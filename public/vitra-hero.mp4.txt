@@ -1,0 +1,5 @@
+Coloque seu vídeo da hero aqui com o nome:
+
+  vitra-hero.mp4
+
+O player usa /vitra-hero.mp4 automaticamente. Se o arquivo não existir, um vídeo placeholder (Pexels) é carregado até você adicionar o seu.

@@ -1,0 +1,443 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, type FormEvent } from "react";
+import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+export const Route = createFileRoute("/entrar")({
+  head: () => ({
+    meta: [
+      { title: "Entrar — Regulariza" },
+      {
+        name: "description",
+        content:
+          "Acesse seu painel Regulariza e acompanhe a regularização do seu imóvel em tempo real.",
+      },
+    ],
+  }),
+  component: EntrarPage,
+});
+
+type Mode = "login" | "signup" | "forgot";
+
+function EntrarPage() {
+  const navigate = useNavigate();
+  const [mode, setMode]           = useState<Mode>("login");
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [showPass, setShowPass]   = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const [success, setSuccess]     = useState<string | null>(null);
+
+  function clearMessages() {
+    setError(null);
+    setSuccess(null);
+  }
+
+  /* ── Login e-mail/senha ─────────────────────────────────────── */
+  async function handleEmailLogin(e: FormEvent) {
+    e.preventDefault();
+    clearMessages();
+    setLoading(true);
+
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError || !data.user) {
+      setError(translateError(authError?.message ?? ""));
+    } else {
+      // Admins vão para o back-office; clientes para o painel
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id);
+      const isAdmin = roles?.some((r) => r.role === "admin");
+      await navigate({ to: isAdmin ? "/admin" : "/dashboard" });
+    }
+
+    setLoading(false);
+  }
+
+  /* ── Cadastro e-mail/senha ──────────────────────────────────── */
+  async function handleEmailSignup(e: FormEvent) {
+    e.preventDefault();
+    clearMessages();
+    setLoading(true);
+
+    const { error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (authError) {
+      setError(translateError(authError.message));
+    } else {
+      setSuccess(
+        "Cadastro realizado! Verifique seu e-mail para confirmar a conta antes de entrar."
+      );
+    }
+
+    setLoading(false);
+  }
+
+  /* ── Redefinir senha ────────────────────────────────────────── */
+  async function handleForgot(e: FormEvent) {
+    e.preventDefault();
+    clearMessages();
+    setLoading(true);
+
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/entrar`,
+    });
+
+    if (authError) {
+      setError(translateError(authError.message));
+    } else {
+      setSuccess("Link enviado! Verifique sua caixa de entrada para redefinir a senha.");
+    }
+
+    setLoading(false);
+  }
+
+  /* ── Google OAuth ───────────────────────────────────────────── */
+  async function handleGoogle() {
+    clearMessages();
+    setLoading(true);
+
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (authError) setError(translateError(authError.message));
+    setLoading(false);
+  }
+
+  /* ── Traduz mensagens de erro do Supabase ───────────────────── */
+  function translateError(msg: string): string {
+    if (msg.includes("Invalid login credentials"))
+      return "E-mail ou senha incorretos. Verifique e tente novamente.";
+    if (msg.includes("Email not confirmed"))
+      return "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.";
+    if (msg.includes("User already registered"))
+      return "Este e-mail já está cadastrado. Faça login ou redefina sua senha.";
+    if (msg.includes("Password should be at least"))
+      return "A senha precisa ter pelo menos 6 caracteres.";
+    if (msg.includes("Unable to validate email"))
+      return "E-mail inválido. Verifique e tente novamente.";
+    return "Algo deu errado. Tente novamente em instantes.";
+  }
+
+  const isLogin  = mode === "login";
+  const isSignup = mode === "signup";
+  const isForgot = mode === "forgot";
+
+  const onSubmit = isForgot
+    ? handleForgot
+    : isSignup
+    ? handleEmailSignup
+    : handleEmailLogin;
+
+  const titles = {
+    login:  "Bem-vindo de volta.",
+    signup: "Crie sua conta.",
+    forgot: "Redefinir senha.",
+  };
+
+  const subs = {
+    login:  "Acesse seu painel e veja onde está sua regularização.",
+    signup: "Em 24h você terá um especialista no seu caso.",
+    forgot: "Enviaremos um link para redefinir sua senha.",
+  };
+
+  return (
+    <div className="grid min-h-screen bg-background text-foreground md:grid-cols-2">
+      {/* ── Painel esquerdo — brand ────────────────────────────── */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-foreground p-12 text-background md:flex">
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              "radial-gradient(60% 80% at 20% 0%, oklch(0.66 0.18 38 / 0.45), transparent 70%)",
+          }}
+        />
+
+        {/* Grain */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: "radial-gradient(oklch(1 0 0) 1px, transparent 1px)",
+            backgroundSize:  "3px 3px",
+          }}
+        />
+
+        <Link to="/" className="relative flex items-center gap-2">
+          <div className="grid h-8 w-8 place-items-center rounded-md bg-background text-foreground">
+            <span className="font-serif text-lg leading-none">R</span>
+          </div>
+          <span className="font-serif text-2xl">Regulariza</span>
+        </Link>
+
+        <div className="relative">
+          <p className="font-serif text-4xl leading-tight tracking-tight text-balance">
+            "Pela primeira vez eu entendi cada etapa da regularização do meu imóvel."
+          </p>
+          <div className="mt-6 flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-accent text-accent-foreground text-sm font-medium">
+              MS
+            </div>
+            <div>
+              <div className="text-sm font-medium">Marina Silveira</div>
+              <div className="text-xs text-background/60">Proprietária · São Paulo</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mini status mock */}
+        <div className="relative rounded-2xl bg-background/10 p-4 ring-1 ring-background/20 backdrop-blur-sm">
+          <div className="text-xs text-background/60">Status atual</div>
+          <div className="mt-1 font-serif text-2xl">Em prefeitura</div>
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-background/15">
+            <div className="h-full w-[55%] rounded-full bg-accent" />
+          </div>
+          <div className="mt-2 text-xs text-background/60">3 de 6 etapas · ~7 dias</div>
+        </div>
+      </div>
+
+      {/* ── Painel direito — formulário ────────────────────────── */}
+      <div className="flex items-center justify-center p-6 sm:p-12">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-md"
+        >
+          {/* Logo mobile */}
+          <Link to="/" className="mb-8 flex items-center gap-2 md:hidden">
+            <div className="grid h-7 w-7 place-items-center rounded-md bg-foreground text-background">
+              <span className="font-serif text-lg leading-none">R</span>
+            </div>
+            <span className="font-serif text-xl">Regulariza</span>
+          </Link>
+
+          {/* Título animado por mode */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22 }}
+            >
+              <h1 className="font-serif text-4xl leading-tight tracking-tight">
+                {titles[mode]}
+              </h1>
+              <p className="mt-2 text-sm text-ink-soft">{subs[mode]}</p>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Mensagem de erro */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 overflow-hidden"
+              >
+                <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  {error}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Mensagem de sucesso */}
+          <AnimatePresence>
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 overflow-hidden"
+              >
+                <div className="flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-700">
+                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  {success}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Formulário */}
+          <form onSubmit={onSubmit} className="mt-8 space-y-4">
+            {/* Campo e-mail */}
+            <label className="block">
+              <span className="text-xs text-ink-soft">E-mail</span>
+              <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2.5 focus-within:border-foreground/40 transition-colors">
+                <Mail className="h-4 w-4 text-ink-soft" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); clearMessages(); }}
+                  placeholder="voce@email.com"
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft/60"
+                />
+              </div>
+            </label>
+
+            {/* Campo senha (oculto em forgot) */}
+            {!isForgot && (
+              <label className="block">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-ink-soft">Senha</span>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => { setMode("forgot"); clearMessages(); }}
+                      className="text-xs text-ink-soft hover:text-foreground transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2.5 focus-within:border-foreground/40 transition-colors">
+                  <Lock className="h-4 w-4 text-ink-soft" />
+                  <input
+                    type={showPass ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => { setPassword(e.target.value); clearMessages(); }}
+                    placeholder="••••••••"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft/60"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass((v) => !v)}
+                    className="text-ink-soft hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </label>
+            )}
+
+            {/* Botão submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="group flex w-full items-center justify-center gap-2 rounded-full
+                         bg-foreground py-3 pl-5 pr-3 text-sm text-background
+                         transition-all hover:scale-[1.01] disabled:opacity-60"
+            >
+              {loading
+                ? "Aguarde..."
+                : isForgot
+                ? "Enviar link"
+                : isSignup
+                ? "Criar conta"
+                : "Entrar no meu painel"}
+              {!loading && (
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-accent transition-transform group-hover:rotate-12">
+                  <ArrowUpRight className="h-4 w-4" />
+                </span>
+              )}
+            </button>
+          </form>
+
+          {/* Separador + Google */}
+          {!isForgot && (
+            <>
+              <div className="my-6 flex items-center gap-3 text-xs text-ink-soft">
+                <div className="h-px flex-1 bg-border" />
+                ou continue com
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogle}
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-border
+                           bg-surface-elevated py-3 text-sm transition-colors hover:border-foreground/30
+                           disabled:opacity-60"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.07 5.07 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.99.66-2.26 1.05-3.72 1.05-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A11 11 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.07l3.66 2.83C6.71 7.3 9.14 5.38 12 5.38z"/>
+                </svg>
+                Entrar com Google
+              </button>
+            </>
+          )}
+
+          {/* Alternância de modo */}
+          <p className="mt-6 text-center text-sm text-ink-soft">
+            {isForgot ? (
+              <>
+                Lembrou a senha?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); clearMessages(); }}
+                  className="text-foreground underline-offset-4 hover:underline"
+                >
+                  Entrar
+                </button>
+              </>
+            ) : isLogin ? (
+              <>
+                Ainda não tem conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signup"); clearMessages(); }}
+                  className="text-foreground underline-offset-4 hover:underline"
+                >
+                  Criar conta grátis
+                </button>
+              </>
+            ) : (
+              <>
+                Já tem conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); clearMessages(); }}
+                  className="text-foreground underline-offset-4 hover:underline"
+                >
+                  Entrar
+                </button>
+              </>
+            )}
+          </p>
+
+          {/* Acesso de demonstração à área de membros */}
+          <div className="mt-6 rounded-xl border border-dashed border-border bg-surface/50 p-3 text-center">
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/dashboard" })}
+              data-cursor="expand"
+              className="text-sm font-medium text-accent underline-offset-4 hover:underline"
+            >
+              Acessar área de membros (demonstração) →
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

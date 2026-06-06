@@ -1,0 +1,260 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/instrumentserif/v4/jizDREVItHgc8qDIbSTKq4XKVjzj.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/instrumentserif/v4/jizGREVItHgc8qDIbSTKq4XKfunQ8A.woff2") format("woff2");
+}
+
+@theme inline {
+  --font-sans: "Inter Tight", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Instrument Serif", "Times New Roman", serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+}
+
+:root {
+  --radius: 0.875rem;
+
+  /* Warm architectural palette */
+  --background: oklch(0.985 0.005 80);          /* warm off-white #FAFAF7 */
+  --surface: oklch(0.965 0.008 75);             /* slightly deeper */
+  --surface-elevated: oklch(1 0 0);
+  --foreground: oklch(0.16 0.01 60);            /* near-black, warm */
+  --ink: oklch(0.13 0.01 60);
+  --ink-soft: oklch(0.45 0.01 60);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.16 0.01 60);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.16 0.01 60);
+
+  /* Primary = deep ink (used for pill buttons) */
+  --primary: oklch(0.18 0.012 60);
+  --primary-foreground: oklch(0.985 0.005 80);
+
+  --secondary: oklch(0.955 0.008 75);
+  --secondary-foreground: oklch(0.18 0.012 60);
+
+  --muted: oklch(0.955 0.008 75);
+  --muted-foreground: oklch(0.5 0.012 60);
+
+  /* Accent = terracotta orange */
+  --accent: oklch(0.66 0.18 38);
+  --accent-foreground: oklch(0.985 0.005 80);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0.005 80);
+
+  --border: oklch(0.9 0.008 75);
+  --input: oklch(0.9 0.008 75);
+  --ring: oklch(0.66 0.18 38);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+
+@layer utilities {
+  .font-serif {
+    font-family: var(--font-serif);
+    letter-spacing: -0.02em;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .grain {
+    background-image: radial-gradient(oklch(0.16 0.01 60 / 0.04) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes float-slower {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.animate-float-slow {
+  animation: float-slow 3s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slower 4s ease-in-out infinite;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Cursor personalizado ───────────────────────────────────────── */
+/* Apenas desktop (com hover real) — aplicado via JS no CustomCursor */
+@media (hover: hover) {
+  a[data-cursor],
+  button[data-cursor] {
+    cursor: none;
+  }
+}
+
+/* ─── Casa flutuante ─────────────────────────────────────────────── */
+@keyframes floatHouse {
+  0%   { transform: translateY(0px)   rotate(0deg);    }
+  20%  { transform: translateY(-14px) rotate(0.6deg);  }
+  50%  { transform: translateY(-20px) rotate(-0.3deg); }
+  80%  { transform: translateY(-10px) rotate(0.4deg);  }
+  100% { transform: translateY(0px)   rotate(0deg);    }
+}
+
+@keyframes shadowPulse {
+  0%, 100% { opacity: 1;    transform: translateX(-50%) scaleX(1);    }
+  50%       { opacity: 0.55; transform: translateX(-50%) scaleX(0.72); }
+}
+
+/* ─── CSS Scroll-Driven Animations (Chrome 115+, progressive) ──── */
+@supports (animation-timeline: view()) {
+  .scroll-fade-up {
+    animation: scrollFadeUp linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 28%;
+  }
+
+  .scroll-fade-in {
+    animation: scrollFadeIn linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 22%;
+  }
+
+  .scroll-scale-up {
+    animation: scrollScaleUp linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 30%;
+  }
+
+  @keyframes scrollFadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scrollFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes scrollScaleUp {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+}
+
+/* ─── Shiny button shimmer ───────────────────────────────────────── */
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+
+.btn-shiny {
+  background: linear-gradient(
+    90deg,
+    oklch(0.16 0.01 60) 0%,
+    oklch(0.16 0.01 60) 40%,
+    oklch(0.35 0.05 60) 50%,
+    oklch(0.16 0.01 60) 60%,
+    oklch(0.16 0.01 60) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 3.5s linear infinite;
+}
+
+/* ─── Animação de texto underline deslizando ─────────────────────── */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 1px;
+  width: 0;
+  background: currentColor;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.link-underline:hover::after {
+  width: 100%;
+}
