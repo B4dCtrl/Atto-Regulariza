@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { CustomCursor } from "@/components/ui/custom-cursor";
 import { ConstructionGate } from "@/components/ConstructionGate";
+import { StaffBar } from "@/components/StaffBar";
 
 import appCss from "../styles.css?url";
 
@@ -131,6 +132,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ConstructionGate>
         <CustomCursor />
+        <StaffBar />
         <Outlet />
       </ConstructionGate>
     </QueryClientProvider>

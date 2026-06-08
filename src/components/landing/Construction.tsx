@@ -1,10 +1,30 @@
-import { motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, Lock } from "lucide-react";
 import { WHATSAPP } from "@/lib/brand";
+import { DEV_ACCESS_KEY, DEV_STORAGE_KEY } from "@/lib/site-config";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function Construction() {
+  const [open, setOpen] = useState(false);
+  const [pwd, setPwd] = useState("");
+  const [erro, setErro] = useState(false);
+
+  function entrarEquipe(e: FormEvent) {
+    e.preventDefault();
+    if (pwd.trim() === DEV_ACCESS_KEY) {
+      try {
+        localStorage.setItem(DEV_STORAGE_KEY, "1");
+      } catch {
+        /* noop */
+      }
+      window.location.href = "/";
+    } else {
+      setErro(true);
+    }
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-6 text-center">
       {/* Glow radial quente */}
@@ -72,6 +92,55 @@ export function Construction() {
         </a>
 
         <div className="mt-12 text-xs text-ink-soft/60">Regulariza · 2026</div>
+
+        {/* Acesso da equipe */}
+        <div className="mt-6">
+          <AnimatePresence mode="wait">
+            {!open ? (
+              <motion.button
+                key="btn"
+                type="button"
+                onClick={() => setOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs text-ink-soft/50 transition-colors hover:text-ink-soft"
+              >
+                <Lock className="h-3 w-3" />
+                Acesso da equipe
+              </motion.button>
+            ) : (
+              <motion.form
+                key="form"
+                onSubmit={entrarEquipe}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mx-auto flex max-w-xs flex-col items-center gap-2"
+              >
+                <div className="flex w-full items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2">
+                  <Lock className="h-3.5 w-3.5 text-ink-soft" />
+                  <input
+                    type="password"
+                    autoFocus
+                    value={pwd}
+                    onChange={(e) => {
+                      setPwd(e.target.value);
+                      setErro(false);
+                    }}
+                    placeholder="Senha da equipe"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft/50"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-foreground px-3 py-1 text-xs text-background"
+                  >
+                    Entrar
+                  </button>
+                </div>
+                {erro && (
+                  <span className="text-xs text-red-500">Senha incorreta.</span>
+                )}
+              </motion.form>
+            )}
+          </AnimatePresence>
+        </div>
       </motion.div>
     </div>
   );

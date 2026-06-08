@@ -11,5 +11,8 @@
 export const CONSTRUCTION_MODE = true;
 export const LOGIN_PAUSED = true;
 
-/** Chave de acesso dos desenvolvedores (use ?dev=ESTA_CHAVE na URL). */
+/** Chave de acesso da equipe (use ?dev=ESTA_CHAVE na URL ou o botão "Acesso da equipe"). */
 export const DEV_ACCESS_KEY = "atto-dev-2026";
+
+/** Chave do localStorage que marca o navegador como "modo equipe". */
+export const DEV_STORAGE_KEY = "regulariza_dev_access";

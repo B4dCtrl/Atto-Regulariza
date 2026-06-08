@@ -1,8 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Construction } from "@/components/landing/Construction";
-import { CONSTRUCTION_MODE, DEV_ACCESS_KEY } from "@/lib/site-config";
-
-const STORAGE_KEY = "regulariza_dev_access";
+import { CONSTRUCTION_MODE, DEV_ACCESS_KEY, DEV_STORAGE_KEY as STORAGE_KEY } from "@/lib/site-config";
 
 /**
  * Porteiro de pré-lançamento.
