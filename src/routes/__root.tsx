@@ -8,6 +8,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { CustomCursor } from "@/components/ui/custom-cursor";
+import { ConstructionGate } from "@/components/ConstructionGate";
 
 import appCss from "../styles.css?url";
 
@@ -128,8 +129,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CustomCursor />
-      <Outlet />
+      <ConstructionGate>
+        <CustomCursor />
+        <Outlet />
+      </ConstructionGate>
     </QueryClientProvider>
   );
 }

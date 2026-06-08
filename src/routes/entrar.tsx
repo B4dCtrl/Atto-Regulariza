@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, type FormEvent } from "react";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { LOGIN_PAUSED } from "@/lib/site-config";
+import { WHATSAPP } from "@/lib/brand";
 
 export const Route = createFileRoute("/entrar")({
   head: () => ({
@@ -134,6 +136,42 @@ function EntrarPage() {
     if (msg.includes("Unable to validate email"))
       return "E-mail inválido. Verifique e tente novamente.";
     return "Algo deu errado. Tente novamente em instantes.";
+  }
+
+  // Login pausado durante a fase de pré-lançamento
+  if (LOGIN_PAUSED) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+        <Link to="/" className="mb-8 flex items-center gap-2">
+          <div className="grid h-8 w-8 place-items-center rounded-md bg-foreground text-background">
+            <span className="font-serif text-lg leading-none">R</span>
+          </div>
+          <span className="font-serif text-2xl">Regulariza</span>
+        </Link>
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs text-ink-soft">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+          Acesso em breve
+        </div>
+        <h1 className="mt-6 font-serif text-4xl leading-tight tracking-tight">
+          A área de membros está chegando.
+        </h1>
+        <p className="mt-3 max-w-md text-sm text-ink-soft">
+          O login e o acompanhamento do seu processo estarão disponíveis no
+          lançamento. Por enquanto, fale com a gente para adiantar seu caso.
+        </p>
+        <a
+          href={WHATSAPP.avaliacaoGratuita}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm text-background transition-all hover:scale-[1.02]"
+        >
+          Falar no WhatsApp
+        </a>
+        <Link to="/" className="mt-6 text-sm text-ink-soft underline-offset-4 hover:underline">
+          Voltar ao início
+        </Link>
+      </div>
+    );
   }
 
   const isLogin  = mode === "login";

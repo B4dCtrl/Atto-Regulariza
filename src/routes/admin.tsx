@@ -1,9 +1,12 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { LOGIN_PAUSED } from "@/lib/site-config";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {
+    // Durante o pré-lançamento o login está pausado: libera a visualização
+    if (LOGIN_PAUSED) return;
     const {
       data: { session },
     } = await supabase.auth.getSession();
