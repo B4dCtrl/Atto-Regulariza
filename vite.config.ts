@@ -12,4 +12,18 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Deploy na Vercel: preset vercel + output no formato Build Output API (.vercel/output).
+  // O preset vem de NITRO_PRESET=vercel (env da Vercel); aqui só corrigimos o output,
+  // que a config padrão força para "dist". Localmente (sem NITRO_PRESET) continua cloudflare-module.
+  nitro:
+    process.env.NITRO_PRESET === "vercel"
+      ? {
+          preset: "vercel",
+          output: {
+            dir: ".vercel/output",
+            publicDir: ".vercel/output/static",
+            serverDir: ".vercel/output/functions/__nitro.func",
+          },
+        }
+      : undefined,
 });

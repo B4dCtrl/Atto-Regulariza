@@ -33,3 +33,6 @@ dist-ssr
 
 # Claude local tooling
 .claude/
+
+# Vercel build output
+.vercel
