@@ -49,9 +49,9 @@ function Index() {
       <main className="w-full overflow-x-hidden">
         <Hero />
         <LogoBar />
-        <BlurHeadline />
         <IntroCards />
         <BentoFeatures />
+        <BlurHeadline />
 
         <Environments />
         <HowItWorks />

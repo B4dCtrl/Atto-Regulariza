@@ -8,7 +8,7 @@ import { useRef, type ReactNode } from "react";
 export function BlurReveal({
   children,
   className = "",
-  amount = 14,
+  amount = 6,
   offset = ["start 90%", "center 65%"],
   delay = 0,
 }: {

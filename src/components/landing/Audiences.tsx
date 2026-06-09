@@ -14,7 +14,7 @@ const items = [
     icon: HardHat,
     t: "Profissionais parceiros",
     d: "Arquitetos, engenheiros, despachantes e advogados que ganham organização e fluxo.",
-    href: "/entrar" as const,
+    href: "/profissionais" as const,
     cta: "Área do parceiro",
   },
   {

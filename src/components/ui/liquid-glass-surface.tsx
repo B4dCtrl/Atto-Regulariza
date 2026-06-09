@@ -12,6 +12,8 @@ export interface LiquidGlassSurfaceProps
   saturate?: number;
   /** Escala da refração de borda (0 = sem). Default 0.12 — sutil, só no rim. */
   refraction?: number;
+  /** Brilho do fundo. <1 escurece, >1 clareia. Default 1.05. */
+  brightness?: number;
   children: React.ReactNode;
   className?: string;
   contentClassName?: string;
@@ -36,6 +38,7 @@ export const LiquidGlassSurface = React.forwardRef<
       blur = 3,
       saturate = 170,
       refraction = 0.1,
+      brightness = 1.05,
       children,
       className,
       contentClassName,
@@ -78,8 +81,8 @@ export const LiquidGlassSurface = React.forwardRef<
             /* Tint Opacity 0.06 (igual ao painel) */
             background-color: ${glassColor || "oklch(from var(--background) l c h / 6%)"};
             /* refração no rim (url) + blur + brilho — Chromium/Safari */
-            backdrop-filter: blur(${blur}px) url(#flt-${id}) saturate(${saturate}%) brightness(1.05);
-            -webkit-backdrop-filter: blur(${blur}px) saturate(${saturate}%) brightness(1.05);
+            backdrop-filter: blur(${blur}px) url(#flt-${id}) saturate(${saturate}%) brightness(${brightness});
+            -webkit-backdrop-filter: blur(${blur}px) saturate(${saturate}%) brightness(${brightness});
             box-shadow:
               /* contorno de vidro */
               inset 0 0 0 1px color-mix(in srgb, white 22%, transparent),

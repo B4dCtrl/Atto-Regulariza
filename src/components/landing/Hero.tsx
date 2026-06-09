@@ -4,6 +4,7 @@ import { ArrowUpRight, MessageCircle, ShieldCheck, Clock, Star } from "lucide-re
 import { WHATSAPP } from "@/lib/brand";
 import { WordScrambleText } from "@/components/ui/word-scramble-text";
 import { MagneticButton } from "@/components/ui/magnetic-button";
+import { GLSLHills } from "@/components/landing/GLSLHills";
 
 const proofs = [
   { icon: ShieldCheck, label: "Sem burocracia para você" },
@@ -29,6 +30,18 @@ export function Hero() {
       style={{ minHeight: "max(92dvh, 640px)" }}
       aria-label="Apresentação principal"
     >
+      {/* Topografia WebGL animada — fica abaixo de tudo */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-[15] opacity-50"
+        style={{
+          maskImage: "radial-gradient(ellipse 85% 65% at 50% 55%, black, transparent)",
+          WebkitMaskImage: "radial-gradient(ellipse 85% 65% at 50% 55%, black, transparent)",
+        }}
+      >
+        <GLSLHills width="100%" height="100%" cameraZ={140} planeSize={256} speed={0.18} />
+      </div>
+
       {/* Brilho radial quente de fundo */}
       <div
         aria-hidden
@@ -94,7 +107,7 @@ export function Hero() {
           variants={fade}
           className="mt-9 flex flex-wrap items-center justify-center gap-3"
         >
-          <MagneticButton strength={0.32}>
+          <MagneticButton strength={0.12}>
             <a
               href={WHATSAPP.avaliacaoGratuita}
               target="_blank"

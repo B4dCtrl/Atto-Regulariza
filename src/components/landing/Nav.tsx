@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, ChevronDown, Home, Building2 } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Home, Building2, Briefcase } from "lucide-react";
 import { LiquidGlassSurface } from "@/components/ui/liquid-glass-surface";
 
 const anchorLinks = [
@@ -10,8 +10,9 @@ const anchorLinks = [
 ];
 
 const paraQuemLinks = [
-  { label: "Pessoa física",  desc: "Proprietários e compradores",          to: "/" as const,              icon: Home      },
-  { label: "Institucional",  desc: "Imobiliárias, construtoras e órgãos", to: "/institucional" as const,  icon: Building2 },
+  { label: "Pessoa física",   desc: "Proprietários e compradores",          to: "/" as const,               icon: Home      },
+  { label: "Profissionais",   desc: "Arquitetos, engenheiros, advogados",   to: "/profissionais" as const,  icon: Briefcase },
+  { label: "Institucional",   desc: "Imobiliárias, construtoras e órgãos", to: "/institucional" as const,  icon: Building2 },
 ];
 
 export function Nav() {
@@ -41,9 +42,10 @@ export function Nav() {
       <LiquidGlassSurface
         className="mx-auto max-w-7xl rounded-full"
         glassColor="oklch(from var(--background) l c h / 5%)"
-        blur={1}
-        saturate={165}
-        refraction={0.3}
+        blur={3.5}
+        saturate={150}
+        brightness={0.97}
+        refraction={0}
         contentClassName="flex items-center justify-between px-5 py-2.5"
       >
         {/* Logo */}

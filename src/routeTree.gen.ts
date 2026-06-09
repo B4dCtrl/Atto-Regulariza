@@ -14,6 +14,7 @@ import { Route as InstitucionalRouteImport } from './routes/institucional'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as PrecosInstitucionalRouteImport } from './routes/precos/institucional'
@@ -44,6 +45,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfissionaisRoute = ProfissionaisRouteImport.update({
+  id: '/profissionais',
+  path: '/profissionais',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/entrar': typeof EntrarRoute
   '/institucional': typeof InstitucionalRoute
   '/precos': typeof PrecosRouteWithChildren
+  '/profissionais': typeof ProfissionaisRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/processos': typeof AdminProcessosRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/entrar': typeof EntrarRoute
   '/institucional': typeof InstitucionalRoute
   '/precos': typeof PrecosRouteWithChildren
+  '/profissionais': typeof ProfissionaisRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/processos': typeof AdminProcessosRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/entrar': typeof EntrarRoute
   '/institucional': typeof InstitucionalRoute
   '/precos': typeof PrecosRouteWithChildren
+  '/profissionais': typeof ProfissionaisRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/processos': typeof AdminProcessosRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/institucional'
     | '/precos'
+    | '/profissionais'
     | '/admin/clientes'
     | '/admin/documentos'
     | '/admin/processos'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/institucional'
     | '/precos'
+    | '/profissionais'
     | '/admin/clientes'
     | '/admin/documentos'
     | '/admin/processos'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/entrar'
     | '/institucional'
     | '/precos'
+    | '/profissionais'
     | '/admin/clientes'
     | '/admin/documentos'
     | '/admin/processos'
@@ -164,6 +176,7 @@ export interface RootRouteChildren {
   EntrarRoute: typeof EntrarRoute
   InstitucionalRoute: typeof InstitucionalRoute
   PrecosRoute: typeof PrecosRouteWithChildren
+  ProfissionaisRoute: typeof ProfissionaisRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -245,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClientesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/profissionais': {
+      id: '/profissionais'
+      path: '/profissionais'
+      fullPath: '/profissionais'
+      preLoaderRoute: typeof ProfissionaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -282,6 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   EntrarRoute: EntrarRoute,
   InstitucionalRoute: InstitucionalRoute,
   PrecosRoute: PrecosRouteWithChildren,
+  ProfissionaisRoute: ProfissionaisRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -10,7 +10,7 @@ export function BlurHeadline() {
     target: ref,
     offset: ["start 80%", "end 60%"],
   });
-  const blur = useTransform(scrollYProgress, [0, 1], [12, 0]);
+  const blur = useTransform(scrollYProgress, [0, 1], [5, 0]);
   const opacity = useTransform(scrollYProgress, [0, 1], [0.25, 1]);
   const filter = useTransform(blur, (b) => `blur(${b}px)`);
 
