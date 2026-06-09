@@ -44,6 +44,8 @@ export function StaffBar() {
         <Link to="/precos" className={linkCls}>Preços</Link>
         <Link to="/dashboard" className={linkCls}>Painel cliente</Link>
         <Link to="/admin" className={linkCls}>Back office</Link>
+        <Link to="/painel-profissional" className={linkCls}>Profissional</Link>
+        <Link to="/gestao" className={linkCls}>Gestão</Link>
         <button
           onClick={sair}
           className="rounded-full px-3 py-1 text-red-500 transition-colors hover:bg-red-50"

@@ -35,6 +35,216 @@ export type Database = {
         }
         Relationships: []
       }
+      properties: {
+        Row: {
+          id: string
+          client_id: string | null
+          name: string
+          address: string | null
+          city: string | null
+          state: string | null
+          progress: number
+          current_stage: number
+          status: string
+          next_action: string | null
+          next_action_deadline: string | null
+          assigned_professional_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_id?: string | null
+          name?: string
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          progress?: number
+          current_stage?: number
+          status?: string
+          next_action?: string | null
+          next_action_deadline?: string | null
+          assigned_professional_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string | null
+          name?: string
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          progress?: number
+          current_stage?: number
+          status?: string
+          next_action?: string | null
+          next_action_deadline?: string | null
+          assigned_professional_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      process_stages: {
+        Row: {
+          id: string
+          property_id: string
+          stage_number: number
+          label: string
+          state: string
+          completed_at: string | null
+          updated_by: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          property_id: string
+          stage_number: number
+          label: string
+          state?: string
+          completed_at?: string | null
+          updated_by?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          property_id?: string
+          stage_number?: number
+          label?: string
+          state?: string
+          completed_at?: string | null
+          updated_by?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_stages_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      documents: {
+        Row: {
+          id: string
+          property_id: string
+          name: string
+          size_text: string | null
+          status: string
+          uploaded_by: string | null
+          file_path: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          property_id: string
+          name: string
+          size_text?: string | null
+          status?: string
+          uploaded_by?: string | null
+          file_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          property_id?: string
+          name?: string
+          size_text?: string | null
+          status?: string
+          uploaded_by?: string | null
+          file_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      messages: {
+        Row: {
+          id: string
+          property_id: string
+          sender_id: string | null
+          sender_name: string
+          content: string
+          is_client: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          property_id: string
+          sender_id?: string | null
+          sender_name?: string
+          content: string
+          is_client?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          property_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          content?: string
+          is_client?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      profiles: {
+        Row: {
+          id: string
+          name: string | null
+          initials: string | null
+          role: string
+          specialization: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name?: string | null
+          initials?: string | null
+          role?: string
+          specialization?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string | null
+          initials?: string | null
+          role?: string
+          specialization?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -9,15 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
+import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as PrecosRouteImport } from './routes/precos'
+import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
+import { Route as PainelProfissionalRouteImport } from './routes/painel-profissional'
 import { Route as InstitucionalRouteImport } from './routes/institucional'
+import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
 import { Route as AvisoDePrivacidadeRouteImport } from './routes/aviso-de-privacidade'
-import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
-import { Route as ProfissionaisRouteImport } from './routes/profissionais'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as PrecosInstitucionalRouteImport } from './routes/precos/institucional'
@@ -25,14 +27,39 @@ import { Route as AdminProcessosRouteImport } from './routes/admin/processos'
 import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
 
+const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
+  id: '/termos-de-uso',
+  path: '/termos-de-uso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfissionaisRoute = ProfissionaisRouteImport.update({
+  id: '/profissionais',
+  path: '/profissionais',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrecosRoute = PrecosRouteImport.update({
   id: '/precos',
   path: '/precos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
+  id: '/politica-de-cookies',
+  path: '/politica-de-cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelProfissionalRoute = PainelProfissionalRouteImport.update({
+  id: '/painel-profissional',
+  path: '/painel-profissional',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InstitucionalRoute = InstitucionalRouteImport.update({
   id: '/institucional',
   path: '/institucional',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GestaoRoute = GestaoRouteImport.update({
+  id: '/gestao',
+  path: '/gestao',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -45,29 +72,14 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
-  id: '/termos-de-uso',
-  path: '/termos-de-uso',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AvisoDePrivacidadeRoute = AvisoDePrivacidadeRouteImport.update({
   id: '/aviso-de-privacidade',
   path: '/aviso-de-privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
-  id: '/politica-de-cookies',
-  path: '/politica-de-cookies',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfissionaisRoute = ProfissionaisRouteImport.update({
-  id: '/profissionais',
-  path: '/profissionais',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -104,13 +116,15 @@ const AdminClientesRoute = AdminClientesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
+  '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/painel-profissional': typeof PainelProfissionalRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
-  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
-  '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
@@ -120,13 +134,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
+  '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/painel-profissional': typeof PainelProfissionalRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
-  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
-  '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
@@ -138,13 +154,15 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
+  '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/painel-profissional': typeof PainelProfissionalRoute
+  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
-  '/politica-de-cookies': typeof PoliticaDeCookiesRoute
-  '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
@@ -157,13 +175,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/aviso-de-privacidade'
     | '/dashboard'
     | '/entrar'
+    | '/gestao'
     | '/institucional'
+    | '/painel-profissional'
+    | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
-    | '/politica-de-cookies'
-    | '/aviso-de-privacidade'
     | '/termos-de-uso'
     | '/admin/clientes'
     | '/admin/documentos'
@@ -173,13 +193,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/aviso-de-privacidade'
     | '/dashboard'
     | '/entrar'
+    | '/gestao'
     | '/institucional'
+    | '/painel-profissional'
+    | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
-    | '/politica-de-cookies'
-    | '/aviso-de-privacidade'
     | '/termos-de-uso'
     | '/admin/clientes'
     | '/admin/documentos'
@@ -190,13 +212,15 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/aviso-de-privacidade'
     | '/dashboard'
     | '/entrar'
+    | '/gestao'
     | '/institucional'
+    | '/painel-profissional'
+    | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
-    | '/politica-de-cookies'
-    | '/aviso-de-privacidade'
     | '/termos-de-uso'
     | '/admin/clientes'
     | '/admin/documentos'
@@ -208,18 +232,34 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  AvisoDePrivacidadeRoute: typeof AvisoDePrivacidadeRoute
   DashboardRoute: typeof DashboardRoute
   EntrarRoute: typeof EntrarRoute
+  GestaoRoute: typeof GestaoRoute
   InstitucionalRoute: typeof InstitucionalRoute
+  PainelProfissionalRoute: typeof PainelProfissionalRoute
+  PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PrecosRoute: typeof PrecosRouteWithChildren
   ProfissionaisRoute: typeof ProfissionaisRoute
-  PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
-  AvisoDePrivacidadeRoute: typeof AvisoDePrivacidadeRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos-de-uso': {
+      id: '/termos-de-uso'
+      path: '/termos-de-uso'
+      fullPath: '/termos-de-uso'
+      preLoaderRoute: typeof TermosDeUsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profissionais': {
+      id: '/profissionais'
+      path: '/profissionais'
+      fullPath: '/profissionais'
+      preLoaderRoute: typeof ProfissionaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/precos': {
       id: '/precos'
       path: '/precos'
@@ -227,11 +267,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrecosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/politica-de-cookies': {
+      id: '/politica-de-cookies'
+      path: '/politica-de-cookies'
+      fullPath: '/politica-de-cookies'
+      preLoaderRoute: typeof PoliticaDeCookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel-profissional': {
+      id: '/painel-profissional'
+      path: '/painel-profissional'
+      fullPath: '/painel-profissional'
+      preLoaderRoute: typeof PainelProfissionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/institucional': {
       id: '/institucional'
       path: '/institucional'
       fullPath: '/institucional'
       preLoaderRoute: typeof InstitucionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gestao': {
+      id: '/gestao'
+      path: '/gestao'
+      fullPath: '/gestao'
+      preLoaderRoute: typeof GestaoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrar': {
@@ -246,6 +307,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aviso-de-privacidade': {
+      id: '/aviso-de-privacidade'
+      path: '/aviso-de-privacidade'
+      fullPath: '/aviso-de-privacidade'
+      preLoaderRoute: typeof AvisoDePrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -297,34 +365,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClientesRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/profissionais': {
-      id: '/profissionais'
-      path: '/profissionais'
-      fullPath: '/profissionais'
-      preLoaderRoute: typeof ProfissionaisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/politica-de-cookies': {
-      id: '/politica-de-cookies'
-      path: '/politica-de-cookies'
-      fullPath: '/politica-de-cookies'
-      preLoaderRoute: typeof PoliticaDeCookiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/aviso-de-privacidade': {
-      id: '/aviso-de-privacidade'
-      path: '/aviso-de-privacidade'
-      fullPath: '/aviso-de-privacidade'
-      preLoaderRoute: typeof AvisoDePrivacidadeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/termos-de-uso': {
-      id: '/termos-de-uso'
-      path: '/termos-de-uso'
-      fullPath: '/termos-de-uso'
-      preLoaderRoute: typeof TermosDeUsoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -358,13 +398,15 @@ const PrecosRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  AvisoDePrivacidadeRoute: AvisoDePrivacidadeRoute,
   DashboardRoute: DashboardRoute,
   EntrarRoute: EntrarRoute,
+  GestaoRoute: GestaoRoute,
   InstitucionalRoute: InstitucionalRoute,
+  PainelProfissionalRoute: PainelProfissionalRoute,
+  PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PrecosRoute: PrecosRouteWithChildren,
   ProfissionaisRoute: ProfissionaisRoute,
-  PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
-  AvisoDePrivacidadeRoute: AvisoDePrivacidadeRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
 }
 export const routeTree = rootRouteImport

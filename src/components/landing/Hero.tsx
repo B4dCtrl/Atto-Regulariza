@@ -1,20 +1,13 @@
-import { motion, type Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, MessageCircle, ShieldCheck, Clock, Star } from "lucide-react";
+import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { WHATSAPP } from "@/lib/brand";
 import { WordScrambleText } from "@/components/ui/word-scramble-text";
 import { MagneticButton } from "@/components/ui/magnetic-button";
-import { GLSLHills } from "@/components/landing/GLSLHills";
-
-const proofs = [
-  { icon: ShieldCheck, label: "Sem burocracia para você" },
-  { icon: Clock,       label: "Até 3,2× mais rápido"    },
-  { icon: Star,        label: "4,9/5 com proprietários"  },
-];
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-const fade: Variants = {
+const fade = {
   hidden: { opacity: 0, y: 20 },
   show: (i: number) => ({
     opacity: 1,
@@ -26,23 +19,28 @@ const fade: Variants = {
 export function Hero() {
   return (
     <section
-      className="relative w-full overflow-hidden"
+      className="relative w-full overflow-hidden bg-background"
       style={{ minHeight: "max(92dvh, 640px)" }}
       aria-label="Apresentação principal"
     >
-      {/* Topografia WebGL animada — fica abaixo de tudo */}
+      {/* Video Background — placeholder para seu vídeo */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-[15] opacity-50"
-        style={{
-          maskImage: "radial-gradient(ellipse 85% 65% at 50% 55%, black, transparent)",
-          WebkitMaskImage: "radial-gradient(ellipse 85% 65% at 50% 55%, black, transparent)",
-        }}
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
       >
-        <GLSLHills width="100%" height="100%" cameraZ={140} planeSize={256} speed={0.18} />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover opacity-40"
+          src="https://videos.pexels.com/video-files/35968183/15249566_1920_1080_30fps.mp4"
+        />
+        {/* Overlay escuro */}
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      {/* Brilho radial quente de fundo */}
+      {/* Brilho radial quente no topo */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -51,18 +49,8 @@ export function Hero() {
             "radial-gradient(60% 50% at 50% 18%, oklch(0.66 0.18 38 / 0.08), transparent 70%)",
         }}
       />
-      {/* Orbs sutis no topo — dão o que refratar para o vidro da nav */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-[5] h-44 overflow-hidden">
-        <div
-          className="absolute left-[20%] top-[-40px] h-48 w-48 rounded-full"
-          style={{ background: "radial-gradient(circle, oklch(0.70 0.17 40 / 0.40), transparent 70%)", filter: "blur(44px)" }}
-        />
-        <div
-          className="absolute right-[24%] top-[-30px] h-44 w-44 rounded-full"
-          style={{ background: "radial-gradient(circle, oklch(0.82 0.14 80 / 0.36), transparent 70%)", filter: "blur(44px)" }}
-        />
-      </div>
 
+      {/* Content */}
       <div className="mx-auto flex min-h-[max(92dvh,640px)] max-w-3xl flex-col items-center justify-center px-6 pb-20 pt-28 text-center">
         {/* Badge */}
         <motion.div
@@ -76,17 +64,17 @@ export function Hero() {
           Disponível em 118 cidades brasileiras
         </motion.div>
 
-        {/* Headline — "anos" cicla dias → meses → anos */}
+        {/* Headline com WordScramble */}
         <h1 className="font-serif text-[clamp(2.5rem,7vw,5.5rem)] leading-[0.98] tracking-tight text-balance">
           Regularize seu imóvel em semanas,{" "}
           <em className="italic text-ink-soft">
             não em{" "}
-            <WordScrambleText words={["meses", "anos"]} startDelay={700} hold={1200} />
+            <WordScrambleText words={["meses", "anos"]} startDelay={700} hold={5000} />
             .
           </em>
         </h1>
 
-        {/* Sub */}
+        {/* Subheading */}
         <motion.p
           custom={2}
           initial="hidden"
@@ -134,7 +122,7 @@ export function Hero() {
           </MagneticButton>
         </motion.div>
 
-        {/* Prova social */}
+        {/* Social Proof */}
         <motion.div
           custom={4}
           initial="hidden"
@@ -142,12 +130,13 @@ export function Hero() {
           variants={fade}
           className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3"
         >
-          {proofs.map((c) => (
-            <div key={c.label} className="flex items-center gap-2 text-sm text-ink-soft">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent/15 text-accent">
-                <c.icon className="h-3.5 w-3.5" />
-              </span>
-              {c.label}
+          {[
+            { label: "Sem burocracia" },
+            { label: "3,2× mais rápido" },
+            { label: "4,9/5 satisfação" },
+          ].map((item) => (
+            <div key={item.label} className="text-sm text-ink-soft">
+              ✓ {item.label}
             </div>
           ))}
         </motion.div>
