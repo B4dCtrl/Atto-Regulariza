@@ -3,7 +3,6 @@ import { Nav } from "@/components/landing/Nav";
 import { Hero } from "@/components/landing/Hero";
 import { LogoBar } from "@/components/landing/LogoBar";
 import { BlurHeadline } from "@/components/landing/BlurHeadline";
-import { IntroCards } from "@/components/landing/IntroCards";
 import { BentoFeatures } from "@/components/landing/BentoFeatures";
 import { Environments } from "@/components/landing/Environments";
 
@@ -50,7 +49,6 @@ function Index() {
         <Hero />
         <LogoBar />
         <BlurHeadline />
-        <IntroCards />
         <BentoFeatures />
 
         <Environments />
