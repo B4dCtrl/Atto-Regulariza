@@ -20,7 +20,7 @@ const fade = {
 export function Hero() {
   return (
     <section
-      className="relative w-full overflow-hidden bg-background"
+      className="relative w-full overflow-hidden"
       style={{ minHeight: "max(92dvh, 640px)" }}
       aria-label="Apresentação principal"
     >
