@@ -10,19 +10,20 @@ import { ArrowUpRight, ChevronDown, Home, Building2, Briefcase } from "lucide-re
 /**
  * MERGED — sobre a hero escura (oklch 0.13).
  * Specular highlights brancos ficam visíveis sobre fundo escuro.
+ * 16% white = bem perceptível sem ser pesado.
  */
 const GLASS_DARK: React.CSSProperties = {
   backdropFilter:       "blur(18.5px) saturate(175%) brightness(1.16)",
   WebkitBackdropFilter: "blur(18.5px) saturate(175%) brightness(1.16)",
-  backgroundColor:      "color-mix(in srgb, white 9%, transparent)",
+  backgroundColor:      "color-mix(in srgb, white 16%, transparent)",
   boxShadow: [
-    "inset 0 0 0 1px color-mix(in srgb, white 24%, transparent)",
-    "inset 0 2px 1px -0.5px color-mix(in srgb, white 92%, transparent)",
-    "inset 1px 0 1px -0.5px color-mix(in srgb, white 55%, transparent)",
-    "inset 0 -10px 16px -12px color-mix(in srgb, black 35%, transparent)",
-    "inset -2px -4px 8px -6px color-mix(in srgb, black 22%, transparent)",
-    "0 1px 2px color-mix(in srgb, black 8%, transparent)",
-    "0 12px 32px -8px color-mix(in srgb, black 22%, transparent)",
+    "inset 0 0 0 1px color-mix(in srgb, white 34%, transparent)",
+    "inset 0 2px 1px -0.5px color-mix(in srgb, white 95%, transparent)",
+    "inset 1px 0 1px -0.5px color-mix(in srgb, white 60%, transparent)",
+    "inset 0 -10px 16px -12px color-mix(in srgb, black 30%, transparent)",
+    "inset -2px -4px 8px -6px color-mix(in srgb, black 18%, transparent)",
+    "0 2px 4px color-mix(in srgb, black 18%, transparent)",
+    "0 16px 40px -10px color-mix(in srgb, black 32%, transparent)",
   ].join(", "),
 };
 
@@ -64,9 +65,13 @@ export function Nav() {
   const menuRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
 
-  /* Detecta quando saiu da hero (~90dvh) */
+  /* Detecta quando saiu da hero (~90dvh).
+   * Verifica posição inicial também (caso a página carregue já rolada). */
   useEffect(() => {
     const threshold = window.innerHeight * 0.90;
+    // Verifica posição atual na montagem
+    setSplit(scrollY.get() > threshold);
+    // Escuta mudanças contínuas
     return scrollY.on("change", (y) => {
       setSplit(y > threshold);
     });
