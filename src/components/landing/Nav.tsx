@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, useScroll, LayoutGroup } from "framer-motion";
+import { motion, useScroll, LayoutGroup, AnimatePresence } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronDown, Home, Building2, Briefcase } from "lucide-react";
 
-/* ─── Glass CSS — dois estilos conforme o fundo ────────────────────────── */
+/* ─── Glass CSS ─────────────────────────────────────────────────────────── */
 
 /**
- * MERGED — sobre a hero escura (oklch 0.13).
- * Specular highlights brancos ficam visíveis sobre fundo escuro.
- * 16% white = bem perceptível sem ser pesado.
+ * MERGED — sobre a hero escura.
+ * Highlights brancos visíveis sobre fundo escuro.
  */
 const GLASS_DARK: React.CSSProperties = {
   backdropFilter:       "blur(18.5px) saturate(175%) brightness(1.16)",
   WebkitBackdropFilter: "blur(18.5px) saturate(175%) brightness(1.16)",
   backgroundColor:      "color-mix(in srgb, white 16%, transparent)",
+  borderRadius:         "9999px",
   boxShadow: [
     "inset 0 0 0 1px color-mix(in srgb, white 34%, transparent)",
     "inset 0 2px 1px -0.5px color-mix(in srgb, white 95%, transparent)",
@@ -29,7 +29,7 @@ const GLASS_DARK: React.CSSProperties = {
 
 /**
  * SPLIT — sobre o fundo creme claro da página.
- * Background semi-opaco + borda escura sutil para contraste no tema claro.
+ * Background semi-opaco + borda escura sutil.
  */
 const GLASS_LIGHT: React.CSSProperties = {
   backdropFilter:       "blur(18.5px) saturate(175%) brightness(1.16)",
@@ -44,14 +44,8 @@ const GLASS_LIGHT: React.CSSProperties = {
   ].join(", "),
 };
 
-const SPRING = {
-  type: "spring" as const,
-  stiffness: 340,
-  damping: 28,
-  mass: 0.9,
-};
-
-const EASE = [0.22, 1, 0.36, 1] as const;
+const SPRING = { type: "spring" as const, stiffness: 340, damping: 28, mass: 0.9 };
+const EASE   = [0.22, 1, 0.36, 1] as const;
 
 const PARA_QUEM = [
   { label: "Pessoa física",  desc: "Proprietários e compradores",          to: "/" as const,              icon: Home      },
@@ -65,16 +59,11 @@ export function Nav() {
   const menuRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
 
-  /* Detecta quando saiu da hero (~90dvh).
-   * Verifica posição inicial também (caso a página carregue já rolada). */
+  /* Detecta threshold da hero (~90dvh) */
   useEffect(() => {
     const threshold = window.innerHeight * 0.90;
-    // Verifica posição atual na montagem
     setSplit(scrollY.get() > threshold);
-    // Escuta mudanças contínuas
-    return scrollY.on("change", (y) => {
-      setSplit(y > threshold);
-    });
+    return scrollY.on("change", (y) => setSplit(y > threshold));
   }, [scrollY]);
 
   /* Fecha dropdown ao clicar fora */
@@ -90,39 +79,46 @@ export function Nav() {
   return (
     <motion.header
       initial={{ y: -28, opacity: 0 }}
-      animate={{ y: 0,   opacity: 1 }}
+      animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.65, ease: EASE }}
       className="fixed left-0 right-0 top-0 z-50 px-5 py-4"
     >
       <LayoutGroup id="nav">
         {/*
-         * Container principal.
-         * MERGED  → w-fit, sem gap, centrado — todos os islands colados formando 1 pill.
-         * SPLIT   → w-full max-w-7xl, gap-3, justify-between — 3 pills separados.
-         * O `layout` anima a transição com mola (spring).
+         * O wrapper é apenas um container de layout — SEM glass.
+         * O glass do estado merged vive como filho absoluto (AnimatePresence)
+         * e só aparece com delay de 160ms, depois que os islands já convergiram.
+         * Assim nunca aparece um pill largo com conteúdo espalhado.
          */}
         <motion.div
           layout
           transition={SPRING}
-          style={
-            /* Merged → 1 pill com glass sobre a hero escura.
-             * Split  → wrapper completamente transparente; cada island tem seu próprio glass. */
-            !split
-              ? { ...GLASS_DARK, borderRadius: "9999px" }
-              : {
-                  backgroundColor: "transparent",
-                  backdropFilter: "none",
-                  WebkitBackdropFilter: "none",
-                  boxShadow: "none",
-                  borderRadius: "0",
-                }
-          }
           className={
             split
-              ? "mx-auto flex w-full max-w-7xl items-center justify-between gap-3"
-              : "mx-auto flex w-fit items-center gap-0"
+              ? "relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3"
+              : "relative mx-auto flex w-fit items-center gap-0"
           }
         >
+
+          {/* ── Glass merged: aparece COM DELAY quando items já convergiram ── */}
+          <AnimatePresence>
+            {!split && (
+              <motion.div
+                key="merged-glass"
+                className="pointer-events-none absolute inset-0 -z-10"
+                style={GLASS_DARK}
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: 1,
+                  transition: { duration: 0.28, delay: 0.16, ease: EASE },
+                }}
+                exit={{
+                  opacity: 0,
+                  transition: { duration: 0.10 },
+                }}
+              />
+            )}
+          </AnimatePresence>
 
           {/* ── Island 1: Logo ── */}
           <motion.div
@@ -130,8 +126,8 @@ export function Nav() {
             transition={SPRING}
             style={
               split
-                ? { ...GLASS_LIGHT, borderRadius: "9999px" }    // island próprio (fundo claro)
-                : { borderRadius: "9999px 0 0 9999px" }         // parte do pill unificado
+                ? { ...GLASS_LIGHT, borderRadius: "9999px" }
+                : { borderRadius: "9999px 0 0 9999px" }
             }
             className="flex items-center px-4 py-2.5"
           >
@@ -143,7 +139,7 @@ export function Nav() {
             </Link>
           </motion.div>
 
-          {/* Divisor entre logo e links (some ao separar) */}
+          {/* Divisor logo → links (some ao separar) */}
           <motion.div
             layout
             animate={{ opacity: split ? 0 : 1, scaleX: split ? 0 : 1 }}
@@ -151,7 +147,7 @@ export function Nav() {
             className="hidden h-4 w-px shrink-0 bg-foreground/12 md:block"
           />
 
-          {/* ── Island 2: Links de navegação ── */}
+          {/* ── Island 2: Links ── */}
           <motion.div
             layout
             transition={SPRING}
@@ -224,7 +220,7 @@ export function Nav() {
             </Link>
           </motion.div>
 
-          {/* Divisor entre links e CTAs (some ao separar) */}
+          {/* Divisor links → CTAs (some ao separar) */}
           <motion.div
             layout
             animate={{ opacity: split ? 0 : 1, scaleX: split ? 0 : 1 }}
