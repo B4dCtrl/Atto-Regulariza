@@ -14,7 +14,7 @@ export function BlurHeadline() {
   });
 
   /* Segunda parte revela com blur + opacity + y — ligado ao scroll */
-  const blur    = useTransform(scrollYProgress, [0, 0.85], [10, 0]);
+  const blur    = useTransform(scrollYProgress, [0, 0.85], [5, 0]);
   const opacity = useTransform(scrollYProgress, [0, 0.85], [0,  1]);
   const y       = useTransform(scrollYProgress, [0, 0.85], [20, 0]);
   const filter  = useTransform(blur, (b) => `blur(${b}px)`);

@@ -4,6 +4,7 @@ import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { WHATSAPP } from "@/lib/brand";
 import { WordScrambleText } from "@/components/ui/word-scramble-text";
 import { MagneticButton } from "@/components/ui/magnetic-button";
+import { GLSLHills } from "@/components/landing/GLSLHills";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -38,6 +39,17 @@ export function Hero() {
         />
         {/* Overlay escuro */}
         <div className="absolute inset-0 bg-black/40" />
+        {/* Linhas topográficas animadas — transparentes sobre o vídeo */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-70"
+          style={{
+            maskImage: "radial-gradient(ellipse 90% 70% at 50% 50%, black 30%, transparent 100%)",
+            WebkitMaskImage: "radial-gradient(ellipse 90% 70% at 50% 50%, black 30%, transparent 100%)",
+          }}
+        >
+          <GLSLHills width="100%" height="100%" cameraZ={140} planeSize={256} speed={0.18} />
+        </div>
       </div>
 
       {/* Brilho radial quente no topo */}
