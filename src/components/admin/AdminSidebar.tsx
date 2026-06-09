@@ -2,21 +2,26 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Briefcase, Users, FolderOpen,
   Settings, LogOut, DollarSign,
-  UserPlus, UserCheck, ChevronDown,
+  UserPlus, UserCheck, ChevronDown, Inbox, Library,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 
 const mainItems = [
-  { to: "/admin",      label: "Visão geral",        icon: LayoutDashboard, exact: true },
-  { to: "/admin/processos",  label: "Processos",    icon: Briefcase },
-  { to: "/admin/clientes",   label: "Clientes",     icon: Users },
-  { to: "/admin/documentos", label: "Documentos",   icon: FolderOpen },
+  { to: "/admin",             label: "Visão geral",  icon: LayoutDashboard, exact: true },
+  { to: "/admin/leads",       label: "Leads",        icon: Inbox },
+  { to: "/admin/processos",   label: "Processos",    icon: Briefcase },
+  { to: "/admin/clientes",    label: "Clientes",     icon: Users },
+  { to: "/admin/documentos",  label: "Documentos",   icon: FolderOpen },
 ] as const;
 
 const cadastroItems = [
   { to: "/admin/cadastro-profissional", label: "Profissional", icon: UserPlus },
   { to: "/admin/cadastro-cliente",      label: "Cliente",      icon: UserCheck },
+] as const;
+
+const bibliotecaItems = [
+  { to: "/admin/documentos-padrao", label: "Docs Padrão", icon: Library },
 ] as const;
 
 const financeiroItems = [
@@ -100,6 +105,18 @@ export function AdminSidebar() {
           {/* Expanded list */}
           <div className={`hidden mt-1 space-y-1 group-hover:block ${!cadastroOpen ? "group-hover:!hidden" : ""}`}>
             {cadastroItems.map((it) => (
+              <NavLink key={it.to} {...it} />
+            ))}
+          </div>
+        </div>
+
+        {/* Biblioteca */}
+        <div className="mt-5">
+          <div className="px-3 pb-1 text-[10px] uppercase tracking-widest text-ink-soft opacity-0 transition-opacity group-hover:opacity-100">
+            Biblioteca
+          </div>
+          <div className="mt-1 space-y-1">
+            {bibliotecaItems.map((it) => (
               <NavLink key={it.to} {...it} />
             ))}
           </div>

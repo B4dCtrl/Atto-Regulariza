@@ -29,6 +29,8 @@ import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
 import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/cadastro-profissional'
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
+import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
+import { Route as AdminDocumentosPadraoRouteImport } from './routes/admin/documentos-padrao'
 
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   id: '/termos-de-uso',
@@ -131,6 +133,16 @@ const AdminCadastroClienteRoute = AdminCadastroClienteRouteImport.update({
   path: '/cadastro-cliente',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDocumentosPadraoRoute = AdminDocumentosPadraoRouteImport.update({
+  id: '/documentos-padrao',
+  path: '/documentos-padrao',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -149,7 +161,9 @@ export interface FileRoutesByFullPath {
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
+  '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
+  '/admin/leads': typeof AdminLeadsRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
@@ -170,7 +184,9 @@ export interface FileRoutesByTo {
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
+  '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
+  '/admin/leads': typeof AdminLeadsRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin': typeof AdminIndexRoute
@@ -193,7 +209,9 @@ export interface FileRoutesById {
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
+  '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
+  '/admin/leads': typeof AdminLeadsRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
@@ -217,7 +235,9 @@ export interface FileRouteTypes {
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
     | '/admin/documentos'
+    | '/admin/documentos-padrao'
     | '/admin/financeiro'
+    | '/admin/leads'
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
@@ -238,7 +258,9 @@ export interface FileRouteTypes {
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
     | '/admin/documentos'
+    | '/admin/documentos-padrao'
     | '/admin/financeiro'
+    | '/admin/leads'
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin'
@@ -260,7 +282,9 @@ export interface FileRouteTypes {
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
     | '/admin/documentos'
+    | '/admin/documentos-padrao'
     | '/admin/financeiro'
+    | '/admin/leads'
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
@@ -423,6 +447,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCadastroClienteRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/documentos-padrao': {
+      id: '/admin/documentos-padrao'
+      path: '/documentos-padrao'
+      fullPath: '/admin/documentos-padrao'
+      preLoaderRoute: typeof AdminDocumentosPadraoRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -431,7 +469,9 @@ interface AdminRouteChildren {
   AdminCadastroProfissionalRoute: typeof AdminCadastroProfissionalRoute
   AdminClientesRoute: typeof AdminClientesRoute
   AdminDocumentosRoute: typeof AdminDocumentosRoute
+  AdminDocumentosPadraoRoute: typeof AdminDocumentosPadraoRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
+  AdminLeadsRoute: typeof AdminLeadsRoute
   AdminProcessosRoute: typeof AdminProcessosRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -441,7 +481,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCadastroProfissionalRoute: AdminCadastroProfissionalRoute,
   AdminClientesRoute: AdminClientesRoute,
   AdminDocumentosRoute: AdminDocumentosRoute,
+  AdminDocumentosPadraoRoute: AdminDocumentosPadraoRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
+  AdminLeadsRoute: AdminLeadsRoute,
   AdminProcessosRoute: AdminProcessosRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
