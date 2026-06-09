@@ -29,8 +29,8 @@ export function Hero() {
       className="relative mx-3 sm:mx-5 overflow-hidden rounded-t-[1rem] rounded-b-[2.5rem] sm:rounded-t-[1.5rem] sm:rounded-b-[3.5rem]"
       style={{
         minHeight: "max(94dvh, 680px)",
-        /* Marrom-escuro quente — foreground do site escurecido */
-        backgroundColor: "oklch(0.13 0.03 55)",
+        /* Areia quente — cor das partículas virou o fundo */
+        backgroundColor: "oklch(0.76 0.04 68)",
       }}
       aria-label="Apresentação principal"
     >
@@ -46,7 +46,7 @@ export function Hero() {
         className="pointer-events-none absolute inset-0 z-[1]"
         style={{
           background:
-            "linear-gradient(100deg, oklch(0.13 0.03 55 / 0.96) 0%, oklch(0.13 0.03 55 / 0.72) 38%, oklch(0.13 0.03 55 / 0.10) 65%, transparent 100%)",
+            "linear-gradient(100deg, oklch(0.76 0.04 68 / 0.96) 0%, oklch(0.76 0.04 68 / 0.72) 38%, oklch(0.76 0.04 68 / 0.10) 65%, transparent 100%)",
         }}
       />
       {/* Gradiente baixo → cima: ancora o texto ao fundo */}
@@ -56,16 +56,16 @@ export function Hero() {
         style={{
           height: "65%",
           background:
-            "linear-gradient(to top, oklch(0.13 0.03 55 / 0.85) 0%, transparent 100%)",
+            "linear-gradient(to top, oklch(0.76 0.04 68 / 0.85) 0%, transparent 100%)",
         }}
       />
-      {/* Glow laranja-quente sutil no centro — sotaque da paleta */}
+      {/* Glow escuro sutil no centro */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 z-[1]"
         style={{
           backgroundImage:
-            "radial-gradient(50% 40% at 30% 55%, oklch(0.60 0.18 38 / 0.07), transparent 70%)",
+            "radial-gradient(50% 40% at 30% 55%, oklch(0.13 0.03 55 / 0.05), transparent 70%)",
         }}
       />
 
@@ -78,7 +78,7 @@ export function Hero() {
           initial="hidden"
           animate="show"
           variants={fade}
-          className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/50"
+          className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-foreground/10 bg-foreground/5 px-3 py-1 text-xs text-foreground/55"
         >
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
           Disponível em 118 cidades brasileiras
@@ -90,12 +90,12 @@ export function Hero() {
           initial="hidden"
           animate="show"
           variants={fade}
-          className="font-serif text-[clamp(2.4rem,5.5vw,4.8rem)] leading-[1.02] tracking-tight text-white text-balance"
+          className="font-serif text-[clamp(2.4rem,5.5vw,4.8rem)] leading-[1.02] tracking-tight text-foreground text-balance"
         >
           Regularize seu imóvel
           <br />
           em semanas,{" "}
-          <em className="italic text-white/50">
+          <em className="italic text-foreground/50">
             não em{" "}
             <WordScrambleText
               words={["meses", "anos"]}
@@ -112,7 +112,7 @@ export function Hero() {
           initial="hidden"
           animate="show"
           variants={fade}
-          className="mt-5 max-w-lg text-base leading-relaxed text-white/55 sm:text-lg"
+          className="mt-5 max-w-lg text-base leading-relaxed text-foreground/55 sm:text-lg"
         >
           Imóvel irregular trava venda, herança e financiamento. A gente
           cuida de tudo — docs, cartório e prefeitura — enquanto você
@@ -132,11 +132,11 @@ export function Hero() {
               href={WHATSAPP.avaliacaoGratuita}
               target="_blank"
               rel="noreferrer"
-              className="group inline-flex items-center gap-2 rounded-full bg-white py-3 pl-6 pr-2 text-sm font-medium text-[oklch(0.13_0.03_55)] shadow-[0_12px_32px_-10px_oklch(0_0_0_/_0.5)] transition-all hover:scale-[1.02]"
+              className="group inline-flex items-center gap-2 rounded-full bg-foreground py-3 pl-6 pr-2 text-sm font-medium text-background shadow-[0_12px_32px_-10px_oklch(0.13_0.03_55_/_0.4)] transition-all hover:scale-[1.02]"
             >
               Quero regularizar meu imóvel
               <span className="grid h-8 w-8 place-items-center rounded-full bg-accent transition-transform group-hover:rotate-12">
-                <ArrowUpRight className="h-4 w-4 text-white" />
+                <ArrowUpRight className="h-4 w-4 text-background" />
               </span>
             </a>
           </MagneticButton>
@@ -144,7 +144,7 @@ export function Hero() {
           <MagneticButton strength={0.2}>
             <Link
               to="/precos"
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-white/80 transition-all hover:border-white/30 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/5 px-6 py-3 text-sm font-medium text-foreground/80 transition-all hover:border-foreground/30 hover:bg-foreground/10"
             >
               <MessageCircle className="h-4 w-4" />
               Ver planos
@@ -162,7 +162,7 @@ export function Hero() {
         >
           {["Sem burocracia", "3,2× mais rápido", "4,9/5 satisfação"].map(
             (item) => (
-              <div key={item} className="text-xs text-white/35">
+              <div key={item} className="text-xs text-foreground/35">
                 ✓ {item}
               </div>
             )

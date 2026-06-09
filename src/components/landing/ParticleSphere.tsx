@@ -67,9 +67,9 @@ export function ParticleSphere() {
           // Círculo limpo
           vec2 c = 2.0 * gl_PointCoord - 1.0;
           if (dot(c, c) > 1.0) discard;
-          // Cor: areia quente — #c8b898 ≈ oklch(0.76 0.04 68)
-          vec3 col = vec3(0.784, 0.722, 0.596);
-          gl_FragColor = vec4(col, vFade * 0.90);
+          // Cor: marrom-escuro — oklch(0.13 0.03 55) ≈ #211a12
+          vec3 col = vec3(0.130, 0.102, 0.071);
+          gl_FragColor = vec4(col, vFade * 0.85);
         }
       `,
       transparent: true,
