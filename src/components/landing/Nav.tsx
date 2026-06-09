@@ -42,7 +42,7 @@ export function Nav() {
       <LiquidGlassSurface
         className="mx-auto max-w-7xl rounded-full"
         glassColor="oklch(from var(--background) l c h / 0%)"
-        blur={18.5}
+        blur={1.2}
         saturate={175}
         brightness={1.16}
         refraction={0}
