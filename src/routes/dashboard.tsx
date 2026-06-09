@@ -196,10 +196,8 @@ function DashboardContent() {
       <header id={TOUR_TOPICS.WELCOME} className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-7 w-7 place-items-center rounded-md bg-foreground text-background">
-              <span className="font-serif text-lg leading-none">R</span>
-            </div>
-            <span className="font-serif text-xl tracking-tight hidden sm:inline">Regulariza</span>
+            <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
+            <span className="font-serif text-xl tracking-tight hidden sm:inline">Ato Regulariza</span>
           </Link>
           <div className="h-5 w-px bg-border hidden sm:block" />
           <div className="flex items-center gap-2 text-sm">

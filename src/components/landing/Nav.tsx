@@ -137,7 +137,7 @@ export function Nav() {
                 alt="Ato Regulariza"
                 className="h-7 w-7 rounded-md object-contain"
               />
-              <span className="font-serif text-base tracking-tight">Regulariza</span>
+              <span className="font-serif text-base tracking-tight">Ato Regulariza</span>
             </Link>
           </motion.div>
 

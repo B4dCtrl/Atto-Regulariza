@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Briefcase, Users, FolderOpen,
-  Settings, LogOut, BarChart2, DollarSign,
+  Settings, LogOut, DollarSign,
   UserPlus, UserCheck, ChevronDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,6 @@ import { useState } from "react";
 
 const mainItems = [
   { to: "/admin",      label: "Visão geral",        icon: LayoutDashboard, exact: true },
-  { to: "/gestao",     label: "Torre de controle",  icon: BarChart2 },
   { to: "/admin/processos",  label: "Processos",    icon: Briefcase },
   { to: "/admin/clientes",   label: "Clientes",     icon: Users },
   { to: "/admin/documentos", label: "Documentos",   icon: FolderOpen },
@@ -69,7 +68,7 @@ export function AdminSidebar() {
             className="h-8 w-8 shrink-0 rounded-md object-contain"
           />
           <div className="overflow-hidden opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <div className="whitespace-nowrap font-serif text-lg leading-none tracking-tight">Regulariza</div>
+            <div className="whitespace-nowrap font-serif text-lg leading-none tracking-tight">Ato Regulariza</div>
             <div className="mt-0.5 whitespace-nowrap text-[10px] uppercase tracking-widest text-ink-soft">
               Gestão
             </div>

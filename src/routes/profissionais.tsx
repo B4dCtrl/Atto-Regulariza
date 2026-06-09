@@ -9,7 +9,7 @@ import { BlurReveal } from "@/components/landing/BlurReveal";
 export const Route = createFileRoute("/profissionais")({
   head: () => ({
     meta: [
-      { title: "Para Profissionais — Regulariza" },
+      { title: "Para Profissionais — Ato Regulariza" },
       {
         name: "description",
         content:
@@ -254,7 +254,7 @@ function ProfissionaisPage() {
               </h2>
               <p className="mt-5 text-base leading-relaxed text-ink-soft">
                 Junte-se a arquitetos, engenheiros e advogados que já simplificaram
-                sua operação com a Regulariza.
+                sua operação com a Ato Regulariza.
               </p>
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
                 <Link

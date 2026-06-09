@@ -44,9 +44,7 @@ export function Construction() {
         className="relative flex flex-col items-center"
       >
         {/* Logo */}
-        <div className="grid h-12 w-12 place-items-center rounded-xl bg-foreground text-background">
-          <span className="font-serif text-2xl leading-none">R</span>
-        </div>
+        <img src="/logo-ato.png" alt="Ato Regulariza" className="h-12 w-12 rounded-xl object-contain" />
 
         {/* Badge */}
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs text-ink-soft">
@@ -82,7 +80,7 @@ export function Construction() {
           </span>
         </a>
 
-        <div className="mt-12 text-xs text-ink-soft/60">Regulariza · 2026</div>
+        <div className="mt-12 text-xs text-ink-soft/60">Ato Regulariza · 2026</div>
 
         {/* Acesso da equipe — entra direto, sem senha */}
         <div className="mt-6">
