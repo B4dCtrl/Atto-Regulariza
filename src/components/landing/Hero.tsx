@@ -72,25 +72,13 @@ export function Hero() {
       {/* ── Conteúdo — bottom-left, como Tailark ── */}
       <div className="relative z-10 flex min-h-[max(94dvh,680px)] max-w-2xl flex-col justify-end px-8 pb-16 pt-36 sm:px-14 sm:pb-20">
 
-        {/* Badge */}
-        <motion.div
+        {/* Headline */}
+        <motion.h1
           custom={0}
           initial="hidden"
           animate="show"
           variants={fade}
-          className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-foreground/10 bg-foreground/5 px-3 py-1 text-xs text-foreground/55"
-        >
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-          Disponível em 118 cidades brasileiras
-        </motion.div>
-
-        {/* Headline */}
-        <motion.h1
-          custom={1}
-          initial="hidden"
-          animate="show"
-          variants={fade}
-          className="font-serif text-[clamp(2.4rem,5.5vw,4.8rem)] leading-[1.02] tracking-tight text-foreground text-balance"
+          className="font-serif text-[clamp(1.85rem,5.5vw,4.8rem)] leading-[1.02] tracking-tight text-foreground"
         >
           Regularize seu imóvel
           <br />
@@ -108,11 +96,11 @@ export function Hero() {
 
         {/* Subtítulo */}
         <motion.p
-          custom={2}
+          custom={1}
           initial="hidden"
           animate="show"
           variants={fade}
-          className="mt-5 max-w-lg text-base leading-relaxed text-foreground/55 sm:text-lg"
+          className="mt-5 max-w-lg text-base leading-relaxed text-foreground/80 sm:text-lg"
         >
           Imóvel irregular trava venda, herança e financiamento. A gente
           cuida de tudo — docs, cartório e prefeitura — enquanto você
@@ -121,7 +109,7 @@ export function Hero() {
 
         {/* CTAs */}
         <motion.div
-          custom={3}
+          custom={2}
           initial="hidden"
           animate="show"
           variants={fade}
@@ -154,15 +142,15 @@ export function Hero() {
 
         {/* Social proof */}
         <motion.div
-          custom={4}
+          custom={3}
           initial="hidden"
           animate="show"
           variants={fade}
           className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2"
         >
-          {["Sem burocracia", "3,2× mais rápido", "4,9/5 satisfação"].map(
+          {["Menos burocracia", "3x mais rápido", "Satisfação garantida"].map(
             (item) => (
-              <div key={item} className="text-xs text-foreground/35">
+              <div key={item} className="text-xs text-foreground/60">
                 ✓ {item}
               </div>
             )

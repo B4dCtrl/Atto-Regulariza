@@ -110,11 +110,11 @@ export function Nav() {
                 initial={{ opacity: 0 }}
                 animate={{
                   opacity: 1,
-                  transition: { duration: 0.28, delay: 0.16, ease: EASE },
+                  transition: { duration: 0.18, delay: 0.30, ease: EASE },
                 }}
                 exit={{
                   opacity: 0,
-                  transition: { duration: 0.10 },
+                  transition: { duration: 0.08 },
                 }}
               />
             )}
@@ -126,8 +126,8 @@ export function Nav() {
             transition={SPRING}
             style={
               split
-                ? { ...GLASS_LIGHT, borderRadius: "9999px" }
-                : { borderRadius: "9999px 0 0 9999px" }
+                ? { ...GLASS_LIGHT, borderRadius: "9999px", transition: "background-color 0.18s ease, box-shadow 0.18s ease" }
+                : { borderRadius: "9999px 0 0 9999px", backgroundColor: "transparent", backdropFilter: "none", WebkitBackdropFilter: "none", boxShadow: "none", transition: "background-color 0.12s ease, box-shadow 0.12s ease" }
             }
             className="flex items-center px-4 py-2.5"
           >
@@ -153,8 +153,8 @@ export function Nav() {
             transition={SPRING}
             style={
               split
-                ? { ...GLASS_LIGHT, borderRadius: "9999px" }
-                : { borderRadius: "0" }
+                ? { ...GLASS_LIGHT, borderRadius: "9999px", transition: "background-color 0.18s ease, box-shadow 0.18s ease" }
+                : { borderRadius: "0", backgroundColor: "transparent", backdropFilter: "none", WebkitBackdropFilter: "none", boxShadow: "none", transition: "background-color 0.12s ease, box-shadow 0.12s ease" }
             }
             className="hidden items-center gap-0.5 px-2 py-2 md:flex"
           >
@@ -234,8 +234,8 @@ export function Nav() {
             transition={SPRING}
             style={
               split
-                ? { ...GLASS_LIGHT, borderRadius: "9999px" }
-                : { borderRadius: "0 9999px 9999px 0" }
+                ? { ...GLASS_LIGHT, borderRadius: "9999px", transition: "background-color 0.18s ease, box-shadow 0.18s ease" }
+                : { borderRadius: "0 9999px 9999px 0", backgroundColor: "transparent", backdropFilter: "none", WebkitBackdropFilter: "none", boxShadow: "none", transition: "background-color 0.12s ease, box-shadow 0.12s ease" }
             }
             className="flex items-center gap-2 px-3 py-2"
           >
