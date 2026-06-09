@@ -5,17 +5,41 @@ import { motion, useScroll, LayoutGroup } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronDown, Home, Building2, Briefcase } from "lucide-react";
 
-/* ─── Glass CSS aplicado diretamente para permitir animação ─────────────── */
-const GLASS: React.CSSProperties = {
-  backdropFilter:         "blur(18.5px) saturate(175%) brightness(1.16)",
-  WebkitBackdropFilter:   "blur(18.5px) saturate(175%) brightness(1.16)",
-  backgroundColor:        "color-mix(in srgb, white 5%, transparent)",
+/* ─── Glass CSS — dois estilos conforme o fundo ────────────────────────── */
+
+/**
+ * MERGED — sobre a hero escura (oklch 0.13).
+ * Specular highlights brancos ficam visíveis sobre fundo escuro.
+ */
+const GLASS_DARK: React.CSSProperties = {
+  backdropFilter:       "blur(18.5px) saturate(175%) brightness(1.16)",
+  WebkitBackdropFilter: "blur(18.5px) saturate(175%) brightness(1.16)",
+  backgroundColor:      "color-mix(in srgb, white 9%, transparent)",
   boxShadow: [
-    "inset 0 0 0 1px color-mix(in srgb, white 28%, transparent)",
-    "inset 0 2px 1px -0.5px color-mix(in srgb, white 90%, transparent)",
-    "inset 0 -8px 12px -10px color-mix(in srgb, black 28%, transparent)",
-    "0 1px 2px color-mix(in srgb, black 5%, transparent)",
-    "0 10px 28px -8px color-mix(in srgb, black 14%, transparent)",
+    "inset 0 0 0 1px color-mix(in srgb, white 24%, transparent)",
+    "inset 0 2px 1px -0.5px color-mix(in srgb, white 92%, transparent)",
+    "inset 1px 0 1px -0.5px color-mix(in srgb, white 55%, transparent)",
+    "inset 0 -10px 16px -12px color-mix(in srgb, black 35%, transparent)",
+    "inset -2px -4px 8px -6px color-mix(in srgb, black 22%, transparent)",
+    "0 1px 2px color-mix(in srgb, black 8%, transparent)",
+    "0 12px 32px -8px color-mix(in srgb, black 22%, transparent)",
+  ].join(", "),
+};
+
+/**
+ * SPLIT — sobre o fundo creme claro da página.
+ * Background semi-opaco + borda escura sutil para contraste no tema claro.
+ */
+const GLASS_LIGHT: React.CSSProperties = {
+  backdropFilter:       "blur(18.5px) saturate(175%) brightness(1.16)",
+  WebkitBackdropFilter: "blur(18.5px) saturate(175%) brightness(1.16)",
+  backgroundColor:      "color-mix(in srgb, white 76%, transparent)",
+  boxShadow: [
+    "inset 0 0 0 1px color-mix(in srgb, black 7%, transparent)",
+    "inset 0 1px 0 0 color-mix(in srgb, white 85%, transparent)",
+    "inset 0 -1px 0 0 color-mix(in srgb, black 4%, transparent)",
+    "0 1px 3px color-mix(in srgb, black 5%, transparent)",
+    "0 8px 24px -8px color-mix(in srgb, black 12%, transparent)",
   ].join(", "),
 };
 
@@ -76,9 +100,9 @@ export function Nav() {
           layout
           transition={SPRING}
           style={
-            /* Quando merged: GLASS no WRAPPER cobre os 3 islands de uma vez */
+            /* Quando merged: GLASS_DARK no WRAPPER cobre os 3 islands (sobre hero escura) */
             !split
-              ? { ...GLASS, borderRadius: "9999px" }
+              ? { ...GLASS_DARK, borderRadius: "9999px" }
               : {}
           }
           className={
@@ -94,7 +118,7 @@ export function Nav() {
             transition={SPRING}
             style={
               split
-                ? { ...GLASS, borderRadius: "9999px" }          // island próprio
+                ? { ...GLASS_LIGHT, borderRadius: "9999px" }    // island próprio (fundo claro)
                 : { borderRadius: "9999px 0 0 9999px" }         // parte do pill unificado
             }
             className="flex items-center px-4 py-2.5"
@@ -121,7 +145,7 @@ export function Nav() {
             transition={SPRING}
             style={
               split
-                ? { ...GLASS, borderRadius: "9999px" }
+                ? { ...GLASS_LIGHT, borderRadius: "9999px" }
                 : { borderRadius: "0" }
             }
             className="hidden items-center gap-0.5 px-2 py-2 md:flex"
@@ -202,7 +226,7 @@ export function Nav() {
             transition={SPRING}
             style={
               split
-                ? { ...GLASS, borderRadius: "9999px" }
+                ? { ...GLASS_LIGHT, borderRadius: "9999px" }
                 : { borderRadius: "0 9999px 9999px 0" }
             }
             className="flex items-center gap-2 px-3 py-2"
