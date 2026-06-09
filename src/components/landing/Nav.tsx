@@ -41,10 +41,10 @@ export function Nav() {
        */}
       <LiquidGlassSurface
         className="mx-auto max-w-7xl rounded-full"
-        glassColor="oklch(from var(--background) l c h / 5%)"
-        blur={3.5}
-        saturate={150}
-        brightness={0.97}
+        glassColor="oklch(from var(--background) l c h / 0%)"
+        blur={18.5}
+        saturate={175}
+        brightness={1.16}
         refraction={0}
         contentClassName="flex items-center justify-between px-5 py-2.5"
       >
