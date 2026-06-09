@@ -105,10 +105,17 @@ export function Nav() {
           layout
           transition={SPRING}
           style={
-            /* Quando merged: GLASS_DARK no WRAPPER cobre os 3 islands (sobre hero escura) */
+            /* Merged → 1 pill com glass sobre a hero escura.
+             * Split  → wrapper completamente transparente; cada island tem seu próprio glass. */
             !split
               ? { ...GLASS_DARK, borderRadius: "9999px" }
-              : {}
+              : {
+                  backgroundColor: "transparent",
+                  backdropFilter: "none",
+                  WebkitBackdropFilter: "none",
+                  boxShadow: "none",
+                  borderRadius: "0",
+                }
           }
           className={
             split
