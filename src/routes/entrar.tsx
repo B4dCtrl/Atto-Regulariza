@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, type FormEvent } from "react";
-import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/entrar")({
@@ -23,6 +23,7 @@ type Mode = "login" | "signup" | "forgot";
 function EntrarPage() {
   const navigate = useNavigate();
   const [mode, setMode]           = useState<Mode>("login");
+  const [name, setName]           = useState("");
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
   const [showPass, setShowPass]   = useState(false);
@@ -72,6 +73,7 @@ function EntrarPage() {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
+        data: { full_name: name.trim() || undefined },
       },
     });
 
@@ -278,6 +280,23 @@ function EntrarPage() {
 
           {/* Formulário */}
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
+            {/* Campo nome — só no cadastro */}
+            {isSignup && (
+              <label className="block">
+                <span className="text-xs text-ink-soft">Nome completo</span>
+                <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2.5 focus-within:border-foreground/40 transition-colors">
+                  <User className="h-4 w-4 text-ink-soft" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => { setName(e.target.value); clearMessages(); }}
+                    placeholder="Seu nome"
+                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft/60"
+                  />
+                </div>
+              </label>
+            )}
+
             {/* Campo e-mail */}
             <label className="block">
               <span className="text-xs text-ink-soft">E-mail</span>

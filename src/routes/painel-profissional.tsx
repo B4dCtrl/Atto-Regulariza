@@ -3,7 +3,8 @@ import { useState, useRef, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
   ChevronRight, FileText, MapPin, MessageSquare, Plus,
-  Send, Upload, User, Clock, X,
+  Send, Upload, User, BookOpen, StickyNote,
+  AlertTriangle, Phone, Mail,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/painel-profissional")({
 type Urgency = "alta" | "media" | "baixa";
 type FieldType = "text" | "textarea" | "date" | "number" | "select" | "checklist" | "checkbox";
 type FieldVal  = string | string[] | boolean;
-type RightTab  = "docs" | "chat";
+type RightTab  = "docs" | "chat" | "briefing";
 
 interface MockProcess {
   id: string;
@@ -193,6 +194,15 @@ function ProfissionalPage() {
   const [allDocs, setAllDocs] = useState<Record<string, LocalDoc[]>>(
     () => storeGet("rz-prof-docs", {})
   );
+  /* ── Notification tracking ── */
+  const [lastChatView, setLastChatView] = useState<Record<string, number>>(
+    () => storeGet("rz-last-chat-view", {})
+  );
+  /* ── Private notes per process ── */
+  const [privateNotes, setPrivateNotes] = useState<Record<string, string>>(
+    () => storeGet("rz-private-notes", {})
+  );
+  const [noteInput, setNoteInput] = useState("");
 
   /* ── Derived ── */
   const selectedProc  = MOCK_PROCESSES.find((p) => p.id === selectedId) ?? null;
@@ -201,6 +211,24 @@ function ProfissionalPage() {
   const msgs          = selectedId ? (allMsgs[selectedId] ?? []) : [];
   const docs          = selectedId ? (allDocs[selectedId] ?? []) : [];
   const stageDef      = STAGE_DEFS.find((s) => s.num === activeStage) ?? STAGE_DEFS[0];
+
+  /* ── Unread counts ── */
+  const unreadCount = (pid: string) => {
+    const lastView = lastChatView[pid] ?? 0;
+    return (allMsgs[pid] ?? []).filter(
+      (m) => m.isClient && new Date(m.ts).getTime() > lastView
+    ).length;
+  };
+  const totalUnread = acceptedIds.reduce((sum, pid) => sum + unreadCount(pid), 0);
+
+  const markChatRead = (pid: string) => {
+    const now = Date.now();
+    setLastChatView((prev) => {
+      const next = { ...prev, [pid]: now };
+      storeSet("rz-last-chat-view", next);
+      return next;
+    });
+  };
 
   const isDone     = (pid: string, n: number) => (doneStages[pid] ?? []).includes(n);
   const isActiveStg = (pid: string, n: number) => {
@@ -268,30 +296,65 @@ function ProfissionalPage() {
     storeSet("rz-accepted-procs", next);
     setSelectedId(pid);
     setActiveStage(1);
+    setRightTab("briefing");
   };
 
   const openProcess = (pid: string) => {
     setSelectedId(pid);
     setActiveStage(currentStage(pid));
-    setRightTab("chat");
+    setRightTab("briefing");
   };
 
   const sendMsg = (e: FormEvent) => {
     e.preventDefault();
     const text = chatInput.trim();
     if (!text || !selectedId) return;
+    const pid = selectedId;
     const msg: LocalMsg = {
       id: crypto.randomUUID(),
       text, isClient: false, sender: PROF_NAME,
       ts: new Date().toISOString(),
     };
     setAllMsgs((prev) => {
-      const next = { ...prev, [selectedId]: [...(prev[selectedId] ?? []), msg] };
+      const next = { ...prev, [pid]: [...(prev[pid] ?? []), msg] };
       storeSet("rz-prof-msgs", next);
       return next;
     });
     setChatInput("");
     setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
+
+    /* Simula resposta automática do cliente após 4s */
+    const proc = MOCK_PROCESSES.find((p) => p.id === pid);
+    const autoReplies = [
+      "Entendido! Vou providenciar.",
+      "Certo, obrigado pela informação!",
+      "Ok, já estou separando os documentos.",
+      "Perfeito, aguardo a próxima atualização.",
+    ];
+    if (proc) {
+      setTimeout(() => {
+        const reply: LocalMsg = {
+          id: crypto.randomUUID(),
+          text: autoReplies[Math.floor(Math.random() * autoReplies.length)],
+          isClient: true,
+          sender: proc.client,
+          ts: new Date().toISOString(),
+        };
+        setAllMsgs((prev) => {
+          const next = { ...prev, [pid]: [...(prev[pid] ?? []), reply] };
+          storeSet("rz-prof-msgs", next);
+          return next;
+        });
+        /* Browser notification se permitido */
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          new Notification(`Mensagem de ${proc.client}`, {
+            body: reply.text,
+            icon: "/logo-ato.png",
+          });
+        }
+        setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
+      }, 4000);
+    }
   };
 
   const uploadDocs = (files: FileList | null) => {
@@ -416,8 +479,33 @@ function ProfissionalPage() {
           )}
 
           <div className="ml-auto flex items-center gap-2">
-            <button className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-elevated">
+            <button
+              onClick={() => {
+                /* Pedir permissão de notificação ao clicar no sino */
+                if (typeof Notification !== "undefined" && Notification.permission === "default") {
+                  Notification.requestPermission();
+                }
+                /* Ir para o processo com mais não-lidos */
+                const withUnread = acceptedIds
+                  .map((pid) => ({ pid, count: unreadCount(pid) }))
+                  .filter((x) => x.count > 0)
+                  .sort((a, b) => b.count - a.count);
+                if (withUnread.length > 0) {
+                  openProcess(withUnread[0].pid);
+                  setTimeout(() => {
+                    setRightTab("chat");
+                    markChatRead(withUnread[0].pid);
+                  }, 50);
+                }
+              }}
+              className="relative grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-elevated"
+            >
               <Bell className="h-4 w-4 text-ink-soft" />
+              {totalUnread > 0 && (
+                <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+                  {totalUnread > 9 ? "9+" : totalUnread}
+                </span>
+              )}
             </button>
             <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs font-medium">
               {PROF_INITIALS}
@@ -727,23 +815,137 @@ function ProfissionalPage() {
 
               {/* Tabs */}
               <div className="flex shrink-0 border-b border-border">
-                {(["docs", "chat"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setRightTab(tab)}
-                    className={`flex-1 py-2.5 text-xs transition-colors ${
-                      rightTab === tab
-                        ? "border-b-2 border-foreground font-medium text-foreground"
-                        : "text-ink-soft hover:text-foreground"
-                    }`}
-                  >
-                    {tab === "docs"
-                      ? <><FileText className="inline-block h-3 w-3 mr-1" />Docs ({docs.length})</>
-                      : <><MessageSquare className="inline-block h-3 w-3 mr-1" />Chat ({msgs.length})</>
-                    }
-                  </button>
-                ))}
+                <button
+                  onClick={() => setRightTab("briefing")}
+                  className={`flex-1 py-2.5 text-xs transition-colors ${rightTab === "briefing" ? "border-b-2 border-foreground font-medium text-foreground" : "text-ink-soft hover:text-foreground"}`}
+                >
+                  <BookOpen className="inline-block h-3 w-3 mr-1" />Briefing
+                </button>
+                <button
+                  onClick={() => setRightTab("docs")}
+                  className={`flex-1 py-2.5 text-xs transition-colors ${rightTab === "docs" ? "border-b-2 border-foreground font-medium text-foreground" : "text-ink-soft hover:text-foreground"}`}
+                >
+                  <FileText className="inline-block h-3 w-3 mr-1" />Docs ({docs.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setRightTab("chat");
+                    if (selectedId) markChatRead(selectedId);
+                  }}
+                  className={`relative flex-1 py-2.5 text-xs transition-colors ${rightTab === "chat" ? "border-b-2 border-foreground font-medium text-foreground" : "text-ink-soft hover:text-foreground"}`}
+                >
+                  <MessageSquare className="inline-block h-3 w-3 mr-1" />Chat ({msgs.length})
+                  {selectedId && unreadCount(selectedId) > 0 && (
+                    <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                      {unreadCount(selectedId)}
+                    </span>
+                  )}
+                </button>
               </div>
+
+              {/* Tab: Briefing */}
+              {rightTab === "briefing" && (
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  {/* Client situation */}
+                  <div className="rounded-xl bg-surface p-3">
+                    <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-soft">
+                      <AlertTriangle className="h-3 w-3" /> Situação relatada
+                    </div>
+                    <p className="text-xs leading-relaxed">{selectedProc?.situation}</p>
+                  </div>
+
+                  {/* Property details */}
+                  <div className="rounded-xl bg-surface p-3 space-y-1.5">
+                    <div className="mb-1 text-[10px] uppercase tracking-widest text-ink-soft">Dados do imóvel</div>
+                    <div className="flex items-center gap-2 text-xs text-ink-soft">
+                      <Building2 className="h-3 w-3 shrink-0" />
+                      <span>{selectedProc?.type}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-ink-soft">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span>{selectedProc?.city} · {selectedProc?.state}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-ink-soft">
+                      <span className="h-3 w-3 shrink-0 text-center text-[10px]">m²</span>
+                      <span>{selectedProc?.area.toLocaleString("pt-BR")} m²</span>
+                    </div>
+                  </div>
+
+                  {/* Contact */}
+                  <div className="rounded-xl bg-surface p-3 space-y-1.5">
+                    <div className="mb-1 text-[10px] uppercase tracking-widest text-ink-soft">Contato</div>
+                    <div className="flex items-center gap-2 text-xs text-ink-soft">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      <span>{selectedProc?.clientPhone}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-ink-soft">
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{selectedProc?.clientEmail}</span>
+                    </div>
+                  </div>
+
+                  {/* Timeline / stage progress */}
+                  <div className="rounded-xl bg-surface p-3">
+                    <div className="mb-2 text-[10px] uppercase tracking-widest text-ink-soft">Progresso</div>
+                    <div className="space-y-1.5">
+                      {STAGE_DEFS.map((s) => {
+                        const done = selectedId ? isDone(selectedId!, s.num) : false;
+                        const active = s.num === activeStage && !done;
+                        return (
+                          <div key={s.num} className="flex items-center gap-2 text-xs">
+                            <div className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-medium ${
+                              done ? "bg-accent/15 text-accent" : active ? "bg-foreground text-background" : "bg-background ring-1 ring-border text-ink-soft"
+                            }`}>
+                              {done ? <Check className="h-3 w-3" /> : s.num}
+                            </div>
+                            <span className={done ? "text-foreground" : "text-ink-soft"}>{s.label}</span>
+                            {done && <span className="ml-auto text-[10px] text-accent">✓</span>}
+                            {active && <span className="ml-auto text-[10px] text-ink-soft">em andamento</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Private notes */}
+                  <div className="rounded-xl bg-surface p-3">
+                    <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-soft">
+                      <StickyNote className="h-3 w-3" /> Notas privadas
+                    </div>
+                    {selectedId && privateNotes[selectedId] && (
+                      <p className="mb-2 text-xs leading-relaxed text-foreground whitespace-pre-wrap">
+                        {privateNotes[selectedId]}
+                      </p>
+                    )}
+                    <textarea
+                      rows={3}
+                      placeholder="Anotações internas, próximos passos, observações..."
+                      value={noteInput}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none resize-none focus:border-foreground/30 placeholder:text-ink-soft/50"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!selectedId || !noteInput.trim()) return;
+                        const combined = [
+                          privateNotes[selectedId] ?? "",
+                          noteInput.trim(),
+                        ].filter(Boolean).join("\n\n");
+                        setPrivateNotes((prev) => {
+                          const next = { ...prev, [selectedId!]: combined };
+                          storeSet("rz-private-notes", next);
+                          return next;
+                        });
+                        setNoteInput("");
+                      }}
+                      disabled={!noteInput.trim()}
+                      className="mt-1.5 w-full rounded-lg bg-foreground py-1.5 text-xs text-background disabled:opacity-40 hover:bg-foreground/90 transition-colors"
+                    >
+                      Salvar nota
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Tab: Docs */}
               {rightTab === "docs" && (
