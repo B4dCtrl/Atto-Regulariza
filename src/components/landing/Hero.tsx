@@ -19,67 +19,83 @@ const fade = {
 
 export function Hero() {
   return (
+    /*
+     * Card da hero — cor ligeiramente mais forte que o creme do site,
+     * cantos arredondados apenas embaixo, como o Tailark.
+     * O vídeo e as linhas topográficas ficam numa camada z-0 (não -z-10),
+     * evitando o bug de ficar coberto pelo background-color.
+     */
     <section
-      className="relative w-full overflow-hidden"
-      style={{ minHeight: "max(92dvh, 640px)" }}
+      className="relative mx-3 sm:mx-4 overflow-hidden rounded-b-[2.5rem] sm:rounded-b-[3.5rem]"
+      style={{
+        minHeight: "max(92dvh, 640px)",
+        backgroundColor: "oklch(0.91 0.03 68)",
+      }}
       aria-label="Apresentação principal"
     >
-      {/* Video Background — placeholder para seu vídeo */}
+      {/* ── Camada de fundo: vídeo + overlay + GLSLHills ── */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
       >
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="h-full w-full object-cover opacity-40"
+          className="h-full w-full object-cover opacity-[0.28]"
           src="https://videos.pexels.com/video-files/35968183/15249566_1920_1080_30fps.mp4"
         />
-        {/* Overlay escuro */}
-        <div className="absolute inset-0 bg-black/40" />
-        {/* Linhas topográficas animadas — transparentes sobre o vídeo */}
+        {/* Overlay suave */}
+        <div className="absolute inset-0 bg-black/20" />
+        {/* Linhas topográficas animadas */}
         <div
-          aria-hidden
-          className="absolute inset-0 opacity-70"
+          className="absolute inset-0 opacity-60"
           style={{
-            maskImage: "radial-gradient(ellipse 90% 70% at 50% 50%, black 30%, transparent 100%)",
-            WebkitMaskImage: "radial-gradient(ellipse 90% 70% at 50% 50%, black 30%, transparent 100%)",
+            maskImage:
+              "radial-gradient(ellipse 90% 70% at 50% 50%, black 30%, transparent 100%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 90% 70% at 50% 50%, black 30%, transparent 100%)",
           }}
         >
-          <GLSLHills width="100%" height="100%" cameraZ={140} planeSize={256} speed={0.18} />
+          <GLSLHills
+            width="100%"
+            height="100%"
+            cameraZ={140}
+            planeSize={256}
+            speed={0.18}
+          />
         </div>
       </div>
 
       {/* Brilho radial quente no topo */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
+        className="pointer-events-none absolute inset-0 z-[1]"
         style={{
           backgroundImage:
-            "radial-gradient(60% 50% at 50% 18%, oklch(0.66 0.18 38 / 0.08), transparent 70%)",
+            "radial-gradient(60% 50% at 50% 18%, oklch(0.66 0.18 38 / 0.10), transparent 70%)",
         }}
       />
 
-      {/* Content */}
-      <div className="mx-auto flex min-h-[max(92dvh,640px)] max-w-3xl flex-col items-center justify-center px-6 pb-20 pt-28 text-center">
+      {/* ── Conteúdo ── */}
+      <div className="relative z-10 mx-auto flex min-h-[max(92dvh,640px)] max-w-3xl flex-col items-center justify-center px-6 pb-20 pt-28 text-center">
         {/* Badge */}
         <motion.div
           custom={0}
           initial="hidden"
           animate="show"
           variants={fade}
-          className="mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs text-ink-soft"
+          className="mb-7 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/5 px-3 py-1 text-xs text-foreground/60"
         >
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
           Disponível em 118 cidades brasileiras
         </motion.div>
 
         {/* Headline com WordScramble */}
-        <h1 className="font-serif text-[clamp(2.5rem,7vw,5.5rem)] leading-[0.98] tracking-tight text-balance">
+        <h1 className="font-serif text-[clamp(2.5rem,7vw,5.5rem)] leading-[0.98] tracking-tight text-balance text-foreground">
           Regularize seu imóvel em semanas,{" "}
-          <em className="italic text-ink-soft">
+          <em className="italic text-foreground/55">
             não em{" "}
             <WordScrambleText words={["meses", "anos"]} startDelay={700} hold={5000} />
             .
@@ -92,7 +108,7 @@ export function Hero() {
           initial="hidden"
           animate="show"
           variants={fade}
-          className="mt-7 max-w-xl text-balance text-base leading-relaxed text-ink-soft sm:text-lg"
+          className="mt-7 max-w-xl text-balance text-base leading-relaxed text-foreground/60 sm:text-lg"
         >
           Imóvel irregular trava venda, herança e financiamento. A gente
           cuida de tudo — docs, cartório e prefeitura — enquanto você
@@ -126,7 +142,7 @@ export function Hero() {
             <Link
               to="/precos"
               data-cursor="expand"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-6 py-3 text-base text-foreground transition-all hover:border-foreground/30"
+              className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/5 px-6 py-3 text-base text-foreground transition-all hover:border-foreground/30 hover:bg-foreground/10"
             >
               <MessageCircle className="h-4 w-4" />
               Ver planos
@@ -147,7 +163,7 @@ export function Hero() {
             { label: "3,2× mais rápido" },
             { label: "4,9/5 satisfação" },
           ].map((item) => (
-            <div key={item.label} className="text-sm text-ink-soft">
+            <div key={item.label} className="text-sm text-foreground/50">
               ✓ {item.label}
             </div>
           ))}

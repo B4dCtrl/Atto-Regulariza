@@ -1,12 +1,12 @@
 import { BookOpen, Compass, Cpu, Gavel, ShieldCheck, Landmark } from "lucide-react";
 
 const logos = [
-  { name: "RI Digital",        full: "Registro de Imóveis Digital",        Icon: BookOpen,    color: "#1a4a8a" },
-  { name: "CAU/BR",            full: "Conselho de Arquitetura e Urbanismo", Icon: Compass,     color: "#005c4b" },
-  { name: "CREA",              full: "Conselho de Engenharia",              Icon: Cpu,         color: "#b03800" },
-  { name: "OAB",               full: "Ordem dos Advogados do Brasil",       Icon: Gavel,       color: "#1a3a6a" },
-  { name: "Receita Federal",   full: "Receita Federal do Brasil",           Icon: ShieldCheck, color: "#1a5c2a" },
-  { name: "Prefeitura Digital",full: "Serviços Municipais Online",          Icon: Landmark,    color: "#5a1a4a" },
+  { name: "RI Digital",         full: "Registro de Imóveis Digital",        Icon: BookOpen,    color: "#1a4a8a" },
+  { name: "CAU/BR",             full: "Conselho de Arquitetura e Urbanismo", Icon: Compass,     color: "#005c4b" },
+  { name: "CREA",               full: "Conselho de Engenharia",              Icon: Cpu,         color: "#b03800" },
+  { name: "OAB",                full: "Ordem dos Advogados do Brasil",       Icon: Gavel,       color: "#1a3a6a" },
+  { name: "Receita Federal",    full: "Receita Federal do Brasil",           Icon: ShieldCheck, color: "#1a5c2a" },
+  { name: "Prefeitura Digital", full: "Serviços Municipais Online",          Icon: Landmark,    color: "#5a1a4a" },
 ];
 
 function LogoCard({ logo }: { logo: (typeof logos)[number] }) {
@@ -31,6 +31,36 @@ function LogoCard({ logo }: { logo: (typeof logos)[number] }) {
   );
 }
 
+/* Efeito portal: blur + fade de cor nas bordas */
+function PortalEdge({ side }: { side: "left" | "right" }) {
+  const dir = side === "left" ? "to right" : "to left";
+  return (
+    <>
+      {/* Camada 1: fade de cor (itens somem na cor do fundo) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 z-20 w-40"
+        style={{
+          [side]: 0,
+          background: `linear-gradient(${dir}, var(--background) 25%, transparent 100%)`,
+        }}
+      />
+      {/* Camada 2: blur crescente na borda (efeito portal) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 z-20 w-28"
+        style={{
+          [side]: 0,
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          maskImage: `linear-gradient(${dir}, black 30%, transparent 100%)`,
+          WebkitMaskImage: `linear-gradient(${dir}, black 30%, transparent 100%)`,
+        }}
+      />
+    </>
+  );
+}
+
 const row2 = [...logos].reverse();
 
 export function LogoBar() {
@@ -52,16 +82,17 @@ export function LogoBar() {
       `}</style>
 
       {/* Cabeçalho */}
-      <div className="mx-auto mb-6 max-w-7xl px-6 text-center lg:px-12">
-        <p className="mb-1 text-xs uppercase tracking-widest text-ink-soft">Integração com</p>
-        <h2 className="font-serif text-2xl tracking-tight">Diversos parceiros</h2>
+      <div className="mx-auto mb-7 max-w-7xl px-6 text-center lg:px-12">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-soft">
+          INTEGRAÇÃO
+        </p>
+        <p className="mt-0.5 text-sm text-ink-soft">com diversos parceiros</p>
       </div>
 
       {/* Fileira 1 — desliza para a esquerda */}
       <div className="relative flex overflow-hidden py-1">
-        {/* Fade edges */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-background to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-background to-transparent" />
+        <PortalEdge side="left" />
+        <PortalEdge side="right" />
         <div className="marquee-left flex gap-3 px-3">
           {[...logos, ...logos].map((logo, i) => (
             <LogoCard key={i} logo={logo} />
@@ -71,8 +102,8 @@ export function LogoBar() {
 
       {/* Fileira 2 — desliza para a direita */}
       <div className="relative mt-3 flex overflow-hidden py-1">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-20 bg-gradient-to-r from-background to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-20 bg-gradient-to-l from-background to-transparent" />
+        <PortalEdge side="left" />
+        <PortalEdge side="right" />
         <div className="marquee-right flex gap-3 px-3">
           {[...row2, ...row2].map((logo, i) => (
             <LogoCard key={i} logo={logo} />
