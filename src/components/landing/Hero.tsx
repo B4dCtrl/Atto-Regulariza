@@ -81,7 +81,7 @@ export function Hero() {
           Regularize seu imóvel em semanas,{" "}
           <em className="italic text-ink-soft">
             não em{" "}
-            <WordScrambleText words={["dias", "meses", "anos"]} startDelay={700} hold={900} />
+            <WordScrambleText words={["meses", "anos"]} startDelay={700} hold={1200} />
             .
           </em>
         </h1>

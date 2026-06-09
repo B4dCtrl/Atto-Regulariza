@@ -120,6 +120,21 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Scripts />
+        {/* Allmo Consent — gerenciador LGPD de cookies */}
+        <script
+          src="https://lwlniuqzicncramyyvut.supabase.co/storage/v1/object/public/cdn/consent/v1.js"
+          defer
+          data-allmo-consent=""
+          data-client="ato-regulariza"
+          data-tone="tecnico"
+          data-categories="analytics,functional,marketing"
+          data-cookies-policy-url="/politica-de-cookies"
+          data-privacy-policy-url="/aviso-de-privacidade"
+          data-terms-url="/termos-de-uso"
+          data-policy-version="v1"
+          data-endpoint="https://lwlniuqzicncramyyvut.supabase.co/functions/v1/consent"
+          data-anon-key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3bG5pdXF6aWNuY3JhbXl5dnV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjk3OTIsImV4cCI6MjA5MjkwNTc5Mn0.7m4Q_fL24M8BgTQpTVQvlf6IZky4s5o8w4ZFEMLpjfg"
+        />
       </body>
     </html>
   );
