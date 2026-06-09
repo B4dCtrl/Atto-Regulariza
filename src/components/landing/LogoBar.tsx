@@ -9,109 +9,109 @@ const logos = [
   { name: "Prefeitura Digital", full: "Serviços Municipais Online",          Icon: Landmark,    color: "#5a1a4a" },
 ];
 
-function LogoCard({ logo }: { logo: (typeof logos)[number] }) {
+function LogoChip({ logo }: { logo: (typeof logos)[number] }) {
   return (
     <div
-      className="flex shrink-0 items-center gap-2.5 rounded-xl border border-border/50 bg-surface/30 px-4 py-2.5 backdrop-blur-sm transition-all hover:border-border hover:bg-surface/60"
-      style={{ minWidth: "168px" }}
+      className="flex shrink-0 items-center gap-2 rounded-xl border border-border/40 bg-surface/20 px-3.5 py-2 transition-all hover:border-border/70 hover:bg-surface/40"
+      style={{ minWidth: "148px" }}
     >
       <div
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
-        style={{ backgroundColor: `${logo.color}22` }}
+        className="grid h-7 w-7 shrink-0 place-items-center rounded-lg"
+        style={{ backgroundColor: `${logo.color}18` }}
       >
-        <logo.Icon className="h-4 w-4" style={{ color: logo.color }} />
+        <logo.Icon className="h-3.5 w-3.5" style={{ color: logo.color }} />
       </div>
-      <div className="min-w-0">
-        <div className="text-xs font-medium text-foreground truncate">{logo.name}</div>
-        <div className="text-[10px] text-ink-soft truncate">
-          {logo.full.split(" ").slice(0, 3).join(" ")}
-        </div>
-      </div>
+      <span className="text-xs font-medium text-foreground/70 truncate">
+        {logo.name}
+      </span>
     </div>
   );
 }
 
-/* Efeito portal: blur + fade de cor nas bordas */
-function PortalEdge({ side }: { side: "left" | "right" }) {
-  const dir = side === "left" ? "to right" : "to left";
-  return (
-    <>
-      {/* Camada 1: fade de cor (itens somem na cor do fundo) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 z-20 w-40"
-        style={{
-          [side]: 0,
-          background: `linear-gradient(${dir}, var(--background) 25%, transparent 100%)`,
-        }}
-      />
-      {/* Camada 2: blur crescente na borda (efeito portal) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 z-20 w-28"
-        style={{
-          [side]: 0,
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-          maskImage: `linear-gradient(${dir}, black 30%, transparent 100%)`,
-          WebkitMaskImage: `linear-gradient(${dir}, black 30%, transparent 100%)`,
-        }}
-      />
-    </>
-  );
-}
-
-const row2 = [...logos].reverse();
-
 export function LogoBar() {
   return (
-    <section className="overflow-hidden bg-background py-10">
+    <section className="bg-background py-9">
       <style>{`
-        @keyframes marquee-left {
+        @keyframes ticker {
           from { transform: translateX(0); }
           to   { transform: translateX(-50%); }
         }
-        @keyframes marquee-right {
-          from { transform: translateX(-50%); }
-          to   { transform: translateX(0); }
+        .ticker-track {
+          animation: ticker 28s linear infinite;
+          will-change: transform;
         }
-        .marquee-left  { animation: marquee-left  30s linear infinite; }
-        .marquee-right { animation: marquee-right 24s linear infinite; }
-        .marquee-left:hover,
-        .marquee-right:hover { animation-play-state: paused; }
+        .ticker-track:hover { animation-play-state: paused; }
       `}</style>
 
-      {/* Cabeçalho */}
-      <div className="mx-auto mb-7 max-w-7xl px-6 text-center lg:px-12">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-soft">
-          INTEGRAÇÃO
-        </p>
-        <p className="mt-0.5 text-sm text-ink-soft">com diversos parceiros</p>
-      </div>
+      {/* Layout Tailark: label à esquerda + marquee preenche o resto */}
+      <div className="mx-auto max-w-7xl px-6 lg:px-12">
+        <div className="flex items-center gap-8">
 
-      {/* Fileira 1 — desliza para a esquerda */}
-      <div className="relative flex overflow-hidden py-1">
-        <PortalEdge side="left" />
-        <PortalEdge side="right" />
-        <div className="marquee-left flex gap-3 px-3">
-          {[...logos, ...logos].map((logo, i) => (
-            <LogoCard key={i} logo={logo} />
-          ))}
+          {/* Label — esquerda, estático */}
+          <div className="shrink-0 w-[130px] sm:w-[148px]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-soft leading-snug">
+              INTEGRAÇÃO
+            </p>
+            <p className="text-[11px] text-ink-soft/70 leading-snug mt-0.5">
+              com diversos parceiros
+            </p>
+          </div>
+
+          {/* Separador vertical */}
+          <div className="h-8 w-px shrink-0 bg-border/50" />
+
+          {/* Marquee + portais de blur */}
+          <div className="relative flex-1 overflow-hidden">
+
+            {/* Portal esquerdo — blur + fade na cor do fundo */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24"
+              style={{
+                backdropFilter: "blur(5px)",
+                WebkitBackdropFilter: "blur(5px)",
+                maskImage: "linear-gradient(to right, black 25%, transparent 100%)",
+                WebkitMaskImage: "linear-gradient(to right, black 25%, transparent 100%)",
+              }}
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-28"
+              style={{
+                background: "linear-gradient(to right, var(--background) 30%, transparent 100%)",
+              }}
+            />
+
+            {/* Portal direito */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24"
+              style={{
+                backdropFilter: "blur(5px)",
+                WebkitBackdropFilter: "blur(5px)",
+                maskImage: "linear-gradient(to left, black 25%, transparent 100%)",
+                WebkitMaskImage: "linear-gradient(to left, black 25%, transparent 100%)",
+              }}
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-28"
+              style={{
+                background: "linear-gradient(to left, var(--background) 30%, transparent 100%)",
+              }}
+            />
+
+            {/* Faixa de logos em loop */}
+            <div className="ticker-track flex gap-3 py-1">
+              {[...logos, ...logos, ...logos].map((logo, i) => (
+                <LogoChip key={i} logo={logo} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Fileira 2 — desliza para a direita */}
-      <div className="relative mt-3 flex overflow-hidden py-1">
-        <PortalEdge side="left" />
-        <PortalEdge side="right" />
-        <div className="marquee-right flex gap-3 px-3">
-          {[...row2, ...row2].map((logo, i) => (
-            <LogoCard key={i} logo={logo} />
-          ))}
-        </div>
-      </div>
-
-      {/* Divider */}
+      {/* Divisor */}
       <div className="mx-auto mt-8 max-w-7xl px-6 lg:px-12">
         <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
