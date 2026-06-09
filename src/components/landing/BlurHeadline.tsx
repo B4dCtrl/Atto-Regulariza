@@ -1,7 +1,5 @@
-import { motion, useScroll, useTransform, useInView } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { LiquidGlassSurface } from "@/components/ui/liquid-glass-surface";
-import { BlurReveal } from "@/components/landing/BlurReveal";
 import {
   ArrowRight, Building2, FileCheck2, Check,
   FileText, Stamp, KeyRound,
@@ -13,25 +11,8 @@ export function BlurHeadline() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start 85%", "center 35%"],
-  });
-
-  const blur   = useTransform(scrollYProgress, [0, 0.85], [5, 0]);
-  const opacity = useTransform(scrollYProgress, [0, 0.85], [0, 1]);
-  const y      = useTransform(scrollYProgress, [0, 0.85], [20, 0]);
-  const filter = useTransform(blur, (b) => `blur(${b}px)`);
-
   return (
-    <LiquidGlassSurface
-      blur={13}
-      saturate={135}
-      brightness={1}
-      glassColor="oklch(from var(--background) l c h / 10%)"
-      refraction={0}
-      className="mx-4 my-12 rounded-3xl sm:mx-8 sm:my-16"
-    >
+    <div className="mx-4 my-12 rounded-3xl sm:mx-8 sm:my-16">
       <div ref={ref} id="produto" className="px-6 pb-16 pt-16 sm:pb-20 sm:pt-20">
 
         {/* ── Headline ── */}
@@ -56,7 +37,9 @@ export function BlurHeadline() {
               Do caos dos cartórios
             </motion.span>{" "}
             <motion.span
-              style={{ filter, opacity, y }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
               className="inline-block text-ink-soft"
             >
               a um fluxo que você acompanha em tempo real.
@@ -69,7 +52,7 @@ export function BlurHeadline() {
           <div className="grid gap-6 md:grid-cols-3">
 
             {/* Card 1 — Imóvel */}
-            <BlurReveal className="flex flex-col">
+            <div className="flex flex-col">
               <div className="rounded-3xl bg-surface-elevated p-6 ring-1 ring-border/70 shadow-[0_30px_60px_-30px_oklch(0.16_0.01_60_/_0.25)]">
                 <div className="flex items-center justify-between border-b border-border pb-4">
                   <div className="flex items-center gap-3">
@@ -106,10 +89,10 @@ export function BlurHeadline() {
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                 Documentos, prazos e responsáveis do seu imóvel — sempre à mão.
               </p>
-            </BlurReveal>
+            </div>
 
             {/* Card 2 — Timeline */}
-            <BlurReveal className="flex flex-col">
+            <div className="flex flex-col">
               <div className="rounded-3xl bg-surface-elevated p-6 ring-1 ring-border/70 shadow-[0_30px_60px_-30px_oklch(0.16_0.01_60_/_0.25)]">
                 <div className="space-y-3">
                   {[
@@ -141,10 +124,10 @@ export function BlurHeadline() {
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                 Cada etapa visível em tempo real, com prazo e responsável.
               </p>
-            </BlurReveal>
+            </div>
 
             {/* Card 3 — Chat */}
-            <BlurReveal className="flex flex-col">
+            <div className="flex flex-col">
               <div className="rounded-3xl bg-surface-elevated p-6 ring-1 ring-border/70 shadow-[0_30px_60px_-30px_oklch(0.16_0.01_60_/_0.25)]">
                 <div className="flex flex-col gap-3">
                   <div className="max-w-[80%] self-start rounded-2xl rounded-bl-md bg-surface px-4 py-2.5 text-sm">
@@ -166,12 +149,12 @@ export function BlurHeadline() {
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
                 Resposta humana no chat, sem juridiquês e sem espera.
               </p>
-            </BlurReveal>
+            </div>
 
           </div>
         </div>
 
       </div>
-    </LiquidGlassSurface>
+    </div>
   );
 }
