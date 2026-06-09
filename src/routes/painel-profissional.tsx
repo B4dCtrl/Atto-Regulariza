@@ -124,7 +124,30 @@ function ProfissionalPage() {
     return () => { supabase.removeChannel(channel); };
   }, [selectedId]);
 
-  /* ── Advance stage ── */
+  /* ── Recalculate property progress after any stage change ── */
+  const recalcProgress = async (stageId: string, newState: string) => {
+    const stageNow = stages.find((s) => s.id === stageId);
+    if (!stageNow || !selectedProp) return;
+
+    // Count done stages, treating the current stage with its new state
+    const doneCount = stages.filter((s) => {
+      if (s.id === stageId) return newState === "done";
+      return s.state === "done";
+    }).length;
+
+    const progress     = Math.round((doneCount / 5) * 100);
+    const currentStage = stages.find((s) => s.state !== "done" && s.id !== stageId || (s.id === stageId && newState !== "done"))?.stage_number ?? 5;
+    const allDone      = stages.every((s) => s.id === stageId ? newState === "done" : s.state === "done");
+
+    await supabase.from("properties").update({
+      progress,
+      current_stage: Math.max(1, currentStage),
+      status: allDone ? "entregue" : selectedProp.status === "entregue" ? "profissional" : selectedProp.status,
+      updated_at: new Date().toISOString(),
+    }).eq("id", selectedId!);
+  };
+
+  /* ── Advance stage (pending → active → done) ── */
   const advanceStage = async (stage: StageRow) => {
     if (stage.state === "done") return;
     const newState = stage.state === "pending" ? "active" : "done";
@@ -133,20 +156,19 @@ function ProfissionalPage() {
       completed_at: newState === "done" ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     }).eq("id", stage.id);
+    await recalcProgress(stage.id, newState);
+  };
 
-    // Update property progress
-    const stageNow = stages.find((s) => s.id === stage.id);
-    if (stageNow && selectedProp) {
-      const doneCount = stages.filter((s) => s.state === "done" || (s.id === stage.id && newState === "done")).length;
-      const progress  = Math.round((doneCount / 5) * 100);
-      const currentStage = newState === "done" ? Math.min(stageNow.stage_number + 1, 5) : stageNow.stage_number;
-      await supabase.from("properties").update({
-        progress,
-        current_stage: currentStage,
-        status: newState === "done" && stageNow.stage_number === 5 ? "entregue" : selectedProp.status,
-        updated_at: new Date().toISOString(),
-      }).eq("id", selectedId!);
-    }
+  /* ── Revert stage (done → active → pending) — sempre disponível ── */
+  const revertStage = async (stage: StageRow) => {
+    if (stage.state === "pending") return;
+    const newState = stage.state === "done" ? "active" : "pending";
+    await supabase.from("process_stages").update({
+      state: newState,
+      completed_at: null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", stage.id);
+    await recalcProgress(stage.id, newState);
   };
 
   /* ── Approve document ── */
@@ -342,15 +364,26 @@ function ProfissionalPage() {
                                   {s.state === "done" ? "Concluído" : s.state === "active" ? "Em andamento" : "Aguardando"}
                                 </div>
                               </div>
-                              {s.state !== "done" && (
-                                <button
-                                  onClick={() => advanceStage(s)}
-                                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-ink-soft hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
-                                >
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  {s.state === "pending" ? "Iniciar" : "Concluir"}
-                                </button>
-                              )}
+                              <div className="flex shrink-0 items-center gap-2">
+                                {s.state !== "done" && (
+                                  <button
+                                    onClick={() => advanceStage(s)}
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-ink-soft hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {s.state === "pending" ? "Iniciar" : "Concluir"}
+                                  </button>
+                                )}
+                                {s.state !== "pending" && (
+                                  <button
+                                    onClick={() => revertStage(s)}
+                                    title="Desfazer etapa"
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-ink-soft hover:bg-surface hover:border-foreground/30 transition-colors"
+                                  >
+                                    ↩ Desfazer
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>

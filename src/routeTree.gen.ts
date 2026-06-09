@@ -24,8 +24,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as PrecosInstitucionalRouteImport } from './routes/precos/institucional'
 import { Route as AdminProcessosRouteImport } from './routes/admin/processos'
+import { Route as AdminFinanceiroRouteImport } from './routes/admin/financeiro'
 import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
+import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/cadastro-profissional'
+import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
 
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   id: '/termos-de-uso',
@@ -102,6 +105,11 @@ const AdminProcessosRoute = AdminProcessosRouteImport.update({
   path: '/processos',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFinanceiroRoute = AdminFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminDocumentosRoute = AdminDocumentosRouteImport.update({
   id: '/documentos',
   path: '/documentos',
@@ -110,6 +118,17 @@ const AdminDocumentosRoute = AdminDocumentosRouteImport.update({
 const AdminClientesRoute = AdminClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCadastroProfissionalRoute =
+  AdminCadastroProfissionalRouteImport.update({
+    id: '/cadastro-profissional',
+    path: '/cadastro-profissional',
+    getParentRoute: () => AdminRoute,
+  } as any)
+const AdminCadastroClienteRoute = AdminCadastroClienteRouteImport.update({
+  id: '/cadastro-cliente',
+  path: '/cadastro-cliente',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -126,8 +145,11 @@ export interface FileRoutesByFullPath {
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
+  '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
+  '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
@@ -144,8 +166,11 @@ export interface FileRoutesByTo {
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
+  '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
+  '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin': typeof AdminIndexRoute
@@ -164,8 +189,11 @@ export interface FileRoutesById {
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
+  '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/documentos': typeof AdminDocumentosRoute
+  '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
@@ -185,8 +213,11 @@ export interface FileRouteTypes {
     | '/precos'
     | '/profissionais'
     | '/termos-de-uso'
+    | '/admin/cadastro-cliente'
+    | '/admin/cadastro-profissional'
     | '/admin/clientes'
     | '/admin/documentos'
+    | '/admin/financeiro'
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
@@ -203,8 +234,11 @@ export interface FileRouteTypes {
     | '/precos'
     | '/profissionais'
     | '/termos-de-uso'
+    | '/admin/cadastro-cliente'
+    | '/admin/cadastro-profissional'
     | '/admin/clientes'
     | '/admin/documentos'
+    | '/admin/financeiro'
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin'
@@ -222,8 +256,11 @@ export interface FileRouteTypes {
     | '/precos'
     | '/profissionais'
     | '/termos-de-uso'
+    | '/admin/cadastro-cliente'
+    | '/admin/cadastro-profissional'
     | '/admin/clientes'
     | '/admin/documentos'
+    | '/admin/financeiro'
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
@@ -351,6 +388,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProcessosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/financeiro': {
+      id: '/admin/financeiro'
+      path: '/financeiro'
+      fullPath: '/admin/financeiro'
+      preLoaderRoute: typeof AdminFinanceiroRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/documentos': {
       id: '/admin/documentos'
       path: '/documentos'
@@ -365,19 +409,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClientesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/cadastro-profissional': {
+      id: '/admin/cadastro-profissional'
+      path: '/cadastro-profissional'
+      fullPath: '/admin/cadastro-profissional'
+      preLoaderRoute: typeof AdminCadastroProfissionalRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/cadastro-cliente': {
+      id: '/admin/cadastro-cliente'
+      path: '/cadastro-cliente'
+      fullPath: '/admin/cadastro-cliente'
+      preLoaderRoute: typeof AdminCadastroClienteRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminCadastroClienteRoute: typeof AdminCadastroClienteRoute
+  AdminCadastroProfissionalRoute: typeof AdminCadastroProfissionalRoute
   AdminClientesRoute: typeof AdminClientesRoute
   AdminDocumentosRoute: typeof AdminDocumentosRoute
+  AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminProcessosRoute: typeof AdminProcessosRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCadastroClienteRoute: AdminCadastroClienteRoute,
+  AdminCadastroProfissionalRoute: AdminCadastroProfissionalRoute,
   AdminClientesRoute: AdminClientesRoute,
   AdminDocumentosRoute: AdminDocumentosRoute,
+  AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminProcessosRoute: AdminProcessosRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -412,13 +476,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
