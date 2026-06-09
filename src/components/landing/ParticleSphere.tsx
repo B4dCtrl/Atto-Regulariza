@@ -3,13 +3,9 @@ import * as THREE from "three";
 
 /* ─── Constantes ─────────────────────────────────────────────────────────── */
 const N        = 6000;
-const HOLD_MS  = 3000;
-const MORPH_MS = 1400;
+const HOLD_MS  = 2500;  // ms estático em cada shape
+const MORPH_MS = 900;   // ~1 s de transição
 const CYCLE_MS = (HOLD_MS + MORPH_MS) * 4;
-
-// Proporção de partículas: 65% no traçado do ícone, 35% no halo ao redor
-const N_PATH  = Math.floor(N * 0.65); // 3900 — formam as linhas do ícone
-const N_HALO  = N - N_PATH;           // 2100 — nuvem difusa (some via shader)
 
 /* ─── Easing ─────────────────────────────────────────────────────────────── */
 function easeInOutCubic(t: number): number {
@@ -17,7 +13,7 @@ function easeInOutCubic(t: number): number {
 }
 
 /* ─── Distribui N pontos uniformemente ao longo de segmentos de reta ────── */
-function sampleLines(segs: number[][], n: number, zJitter = 0.07): Float32Array {
+function sampleLines(segs: number[][], n: number, zJitter = 0.04): Float32Array {
   const lens   = segs.map(([x1, y1, x2, y2]) => Math.hypot(x2 - x1, y2 - y1));
   const cumLen = [0];
   for (const l of lens) cumLen.push(cumLen[cumLen.length - 1] + l);
@@ -34,40 +30,16 @@ function sampleLines(segs: number[][], n: number, zJitter = 0.07): Float32Array 
     }
     const [x1, y1, x2, y2] = segs[lo];
     const t = lens[lo] > 1e-6 ? Math.min((r - cumLen[lo]) / lens[lo], 1) : 0;
-    out[i * 3]     = x1 + t * (x2 - x1) + (Math.random() - 0.5) * 0.04;
-    out[i * 3 + 1] = y1 + t * (y2 - y1) + (Math.random() - 0.5) * 0.04;
+    out[i * 3]     = x1 + t * (x2 - x1) + (Math.random() - 0.5) * 0.025;
+    out[i * 3 + 1] = y1 + t * (y2 - y1) + (Math.random() - 0.5) * 0.025;
     out[i * 3 + 2] = (Math.random() - 0.5) * zJitter;
   }
   return out;
 }
 
-/* ─── Nuvem halo ao redor dos ícones planos ─────────────────────────────────
- * Partículas espalhadas em 3D ao redor do ícone, levemente achatadas em Z.
- * O shader vFade (smoothstep 2→4.8) cuida da transparência naturalmente:
- * dist < 2 → opaco, dist > 4.8 → invisível, entre → fade.               */
-function buildHalo(n: number): Float32Array {
-  const out = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi   = Math.acos(2 * Math.random() - 1);
-    const r     = 2.1 + Math.random() * 2.0;   // 2.1 – 4.1 da origem
-    out[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
-    out[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    out[i * 3 + 2] = r * Math.cos(phi) * 0.35; // achatado em Z (35%)
-  }
-  return out;
-}
-
-/* ─── Combina traçado + halo numa única Float32Array ─────────────────────── */
-function withHalo(pathBuf: Float32Array): Float32Array {
-  const out = new Float32Array(N * 3);
-  out.set(pathBuf, 0);
-  out.set(buildHalo(N_HALO), N_PATH * 3);
-  return out;
-}
-
 /* ─── Shape builders ─────────────────────────────────────────────────────── */
 
+/** Esfera 3D com névoa — 76% casca + 24% nuvem dispersa */
 function buildSphere(n: number): Float32Array {
   const out  = new Float32Array(n * 3);
   const SURF = Math.floor(n * 0.76);
@@ -84,10 +56,11 @@ function buildSphere(n: number): Float32Array {
   return out;
 }
 
-function buildHouse(): Float32Array {
-  return withHalo(sampleLines([
-    [-1.6,  0.05,   0.0,  1.78],   // telhado esquerda
-    [ 0.0,  1.78,   1.6,  0.05],   // telhado direita
+/** Casa — todas as 6000 partículas nos traçados = linhas densas e contrastadas */
+function buildHouse(n: number): Float32Array {
+  return sampleLines([
+    [-1.6,  0.05,   0.0,  1.78],   // telhado esq
+    [ 0.0,  1.78,   1.6,  0.05],   // telhado dir
     [ 0.65, 1.15,   0.65, 1.88],   // chaminé esq
     [ 0.65, 1.88,   1.05, 1.88],   // chaminé topo
     [ 1.05, 1.88,   1.05, 1.02],   // chaminé dir
@@ -97,49 +70,48 @@ function buildHouse(): Float32Array {
     [-0.44,-1.85,  -0.44,-0.82],   // porta esq
     [-0.44,-0.82,   0.44,-0.82],   // porta topo
     [ 0.44,-0.82,   0.44,-1.85],   // porta dir
-  ], N_PATH, 0.06));
+  ], n, 0.04);
 }
 
-function buildDocument(): Float32Array {
-  return withHalo(sampleLines([
+/** Documento — todas as 6000 partículas nos traçados */
+function buildDocument(n: number): Float32Array {
+  return sampleLines([
     [-1.1,  1.55,  -1.1, -1.72],   // lateral esq
     [-1.1, -1.72,   1.1, -1.72],   // base
-    [ 1.1, -1.72,   1.1,  1.05],   // lateral dir (até vinco)
-    [-1.1,  1.55,   0.58, 1.55],   // topo (até canto dobrado)
+    [ 1.1, -1.72,   1.1,  1.05],   // lateral dir
+    [-1.1,  1.55,   0.58, 1.55],   // topo
     [ 0.58, 1.55,   1.1,  1.05],   // corte diagonal
     [ 0.58, 1.55,   0.58, 1.05],   // vinco vertical
     [ 0.58, 1.05,   1.1,  1.05],   // vinco horizontal
-    [-0.75, 0.82,   0.75, 0.82],   // linha texto 1
-    [-0.75, 0.42,   0.75, 0.42],   // linha texto 2
-    [-0.75, 0.02,   0.75, 0.02],   // linha texto 3
-    [-0.75,-0.38,   0.75,-0.38],   // linha texto 4
-    [-0.75,-0.78,   0.75,-0.78],   // linha texto 5
-    [-0.75,-1.18,   0.42,-1.18],   // linha texto 6 (curta)
-  ], N_PATH, 0.06));
+    [-0.75, 0.82,   0.75, 0.82],   // texto 1
+    [-0.75, 0.42,   0.75, 0.42],   // texto 2
+    [-0.75, 0.02,   0.75, 0.02],   // texto 3
+    [-0.75,-0.38,   0.75,-0.38],   // texto 4
+    [-0.75,-0.78,   0.75,-0.78],   // texto 5
+    [-0.75,-1.18,   0.42,-1.18],   // texto 6
+  ], n, 0.04);
 }
 
-function buildCheck(): Float32Array {
-  const nCircle = Math.round(N_PATH * 0.60);
-  const nMark   = N_PATH - nCircle;
-  const pathBuf = new Float32Array(N_PATH * 3);
+/** Checkmark — todas as 6000 partículas no círculo + ✓ */
+function buildCheck(n: number): Float32Array {
+  const nCircle = Math.round(n * 0.60);
+  const nMark   = n - nCircle;
+  const out     = new Float32Array(n * 3);
   const R       = 1.72;
 
-  // Círculo
   for (let i = 0; i < nCircle; i++) {
     const a = Math.random() * Math.PI * 2;
-    pathBuf[i * 3]     = Math.cos(a) * R + (Math.random() - 0.5) * 0.04;
-    pathBuf[i * 3 + 1] = Math.sin(a) * R + (Math.random() - 0.5) * 0.04;
-    pathBuf[i * 3 + 2] = (Math.random() - 0.5) * 0.06;
+    out[i * 3]     = Math.cos(a) * R + (Math.random() - 0.5) * 0.025;
+    out[i * 3 + 1] = Math.sin(a) * R + (Math.random() - 0.5) * 0.025;
+    out[i * 3 + 2] = (Math.random() - 0.5) * 0.04;
   }
 
-  // Checkmark ✓
-  const markLines = sampleLines([
+  const mark = sampleLines([
     [-0.88, -0.12,  -0.14, -0.88],
     [-0.14, -0.88,   0.88,  0.68],
-  ], nMark, 0.09);
-  pathBuf.set(markLines, nCircle * 3);
-
-  return withHalo(pathBuf);
+  ], nMark, 0.05);
+  out.set(mark, nCircle * 3);
+  return out;
 }
 
 /* ─── Componente ─────────────────────────────────────────────────────────── */
@@ -152,9 +124,9 @@ export function ParticleSphere() {
 
     const phases = [
       buildSphere(N),
-      buildHouse(),
-      buildDocument(),
-      buildCheck(),
+      buildHouse(N),
+      buildDocument(N),
+      buildCheck(N),
     ] as const;
 
     const workBuf = phases[0].slice();
@@ -183,6 +155,8 @@ export function ParticleSphere() {
         varying float vFade;
         void main() {
           float dist = length(position);
+          // Esfera: névoa some gradualmente (dist 2→4.8)
+          // Ícones 2D: dist ≤ 2 → vFade ≈ 1 → totalmente opacos
           vFade = 1.0 - smoothstep(2.0, 4.8, dist);
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           float sz = 260.0 / -mv.z;
@@ -196,7 +170,7 @@ export function ParticleSphere() {
           vec2 c = 2.0 * gl_PointCoord - 1.0;
           if (dot(c, c) > 1.0) discard;
           vec3 col = vec3(0.130, 0.102, 0.071);
-          gl_FragColor = vec4(col, vFade * 0.85);
+          gl_FragColor = vec4(col, vFade * 0.90);
         }
       `,
       transparent: true,
@@ -210,7 +184,7 @@ export function ParticleSphere() {
     /* Loop */
     let lastT  = performance.now();
     let totalT = 0;
-    let rotY   = 0;
+    let rotY   = 0; // acumulador de rotação da esfera
     let raf: number;
 
     const resize = () => {
@@ -249,21 +223,28 @@ export function ParticleSphere() {
       }
       posAttr.needsUpdate = true;
 
-      /* Rotação:
-       * Fase 0 (esfera)  → gira 0.05 rad/s, desacelera ao sair
-       * Fases 1-2 (casa, doc) → paradas (0)
-       * Fase 3 (check→esfera) → acelera suavemente voltando à velocidade da esfera */
-      const rotSpd =
-        phaseIdx === 0               ? 0.05 * (1 - morphT * 0.96) :
-        phaseIdx === phases.length-1 ? morphT * morphT * 0.05      :
-        0;
-
-      rotY           += dt * rotSpd;
-      points.rotation.y = rotY;
-      // Balanço X só durante a esfera
-      points.rotation.x = phaseIdx === 0
-        ? Math.sin(totalT * 0.035) * 0.07 * (1 - morphT)
-        : 0;
+      /* ── Rotação ──────────────────────────────────────────────────────────
+       * APENAS a esfera (fase 0) gira.
+       * Durante morph esfera→casa: a rotação suaviza para 0 (× 1 - morphT²).
+       * Fases 1,2,3 (ícones planos): rotation.y = 0, acumulador zerado.
+       * Retorno check→esfera: acelera com ease-in quadrático.              */
+      if (phaseIdx === 0) {
+        // Esfera: acumula rotação, desacelera durante morph de saída
+        rotY += dt * 0.05 * (1 - morphT * 0.95);
+        // Suaviza para 0 ao terminar o morph (quadrático)
+        points.rotation.y = rotY * (1 - morphT * morphT);
+        points.rotation.x = Math.sin(totalT * 0.035) * 0.07 * (1 - morphT);
+      } else if (phaseIdx === phases.length - 1 && morphT > 0) {
+        // Check → Esfera: começa a acumular de novo com ease-in
+        rotY += dt * morphT * morphT * 0.05;
+        points.rotation.y = rotY;
+        points.rotation.x = 0;
+      } else {
+        // Casa / Documento / Check durante hold: completamente parados
+        rotY = 0;
+        points.rotation.y = 0;
+        points.rotation.x = 0;
+      }
 
       renderer.render(scene, camera);
     };
