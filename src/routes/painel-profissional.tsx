@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
   ChevronRight, FileText, MapPin, MessageSquare, Plus,
   Send, Upload, User, BookOpen, StickyNote,
-  AlertTriangle, Phone, Mail,
+  AlertTriangle, Phone, Mail, LayoutDashboard, Settings, BarChart3, LogOut,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,6 +23,7 @@ type Urgency = "alta" | "media" | "baixa";
 type FieldType = "text" | "textarea" | "date" | "number" | "select" | "checklist" | "checkbox";
 type FieldVal  = string | string[] | boolean;
 type RightTab  = "docs" | "chat" | "briefing";
+type MainSection = "processos" | "profile" | "stats" | "notificacoes" | "configuracoes";
 
 interface MockProcess {
   id: string;
@@ -171,6 +172,8 @@ const SEED_MSGS: Record<string, LocalMsg[]> = {
 
 /* ─────────────────────────────────────────────── Component */
 function ProfissionalPage() {
+  const navigate = useNavigate();
+  const [mainSection, setMainSection] = useState<MainSection>("processos");
   const [selectedId,  setSelectedId]  = useState<string | null>(null);
   const [activeStage, setActiveStage] = useState(1);
   const [rightTab,    setRightTab]    = useState<RightTab>("chat");
@@ -443,7 +446,7 @@ function ProfissionalPage() {
   return (
     <div className="min-h-screen bg-surface/50 text-foreground">
       {/* ── Topbar ── */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl h-14">
         <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
           {selectedProc ? (
             <button
