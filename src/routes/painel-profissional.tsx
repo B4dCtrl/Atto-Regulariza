@@ -456,7 +456,6 @@ function ProfissionalPage() {
           ) : (
             <Link to="/" className="flex items-center gap-2">
               <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-              <span className="font-serif text-xl tracking-tight hidden sm:inline">Ato Regulariza</span>
             </Link>
           )}
 

@@ -197,7 +197,6 @@ function DashboardContent() {
         <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2">
             <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-            <span className="font-serif text-xl tracking-tight hidden sm:inline">Ato Regulariza</span>
           </Link>
           <div className="h-5 w-px bg-border hidden sm:block" />
           <div className="flex items-center gap-2 text-sm">

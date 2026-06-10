@@ -73,7 +73,6 @@ export function AdminSidebar() {
             className="h-8 w-8 shrink-0 rounded-md object-contain"
           />
           <div className="overflow-hidden opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <div className="whitespace-nowrap font-serif text-lg leading-none tracking-tight">Ato Regulariza</div>
             <div className="mt-0.5 whitespace-nowrap text-[10px] uppercase tracking-widest text-ink-soft">
               Gestão
             </div>

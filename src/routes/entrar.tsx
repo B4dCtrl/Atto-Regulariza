@@ -185,7 +185,6 @@ function EntrarPage() {
 
         <Link to="/" className="relative flex items-center gap-2">
           <img src="/logo-ato.png" alt="Ato Regulariza" className="h-8 w-8 rounded-md object-contain" />
-          <span className="font-serif text-2xl">Ato Regulariza</span>
         </Link>
 
         <div className="relative">
@@ -225,7 +224,6 @@ function EntrarPage() {
           {/* Logo mobile */}
           <Link to="/" className="mb-8 flex items-center gap-2 md:hidden">
             <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-            <span className="font-serif text-xl">Ato Regulariza</span>
           </Link>
 
           {/* Título animado por mode */}
