@@ -87,8 +87,10 @@ export function Hero() {
             não em{" "}
             <WordScrambleText
               words={["meses", "anos"]}
-              startDelay={700}
-              hold={5000}
+              startDelay={600}
+              scrambleTime={180}
+              hold={2800}
+              loop
             />
             .
           </em>
