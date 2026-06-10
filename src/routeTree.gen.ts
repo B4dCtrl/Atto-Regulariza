@@ -31,6 +31,8 @@ import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/ca
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
 import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
 import { Route as AdminDocumentosPadraoRouteImport } from './routes/admin/documentos-padrao'
+import { Route as PerfilRouteImport } from './routes/perfil'
+import { Route as PerfilProfissionalRouteImport } from './routes/perfil-profissional'
 
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   id: '/termos-de-uso',
@@ -143,6 +145,16 @@ const AdminDocumentosPadraoRoute = AdminDocumentosPadraoRouteImport.update({
   path: '/documentos-padrao',
   getParentRoute: () => AdminRoute,
 } as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilProfissionalRoute = PerfilProfissionalRouteImport.update({
+  id: '/perfil-profissional',
+  path: '/perfil-profissional',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -167,6 +179,8 @@ export interface FileRoutesByFullPath {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
+  '/perfil': typeof PerfilRoute
+  '/perfil-profissional': typeof PerfilProfissionalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -190,6 +204,8 @@ export interface FileRoutesByTo {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin': typeof AdminIndexRoute
+  '/perfil': typeof PerfilRoute
+  '/perfil-profissional': typeof PerfilProfissionalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -215,6 +231,8 @@ export interface FileRoutesById {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
+  '/perfil': typeof PerfilRoute
+  '/perfil-profissional': typeof PerfilProfissionalRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -241,6 +259,8 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
+    | '/perfil'
+    | '/perfil-profissional'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -264,6 +284,8 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin'
+    | '/perfil'
+    | '/perfil-profissional'
   id:
     | '__root__'
     | '/'
@@ -288,6 +310,8 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
+    | '/perfil'
+    | '/perfil-profissional'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -303,6 +327,8 @@ export interface RootRouteChildren {
   PrecosRoute: typeof PrecosRouteWithChildren
   ProfissionaisRoute: typeof ProfissionaisRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
+  PerfilRoute: typeof PerfilRoute
+  PerfilProfissionalRoute: typeof PerfilProfissionalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -461,6 +487,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDocumentosPadraoRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil-profissional': {
+      id: '/perfil-profissional'
+      path: '/perfil-profissional'
+      fullPath: '/perfil-profissional'
+      preLoaderRoute: typeof PerfilProfissionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -514,6 +554,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrecosRoute: PrecosRouteWithChildren,
   ProfissionaisRoute: ProfissionaisRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
+  PerfilRoute: PerfilRoute,
+  PerfilProfissionalRoute: PerfilProfissionalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

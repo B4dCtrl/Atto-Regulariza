@@ -214,9 +214,12 @@ function DashboardContent() {
             <button className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-elevated">
               <Bell className="h-4 w-4 text-ink-soft" />
             </button>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs font-medium">
+            <Link
+              to="/perfil"
+              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-xs font-medium text-background transition-opacity hover:opacity-80"
+            >
               MS
-            </div>
+            </Link>
           </div>
         </div>
       </header>

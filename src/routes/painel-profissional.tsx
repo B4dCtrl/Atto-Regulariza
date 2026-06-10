@@ -507,9 +507,12 @@ function ProfissionalPage() {
                 </span>
               )}
             </button>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs font-medium">
+            <Link
+              to="/perfil-profissional"
+              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-xs font-medium text-background transition-opacity hover:opacity-80"
+            >
               {PROF_INITIALS}
-            </div>
+            </Link>
           </div>
         </div>
       </header>
