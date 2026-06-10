@@ -19,9 +19,21 @@
   src: url("https://fonts.gstatic.com/s/instrumentserif/v4/jizGREVItHgc8qDIbSTKq4XKfunQ8A.woff2") format("woff2");
 }
 
+@import url("https://fonts.googleapis.com/css2?family=Arsenal:ital,wght@0,400;0,700;1,400&display=swap");
+
+@font-face {
+  font-family: "Arsenica";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local("Arsenica"),
+       url("/fonts/Arsenica-Regular.woff2") format("woff2");
+}
+
 @theme inline {
   --font-sans: "Inter Tight", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-serif: "Instrument Serif", "Times New Roman", serif;
+  --font-arsenica: "Arsenica", "Arsenal", Georgia, serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

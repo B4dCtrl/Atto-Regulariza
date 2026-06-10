@@ -454,8 +454,9 @@ function ProfissionalPage() {
               <span className="hidden sm:inline">Processos</span>
             </button>
           ) : (
-            <Link to="/" className="flex items-center gap-2">
-              <img src="/logo-ato.png" alt="Ato Regulariza" className="h-20 w-20 rounded-md object-contain" />
+            <Link to="/" className="flex items-center gap-1.5">
+              <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
+              <span className="font-arsenica text-xl leading-none text-accent hidden sm:inline">ato</span>
             </Link>
           )}
 
