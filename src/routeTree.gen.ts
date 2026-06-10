@@ -13,6 +13,8 @@ import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as PrecosRouteImport } from './routes/precos'
 import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
+import { Route as PerfilProfissionalRouteImport } from './routes/perfil-profissional'
+import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PainelProfissionalRouteImport } from './routes/painel-profissional'
 import { Route as InstitucionalRouteImport } from './routes/institucional'
 import { Route as GestaoRouteImport } from './routes/gestao'
@@ -24,15 +26,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as PrecosInstitucionalRouteImport } from './routes/precos/institucional'
 import { Route as AdminProcessosRouteImport } from './routes/admin/processos'
+import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin/financeiro'
+import { Route as AdminDocumentosPadraoRouteImport } from './routes/admin/documentos-padrao'
 import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
 import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/cadastro-profissional'
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
-import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
-import { Route as AdminDocumentosPadraoRouteImport } from './routes/admin/documentos-padrao'
-import { Route as PerfilRouteImport } from './routes/perfil'
-import { Route as PerfilProfissionalRouteImport } from './routes/perfil-profissional'
 
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   id: '/termos-de-uso',
@@ -52,6 +52,16 @@ const PrecosRoute = PrecosRouteImport.update({
 const PoliticaDeCookiesRoute = PoliticaDeCookiesRouteImport.update({
   id: '/politica-de-cookies',
   path: '/politica-de-cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilProfissionalRoute = PerfilProfissionalRouteImport.update({
+  id: '/perfil-profissional',
+  path: '/perfil-profissional',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PainelProfissionalRoute = PainelProfissionalRouteImport.update({
@@ -109,9 +119,19 @@ const AdminProcessosRoute = AdminProcessosRouteImport.update({
   path: '/processos',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLeadsRoute = AdminLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFinanceiroRoute = AdminFinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDocumentosPadraoRoute = AdminDocumentosPadraoRouteImport.update({
+  id: '/documentos-padrao',
+  path: '/documentos-padrao',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDocumentosRoute = AdminDocumentosRouteImport.update({
@@ -135,26 +155,6 @@ const AdminCadastroClienteRoute = AdminCadastroClienteRouteImport.update({
   path: '/cadastro-cliente',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminLeadsRoute = AdminLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminDocumentosPadraoRoute = AdminDocumentosPadraoRouteImport.update({
-  id: '/documentos-padrao',
-  path: '/documentos-padrao',
-  getParentRoute: () => AdminRoute,
-} as any)
-const PerfilRoute = PerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PerfilProfissionalRoute = PerfilProfissionalRouteImport.update({
-  id: '/perfil-profissional',
-  path: '/perfil-profissional',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -165,6 +165,8 @@ export interface FileRoutesByFullPath {
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
   '/painel-profissional': typeof PainelProfissionalRoute
+  '/perfil': typeof PerfilRoute
+  '/perfil-profissional': typeof PerfilProfissionalRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
@@ -179,8 +181,6 @@ export interface FileRoutesByFullPath {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
-  '/perfil': typeof PerfilRoute
-  '/perfil-profissional': typeof PerfilProfissionalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -190,6 +190,8 @@ export interface FileRoutesByTo {
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
   '/painel-profissional': typeof PainelProfissionalRoute
+  '/perfil': typeof PerfilRoute
+  '/perfil-profissional': typeof PerfilProfissionalRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
@@ -204,8 +206,6 @@ export interface FileRoutesByTo {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin': typeof AdminIndexRoute
-  '/perfil': typeof PerfilRoute
-  '/perfil-profissional': typeof PerfilProfissionalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -217,6 +217,8 @@ export interface FileRoutesById {
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
   '/painel-profissional': typeof PainelProfissionalRoute
+  '/perfil': typeof PerfilRoute
+  '/perfil-profissional': typeof PerfilProfissionalRoute
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
@@ -231,8 +233,6 @@ export interface FileRoutesById {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
-  '/perfil': typeof PerfilRoute
-  '/perfil-profissional': typeof PerfilProfissionalRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -245,6 +245,8 @@ export interface FileRouteTypes {
     | '/gestao'
     | '/institucional'
     | '/painel-profissional'
+    | '/perfil'
+    | '/perfil-profissional'
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
@@ -259,8 +261,6 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
-    | '/perfil'
-    | '/perfil-profissional'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -270,6 +270,8 @@ export interface FileRouteTypes {
     | '/gestao'
     | '/institucional'
     | '/painel-profissional'
+    | '/perfil'
+    | '/perfil-profissional'
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
@@ -284,8 +286,6 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin'
-    | '/perfil'
-    | '/perfil-profissional'
   id:
     | '__root__'
     | '/'
@@ -296,6 +296,8 @@ export interface FileRouteTypes {
     | '/gestao'
     | '/institucional'
     | '/painel-profissional'
+    | '/perfil'
+    | '/perfil-profissional'
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
@@ -310,8 +312,6 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
-    | '/perfil'
-    | '/perfil-profissional'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -323,12 +323,12 @@ export interface RootRouteChildren {
   GestaoRoute: typeof GestaoRoute
   InstitucionalRoute: typeof InstitucionalRoute
   PainelProfissionalRoute: typeof PainelProfissionalRoute
+  PerfilRoute: typeof PerfilRoute
+  PerfilProfissionalRoute: typeof PerfilProfissionalRoute
   PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PrecosRoute: typeof PrecosRouteWithChildren
   ProfissionaisRoute: typeof ProfissionaisRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
-  PerfilRoute: typeof PerfilRoute
-  PerfilProfissionalRoute: typeof PerfilProfissionalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -359,6 +359,20 @@ declare module '@tanstack/react-router' {
       path: '/politica-de-cookies'
       fullPath: '/politica-de-cookies'
       preLoaderRoute: typeof PoliticaDeCookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil-profissional': {
+      id: '/perfil-profissional'
+      path: '/perfil-profissional'
+      fullPath: '/perfil-profissional'
+      preLoaderRoute: typeof PerfilProfissionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/painel-profissional': {
@@ -438,11 +452,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProcessosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/leads': {
+      id: '/admin/leads'
+      path: '/leads'
+      fullPath: '/admin/leads'
+      preLoaderRoute: typeof AdminLeadsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/financeiro': {
       id: '/admin/financeiro'
       path: '/financeiro'
       fullPath: '/admin/financeiro'
       preLoaderRoute: typeof AdminFinanceiroRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/documentos-padrao': {
+      id: '/admin/documentos-padrao'
+      path: '/documentos-padrao'
+      fullPath: '/admin/documentos-padrao'
+      preLoaderRoute: typeof AdminDocumentosPadraoRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/documentos': {
@@ -472,34 +500,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/cadastro-cliente'
       preLoaderRoute: typeof AdminCadastroClienteRouteImport
       parentRoute: typeof AdminRoute
-    }
-    '/admin/leads': {
-      id: '/admin/leads'
-      path: '/leads'
-      fullPath: '/admin/leads'
-      preLoaderRoute: typeof AdminLeadsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/documentos-padrao': {
-      id: '/admin/documentos-padrao'
-      path: '/documentos-padrao'
-      fullPath: '/admin/documentos-padrao'
-      preLoaderRoute: typeof AdminDocumentosPadraoRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/perfil': {
-      id: '/perfil'
-      path: '/perfil'
-      fullPath: '/perfil'
-      preLoaderRoute: typeof PerfilRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/perfil-profissional': {
-      id: '/perfil-profissional'
-      path: '/perfil-profissional'
-      fullPath: '/perfil-profissional'
-      preLoaderRoute: typeof PerfilProfissionalRouteImport
-      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -550,13 +550,23 @@ const rootRouteChildren: RootRouteChildren = {
   GestaoRoute: GestaoRoute,
   InstitucionalRoute: InstitucionalRoute,
   PainelProfissionalRoute: PainelProfissionalRoute,
+  PerfilRoute: PerfilRoute,
+  PerfilProfissionalRoute: PerfilProfissionalRoute,
   PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PrecosRoute: PrecosRouteWithChildren,
   ProfissionaisRoute: ProfissionaisRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
-  PerfilRoute: PerfilRoute,
-  PerfilProfissionalRoute: PerfilProfissionalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
