@@ -455,7 +455,7 @@ function ProfissionalPage() {
             </button>
           ) : (
             <Link to="/" className="flex items-center gap-2">
-              <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
+              <img src="/logo-ato.png" alt="Ato Regulariza" className="h-20 w-20 rounded-md object-contain" />
             </Link>
           )}
 

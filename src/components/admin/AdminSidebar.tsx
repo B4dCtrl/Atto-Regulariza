@@ -70,7 +70,7 @@ export function AdminSidebar() {
           <img
             src="/logo-ato.png"
             alt="Ato Regulariza"
-            className="h-8 w-8 shrink-0 rounded-md object-contain"
+            className="h-24 w-24 shrink-0 rounded-md object-contain"
           />
           <div className="overflow-hidden opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <div className="mt-0.5 whitespace-nowrap text-[10px] uppercase tracking-widest text-ink-soft">
