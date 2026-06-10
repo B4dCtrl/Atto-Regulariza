@@ -1,10 +1,10 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useRef, type FormEvent } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import React, { useState, useRef, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
   ChevronRight, FileText, MapPin, MessageSquare, Plus,
   Send, Upload, User, BookOpen, StickyNote,
-  AlertTriangle, Phone, Mail, LayoutDashboard, Settings, BarChart3, LogOut,
+  AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,7 +23,15 @@ type Urgency = "alta" | "media" | "baixa";
 type FieldType = "text" | "textarea" | "date" | "number" | "select" | "checklist" | "checkbox";
 type FieldVal  = string | string[] | boolean;
 type RightTab  = "docs" | "chat" | "briefing";
-type MainSection = "processos" | "profile" | "stats" | "notificacoes" | "configuracoes";
+type MainSection = "processos" | "stats" | "notificacoes" | "configuracoes";
+
+interface Pendency {
+  id: string;
+  stageNum: number;
+  description: string;
+  createdAt: string;
+  status: "aberta" | "resolvida";
+}
 
 interface MockProcess {
   id: string;
@@ -172,12 +180,13 @@ const SEED_MSGS: Record<string, LocalMsg[]> = {
 
 /* ─────────────────────────────────────────────── Component */
 function ProfissionalPage() {
-  const navigate = useNavigate();
-  const [mainSection, setMainSection] = useState<MainSection>("processos");
-  const [selectedId,  setSelectedId]  = useState<string | null>(null);
-  const [activeStage, setActiveStage] = useState(1);
-  const [rightTab,    setRightTab]    = useState<RightTab>("chat");
-  const [chatInput,   setChatInput]   = useState("");
+  const [mainSection,  setMainSection]  = useState<MainSection>("processos");
+  const [selectedId,   setSelectedId]   = useState<string | null>(null);
+  const [activeStage,  setActiveStage]  = useState(1);
+  const [rightTab,     setRightTab]     = useState<RightTab>("chat");
+  const [chatInput,    setChatInput]    = useState("");
+  const [pendencyInput,    setPendencyInput]    = useState("");
+  const [showPendencyForm, setShowPendencyForm] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
@@ -196,6 +205,9 @@ function ProfissionalPage() {
   );
   const [allDocs, setAllDocs] = useState<Record<string, LocalDoc[]>>(
     () => storeGet("rz-prof-docs", {})
+  );
+  const [allPendencies, setAllPendencies] = useState<Record<string, Pendency[]>>(
+    () => storeGet("rz-pendencies", {})
   );
   /* ── Notification tracking ── */
   const [lastChatView, setLastChatView] = useState<Record<string, number>>(
@@ -289,6 +301,28 @@ function ProfissionalPage() {
     setDoneStages((prev) => {
       const next = { ...prev, [pid]: (prev[pid] ?? []).filter((x) => x !== n) };
       storeSet("rz-done-stages", next);
+      return next;
+    });
+  };
+
+  const openPendencies = (pid: string, stageNum: number) =>
+    (allPendencies[pid] ?? []).filter((p) => p.stageNum === stageNum && p.status === "aberta");
+
+  const hasOpenPendencies = (pid: string, stageNum: number) =>
+    openPendencies(pid, stageNum).length > 0;
+
+  const createPendency = (pid: string, stageNum: number, desc: string) => {
+    if (!desc.trim()) return;
+    const p: Pendency = { id: crypto.randomUUID(), stageNum, description: desc.trim(), createdAt: new Date().toISOString(), status: "aberta" };
+    setAllPendencies((prev) => { const next = { ...prev, [pid]: [...(prev[pid] ?? []), p] }; storeSet("rz-pendencies", next); return next; });
+    setPendencyInput("");
+    setShowPendencyForm(false);
+  };
+
+  const resolvePendency = (pid: string, id: string) => {
+    setAllPendencies((prev) => {
+      const next = { ...prev, [pid]: (prev[pid] ?? []).map((p) => p.id === id ? { ...p, status: "resolvida" as const } : p) };
+      storeSet("rz-pendencies", next);
       return next;
     });
   };
@@ -446,7 +480,7 @@ function ProfissionalPage() {
   return (
     <div className="min-h-screen bg-surface/50 text-foreground">
       {/* ── Topbar ── */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl h-14">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
           {selectedProc ? (
             <button
@@ -510,19 +544,75 @@ function ProfissionalPage() {
                 </span>
               )}
             </button>
-            <Link
-              to="/perfil-profissional"
-              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-xs font-medium text-background transition-opacity hover:opacity-80"
-            >
+            <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs font-medium">
               {PROF_INITIALS}
-            </Link>
+            </div>
           </div>
         </div>
       </header>
 
-      <AnimatePresence mode="wait">
-        {/* ═══════════════════════════════ LIST VIEW */}
-        {!selectedProc ? (
+      <div className="flex h-[calc(100vh-3.5rem)]">
+        {/* ═══ SIDEBAR ═══ */}
+        <aside className="group sticky top-14 hidden h-[calc(100vh-3.5rem)] w-16 shrink-0 md:block">
+          <div className="absolute inset-y-0 left-0 z-20 flex h-full w-16 flex-col overflow-hidden border-r border-border bg-background p-3 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]">
+            <Link to="/" className="mb-4 flex shrink-0 items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <img src="/logo-ato.png" alt="Ato" className="h-5 w-5 shrink-0 rounded" />
+              <span className="whitespace-nowrap text-sm font-medium">profissional</span>
+            </Link>
+            <nav className="space-y-0.5">
+              {([
+                { id: "processos", label: "Meus processos", icon: Briefcase },
+                { id: "stats",     label: "Estatísticas",   icon: BarChart3  },
+                { id: "notificacoes", label: "Notificações",icon: Bell       },
+              ] as { id: MainSection; label: string; icon: React.ElementType }[]).map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => { setMainSection(item.id); setSelectedId(null); }}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${mainSection === item.id ? "bg-foreground text-background" : "text-ink-soft hover:bg-surface"}`}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">{item.label}</span>
+                </button>
+              ))}
+            </nav>
+            <div className="mt-6">
+              <div className="px-3 pb-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-soft">Conta</span>
+              </div>
+              <nav className="space-y-0.5">
+                <Link
+                  to="/perfil-profissional"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
+                >
+                  <User className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">Meu Perfil</span>
+                </Link>
+                <button
+                  onClick={() => { setMainSection("configuracoes"); setSelectedId(null); }}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${mainSection === "configuracoes" ? "bg-foreground text-background" : "text-ink-soft hover:bg-surface"}`}
+                >
+                  <Settings className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">Configurações</span>
+                </button>
+              </nav>
+            </div>
+            <div className="mt-auto">
+              <button
+                onClick={() => { window.location.href = "/entrar"; }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">Sair</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* ═══ MAIN ═══ */}
+        <main className="flex-1 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            {/* ── PROCESSOS: lista ── */}
+            {mainSection === "processos" && !selectedProc && (
           <motion.div
             key="list"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -624,8 +714,113 @@ function ProfissionalPage() {
               </div>
             </section>
           </motion.div>
-        ) : (
-          /* ═══════════════════════════════ WORK VIEW (3 columns) */
+            )}
+
+            {/* ── ESTATÍSTICAS ── */}
+            {mainSection === "stats" && (
+              <motion.div key="stats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
+                <div className="mb-8">
+                  <div className="text-[10px] uppercase tracking-widest text-ink-soft">Gestão</div>
+                  <h2 className="font-serif text-2xl tracking-tight">Estatísticas</h2>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    { label: "Total de casos",  value: myProcs.length,                                                                                               icon: Briefcase     },
+                    { label: "Concluídos",       value: myProcs.filter((p) => (doneStages[p.id] ?? []).length === 5).length,                                         icon: CheckCircle2  },
+                    { label: "Em progresso",     value: myProcs.filter((p) => (doneStages[p.id] ?? []).length > 0 && (doneStages[p.id] ?? []).length < 5).length,    icon: BarChart3     },
+                    { label: "Não iniciados",    value: myProcs.filter((p) => (doneStages[p.id] ?? []).length === 0).length,                                         icon: AlertTriangle },
+                  ].map((s, i) => (
+                    <div key={i} className="rounded-2xl bg-background ring-1 ring-border p-6">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm text-ink-soft">{s.label}</span>
+                        <div className="grid h-9 w-9 place-items-center rounded-xl bg-surface"><s.icon className="h-4 w-4 text-ink-soft" /></div>
+                      </div>
+                      <div className="font-serif text-3xl font-bold">{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-8 rounded-2xl bg-background ring-1 ring-border p-6">
+                  <div className="text-sm font-medium mb-4">Progresso por caso</div>
+                  <div className="space-y-3">
+                    {myProcs.map((p) => (
+                      <div key={p.id}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-ink-soft">{p.name}</span>
+                          <span className="text-xs font-medium">{progress(p.id)}%</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-surface">
+                          <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress(p.id)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── NOTIFICAÇÕES ── */}
+            {mainSection === "notificacoes" && (
+              <motion.div key="notifs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+                <div className="mb-8">
+                  <div className="text-[10px] uppercase tracking-widest text-ink-soft">Comunicação</div>
+                  <h2 className="font-serif text-2xl tracking-tight">Notificações</h2>
+                </div>
+                {totalUnread === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border bg-background p-12 text-center">
+                    <Bell className="mx-auto h-10 w-10 text-ink-soft/30 mb-3" />
+                    <div className="text-sm text-ink-soft">Nenhuma notificação por enquanto.</div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {acceptedIds.map((pid) => {
+                      const count = unreadCount(pid);
+                      const proc  = MOCK_PROCESSES.find((p) => p.id === pid);
+                      if (!proc || count === 0) return null;
+                      return (
+                        <div key={pid} onClick={() => { openProcess(pid); setRightTab("chat"); markChatRead(pid); }}
+                          className="flex items-center justify-between rounded-2xl bg-background ring-1 ring-border p-4 cursor-pointer hover:ring-foreground/30 transition-colors">
+                          <div>
+                            <div className="text-sm font-medium">{proc.client} — {proc.name}</div>
+                            <div className="text-xs text-ink-soft mt-1">{count} mensagem{count !== 1 ? "s" : ""} não lida{count !== 1 ? "s" : ""}</div>
+                          </div>
+                          <div className="ml-3 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">{count > 9 ? "9+" : count}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* ── CONFIGURAÇÕES ── */}
+            {mainSection === "configuracoes" && (
+              <motion.div key="config" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+                <div className="mb-8">
+                  <div className="text-[10px] uppercase tracking-widest text-ink-soft">Preferências</div>
+                  <h2 className="font-serif text-2xl tracking-tight">Configurações</h2>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { label: "Notificações por email", desc: "Alertas quando houver mensagens novas" },
+                    { label: "Avisos de atraso",       desc: "Alertas para etapas próximas do prazo" },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center justify-between rounded-2xl bg-background ring-1 ring-border p-5">
+                      <div>
+                        <div className="text-sm font-medium">{item.label}</div>
+                        <div className="text-xs text-ink-soft mt-0.5">{item.desc}</div>
+                      </div>
+                      <div className="h-6 w-11 rounded-full bg-foreground/20 ring-1 ring-border" />
+                    </div>
+                  ))}
+                  <Link to="/perfil-profissional" className="block w-full rounded-xl bg-foreground py-3 text-center text-sm text-background hover:bg-foreground/90 transition-colors">
+                    Ver perfil completo
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── PROCESSOS: trabalho ── */}
+            {mainSection === "processos" && selectedProc && (
           <motion.div
             key={`work-${selectedId}`}
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -769,20 +964,43 @@ function ProfissionalPage() {
                     </>
                   ) : (
                     <>
-                      <p className="flex-1 text-xs text-ink-soft">
-                        {hasAnyField(selectedId!, activeStage)
-                          ? "Pronto para concluir esta etapa."
-                          : "Preencha pelo menos um campo para habilitar."}
-                      </p>
+                      {hasOpenPendencies(selectedId!, activeStage) ? (
+                        <div className="flex flex-1 items-center gap-2 text-xs text-red-500">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          Resolva as pendências antes de concluir
+                        </div>
+                      ) : (
+                        <p className="flex-1 text-xs text-ink-soft">
+                          {hasAnyField(selectedId!, activeStage) ? "Pronto para concluir." : "Preencha ao menos um campo."}
+                        </p>
+                      )}
+                      <button
+                        onClick={() => setShowPendencyForm(true)}
+                        className="rounded-full border border-border px-3 py-2 text-xs text-ink-soft hover:bg-surface transition-colors"
+                      >
+                        + Pendência
+                      </button>
                       <button
                         onClick={() => completeStage(selectedId!, activeStage)}
-                        disabled={!hasAnyField(selectedId!, activeStage)}
+                        disabled={!hasAnyField(selectedId!, activeStage) || hasOpenPendencies(selectedId!, activeStage)}
                         className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         <Check className="h-3.5 w-3.5" />
                         Concluir etapa {activeStage}
                       </button>
                     </>
+                  )}
+                  {/* Pendências abertas desta etapa */}
+                  {selectedId && openPendencies(selectedId, activeStage).length > 0 && (
+                    <div className="mt-2 w-full space-y-1.5">
+                      {openPendencies(selectedId, activeStage).map((p) => (
+                        <div key={p.id} className="flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700 ring-1 ring-red-200">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                          <span className="flex-1">{p.description}</span>
+                          <button onClick={() => resolvePendency(selectedId, p.id)} className="font-medium underline hover:no-underline">Resolver</button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -1030,8 +1248,38 @@ function ProfissionalPage() {
               )}
             </aside>
           </motion.div>
-        )}
-      </AnimatePresence>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
+
+      {/* ── MODAL PENDÊNCIA ── */}
+      {showPendencyForm && selectedId && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center" onClick={() => setShowPendencyForm(false)}>
+          <div className="w-full rounded-t-3xl bg-background p-6 sm:mx-auto sm:w-[440px] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="font-serif text-xl">Solicitar Pendência</h3>
+              <button onClick={() => setShowPendencyForm(false)} className="rounded-full p-1 hover:bg-surface"><X className="h-4 w-4" /></button>
+            </div>
+            <p className="mb-4 text-sm text-ink-soft">Etapa {activeStage} — descreva o que está bloqueado</p>
+            <textarea
+              value={pendencyInput}
+              onChange={(e) => setPendencyInput(e.target.value)}
+              placeholder="Ex: Aguardando documento do cliente, falta assinatura, aguardando prefeitura..."
+              rows={4}
+              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none resize-none focus:border-foreground/30 placeholder:text-ink-soft/50"
+            />
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => { setShowPendencyForm(false); setPendencyInput(""); }} className="flex-1 rounded-xl border border-border py-2 text-sm text-ink-soft hover:bg-surface transition-colors">Cancelar</button>
+              <button
+                onClick={() => createPendency(selectedId, activeStage, pendencyInput)}
+                disabled={!pendencyInput.trim()}
+                className="flex-1 rounded-xl bg-foreground py-2 text-sm text-background hover:bg-foreground/90 disabled:opacity-40 transition-colors"
+              >Criar Pendência</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
