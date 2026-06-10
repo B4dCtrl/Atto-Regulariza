@@ -131,13 +131,13 @@ export function Nav() {
             }
             className="flex items-center px-4 py-2.5"
           >
-            <Link to="/" className="flex items-center gap-1.5">
+            <Link to="/" className="flex items-center gap-2">
               <img
                 src="/logo-ato.png"
                 alt="Ato Regulariza"
-                className="h-7 w-7 rounded-md object-contain"
+                className="h-9 w-9 object-contain"
               />
-              <span className="font-arsenica text-xl leading-none text-accent">ato</span>
+              <span className="font-arsenica text-[2rem] leading-none text-accent">ato</span>
             </Link>
           </motion.div>
 

@@ -19,15 +19,12 @@
   src: url("https://fonts.gstatic.com/s/instrumentserif/v4/jizGREVItHgc8qDIbSTKq4XKfunQ8A.woff2") format("woff2");
 }
 
-@import url("https://fonts.googleapis.com/css2?family=Arsenal:ital,wght@0,400;0,700;1,400&display=swap");
-
 @font-face {
   font-family: "Arsenica";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 300;
   font-display: swap;
-  src: local("Arsenica"),
-       url("/fonts/Arsenica-Regular.woff2") format("woff2");
+  src: url("/fonts/Arsenica-Light.ttf") format("truetype");
 }
 
 @theme inline {
