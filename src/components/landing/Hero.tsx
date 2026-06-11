@@ -80,9 +80,7 @@ export function Hero() {
           variants={fade}
           className="font-serif text-[clamp(1.85rem,5.5vw,4.8rem)] leading-[1.02] tracking-tight text-foreground"
         >
-          Regularize seu imóvel
-          <br />
-          em semanas,{" "}
+          Regularize seu imóvel em semanas,{" "}
           <em className="italic text-foreground/50">
             não em{" "}
             <WordScrambleText
