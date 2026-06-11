@@ -10,12 +10,9 @@ const steps = [
   { n: "05", t: "Matrícula nas suas mãos", d: "Regularização concluída." },
 ];
 
-/* Centro de cada coluna (grid 5 × 20% = 10 / 30 / 50 / 70 / 90) */
-const COL_PCT = [10, 30, 50, 70, 90];
-
-const TRAVEL  = 0.5;  // segundos para mover ao próximo passo
-const PAUSE   = 300;  // ms de pausa em cada passo (0,3 s)
-const REST    = 1500; // ms de pausa no final antes de reiniciar
+const TRAVEL = 0.35;  // s para mover ao próximo passo
+const PAUSE  = 600;   // ms de pausa em cima do círculo
+const REST   = 1500;  // ms no final antes de reiniciar
 
 const ACTIVE: React.CSSProperties = {
   backgroundColor: "oklch(0.66 0.18 38)",
@@ -31,52 +28,63 @@ const IDLE: React.CSSProperties = {
 };
 
 export function HowItWorks() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const inView     = useInView(sectionRef, { once: true, margin: "-100px" });
+  const sectionRef   = useRef<HTMLElement>(null);
+  const relRef       = useRef<HTMLDivElement>(null);   // container com position:relative
+  const circleRefs   = useRef<(HTMLDivElement | null)[]>([null, null, null, null, null]);
 
-  /* Controles individuais — sem chamar hooks em loop */
-  const beamCtrl  = useAnimation();
-  const partCtrl  = useAnimation();
+  const inView = useInView(sectionRef, { once: true, margin: "-100px" });
+
+  /* Controles individuais — sem hook em loop */
+  const beamCtrl = useAnimation();
+  const partCtrl = useAnimation();
   const c0 = useAnimation(); const c1 = useAnimation();
   const c2 = useAnimation(); const c3 = useAnimation(); const c4 = useAnimation();
   const cc = [c0, c1, c2, c3, c4];
 
   const [done, setDone] = useState<Set<number>>(new Set());
 
+  /* Mede o centro X de um círculo em relação ao relRef */
+  function centerX(i: number): number {
+    const el  = circleRefs.current[i];
+    const box = relRef.current;
+    if (!el || !box) return 0;
+    const er = el.getBoundingClientRect();
+    const br = box.getBoundingClientRect();
+    return er.left + er.width / 2 - br.left;
+  }
+
   useEffect(() => {
     if (!inView) return;
     let dead = false;
-
-    const wait = (ms: number) =>
-      new Promise<void>((r) => setTimeout(r, ms));
+    const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
     async function loop() {
       while (!dead) {
         /* ── reset ── */
         setDone(new Set());
-        beamCtrl.set({ scaleX: 0 });
-        partCtrl.set({ left: `${COL_PCT[0]}%` });
         cc.forEach((c) => c.set(IDLE));
+
+        const x0 = centerX(0);
+        /* partícula começa exatamente em cima do círculo 0 (centralizada) */
+        partCtrl.set({ x: x0 });
+        /* beam começa como ponto no centro do círculo 0 */
+        beamCtrl.set({ x: x0, width: 0 });
 
         /* ── passo a passo ── */
         for (let i = 0; i < steps.length; i++) {
           if (dead) return;
 
-          if (i === 0) {
-            /* Primeiro círculo: acende sem movimento de partícula */
-            await wait(80);
-          } else {
-            /* Move partícula + cresce beam até o centro da coluna i */
-            const tgt = COL_PCT[i];
+          if (i > 0) {
+            const xi  = centerX(i);
+            const bw  = xi - centerX(0); // largura do beam = distância do início
+
             await Promise.all([
               partCtrl.start({
-                left: `${tgt}%`,
+                x: xi,
                 transition: { duration: TRAVEL, ease: [0.4, 0, 0.2, 1] },
               }),
               beamCtrl.start({
-                // beam container vai de left-[10%] a right-[10%] (80% do pai)
-                // scaleX 0→1 representa 10%→90% do container pai
-                scaleX: (tgt - COL_PCT[0]) / (COL_PCT[COL_PCT.length - 1] - COL_PCT[0]),
+                width: bw,
                 transition: { duration: TRAVEL, ease: [0.4, 0, 0.2, 1] },
               }),
             ]);
@@ -84,11 +92,11 @@ export function HowItWorks() {
 
           if (dead) return;
 
-          /* Acende círculo com check */
+          /* Acende círculo + ✓ */
           setDone((prev) => new Set([...prev, i]));
           cc[i].start({ ...ACTIVE, transition: { duration: 0.28 } });
 
-          /* Pausa 0,3 s no passo */
+          /* Pausa em cima do círculo */
           await wait(PAUSE);
         }
 
@@ -101,9 +109,6 @@ export function HowItWorks() {
     return () => { dead = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inView]);
-
-  /* ── Beam scale: de col[0]% até col[4]% = 80% do container ── */
-  // scaleX calculado dinamicamente no loop acima; aqui só definimos o initial.
 
   return (
     <section
@@ -125,25 +130,24 @@ export function HowItWorks() {
           </h2>
         </motion.div>
 
-        {/* Grid */}
-        <div className="relative">
+        {/* Grid de passos */}
+        <div className="relative" ref={relRef}>
           {/* Trilha estática */}
-          <div className="pointer-events-none absolute left-[10%] right-[10%] top-6 hidden h-px bg-border md:block" />
+          <div className="pointer-events-none absolute left-0 right-0 top-6 hidden h-px bg-border md:block" />
 
-          {/* Beam */}
-          <div className="pointer-events-none absolute left-[10%] right-[10%] top-6 hidden overflow-visible md:block">
-            <motion.div
-              className="h-px origin-left bg-accent/70"
-              animate={beamCtrl}
-              initial={{ scaleX: 0 }}
-            />
-          </div>
-
-          {/* Partícula */}
+          {/* Beam animado — parte do centro do círculo 0, cresce para a direita */}
           <motion.div
-            className="pointer-events-none absolute top-[21px] hidden h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_0_12px_3px_oklch(0.66_0.18_38_/_0.55)] md:block"
+            className="pointer-events-none absolute top-6 hidden h-px bg-accent/70 origin-left md:block"
+            animate={beamCtrl}
+            initial={{ x: 0, width: 0 }}
+          />
+
+          {/* Partícula — translateX centraliza nos círculos */}
+          <motion.div
+            className="pointer-events-none absolute hidden h-3 w-3 -translate-x-1/2 rounded-full bg-accent shadow-[0_0_12px_3px_oklch(0.66_0.18_38_/_0.6)] md:block"
+            style={{ top: "18px" }} /* 24px (top-6) - 6px (metade de h-3=12px) */
             animate={partCtrl}
-            initial={{ left: `${COL_PCT[0]}%` }}
+            initial={{ x: 0 }}
           />
 
           <div className="grid gap-8 md:grid-cols-5">
@@ -158,6 +162,7 @@ export function HowItWorks() {
               >
                 {/* Círculo */}
                 <motion.div
+                  ref={(el) => { circleRefs.current[i] = el; }}
                   className="relative z-10 mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full font-serif text-lg"
                   animate={cc[i]}
                   initial={IDLE}

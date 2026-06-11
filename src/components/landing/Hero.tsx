@@ -78,7 +78,7 @@ export function Hero() {
           initial="hidden"
           animate="show"
           variants={fade}
-          className="font-serif text-[clamp(1.6rem,3.8vw,3.6rem)] leading-[1.06] tracking-tight text-foreground"
+          className="font-serif text-[clamp(2rem,5.5vw,5rem)] leading-[1.02] tracking-tight text-foreground"
         >
           <span className="whitespace-nowrap">Regularize seu imóvel</span>{" "}em semanas,{" "}
           <em className="italic text-foreground/50">
