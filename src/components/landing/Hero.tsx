@@ -69,8 +69,8 @@ export function Hero() {
         }}
       />
 
-      {/* ── Conteúdo — bottom-left, como Tailark ── */}
-      <div className="relative z-10 flex min-h-[max(94dvh,680px)] max-w-2xl flex-col justify-end px-8 pb-16 pt-36 sm:px-14 sm:pb-20">
+      {/* ── Conteúdo — centro vertical, esquerda ── */}
+      <div className="relative z-10 flex min-h-[max(94dvh,680px)] max-w-2xl flex-col justify-center px-8 pt-20 pb-8 sm:px-14">
 
         {/* Headline */}
         <motion.h1
