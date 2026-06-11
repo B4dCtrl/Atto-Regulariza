@@ -45,8 +45,7 @@ function AvisoDePrivacidadePage() {
 
         <h2>1. Controlador</h2>
         <p>
-          Gzg Arquitetura LTDA (marca <strong>Ato Regulariza</strong>)<br />
-          CNPJ 40.420.802/0001-75
+          Gzg Arquitetura LTDA (marca <strong>Ato Regulariza</strong>)
         </p>
 
         <h2>2. Encarregado (DPO)</h2>

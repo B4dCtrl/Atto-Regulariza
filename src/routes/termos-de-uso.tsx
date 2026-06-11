@@ -39,7 +39,7 @@ function TermosDeUsoPage() {
 
         <p>
           Estes Termos regem o uso do site e da plataforma <strong>Ato Regulariza</strong>, operados por{" "}
-          <strong>Gzg Arquitetura LTDA</strong> (CNPJ 40.420.802/0001-75). Ao navegar, você concorda com
+          <strong>Gzg Arquitetura LTDA</strong>. Ao navegar, você concorda com
           as condições abaixo.
         </p>
 
@@ -108,7 +108,7 @@ function TermosDeUsoPage() {
 
         <h2>10. Contato</h2>
         <p>
-          Gzg Arquitetura LTDA (marca Ato Regulariza) · CNPJ 40.420.802/0001-75<br />
+          Gzg Arquitetura LTDA (marca Ato Regulariza)<br />
           <a href="mailto:contato@atoregulariza.com">contato@atoregulariza.com</a> · WhatsApp +55 67 99851-3179
         </p>
       </main>

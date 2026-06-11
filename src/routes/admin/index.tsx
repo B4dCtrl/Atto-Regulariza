@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect, useRef } from "react";
 import { Kanban } from "@/components/admin/Kanban";
 import { ChatbotPanel } from "@/components/admin/ChatbotPanel";
 import { UploadZone } from "@/components/admin/UploadZone";
-import { Search, Bell, Plus, Loader2 } from "lucide-react";
+import { Search, Bell, Plus, Loader2, User, Settings, LogOut, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/")({
@@ -14,13 +14,27 @@ export const Route = createFileRoute("/admin/")({
 type KPI = { l: string; v: string };
 
 function AdminHome() {
+  const navigate = useNavigate();
   const [kpis,    setKpis]    = useState<KPI[]>([
     { l: "Ativos",              v: "…" },
     { l: "Em prefeitura",       v: "…" },
     { l: "Aguardando cliente",  v: "…" },
     { l: "Entregues no mês",    v: "…" },
   ]);
-  const [loading, setLoading] = useState(true);
+  const [loading,       setLoading]       = useState(true);
+  const [showAvatar,    setShowAvatar]    = useState(false);
+  const [showSearch,    setShowSearch]    = useState(false);
+  const [searchQuery,   setSearchQuery]   = useState("");
+  const [showNewModal,  setShowNewModal]  = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onOut(e: MouseEvent) {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) setShowAvatar(false);
+    }
+    document.addEventListener("mousedown", onOut);
+    return () => document.removeEventListener("mousedown", onOut);
+  }, []);
 
   async function loadKpis() {
     const { data } = await supabase.from("properties").select("status, updated_at");
@@ -68,26 +82,86 @@ function AdminHome() {
           <h1 className="font-serif text-3xl tracking-tight">Processos em andamento</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {/* Busca */}
+          {showSearch ? (
+            <div className="flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5">
+              <Search className="h-3.5 w-3.5 text-ink-soft" />
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar processo…"
+                className="w-40 bg-transparent text-xs outline-none placeholder:text-ink-soft/60"
+              />
+              <button onClick={() => { setShowSearch(false); setSearchQuery(""); }}>
+                <X className="h-3.5 w-3.5 text-ink-soft" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSearch(true)}
+              className="hidden items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-ink-soft md:flex hover:bg-surface transition-colors"
+            >
+              <Search className="h-3.5 w-3.5" /> Buscar processo
+            </button>
+          )}
+
+          {/* Sino */}
           <button
             type="button"
-            className="hidden items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-ink-soft md:flex"
-          >
-            <Search className="h-3.5 w-3.5" /> Buscar processo
-          </button>
-          <button
-            type="button"
-            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background"
+            onClick={() => navigate({ to: "/admin/processos" })}
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background hover:bg-surface transition-colors"
           >
             <Bell className="h-4 w-4 text-ink-soft" />
           </button>
+
+          {/* Novo processo */}
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-full bg-foreground px-3 py-2 text-sm text-background"
+            onClick={() => navigate({ to: "/admin/cadastro-cliente" })}
+            className="inline-flex items-center gap-2 rounded-full bg-foreground px-3 py-2 text-sm text-background hover:opacity-80 transition-opacity"
           >
             <Plus className="h-3.5 w-3.5" /> Novo processo
           </button>
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-xs text-background">
-            AD
+
+          {/* Avatar AD */}
+          <div ref={avatarRef} className="relative">
+            <button
+              onClick={() => setShowAvatar((v) => !v)}
+              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-xs text-background hover:opacity-80 transition-opacity"
+            >
+              AD
+            </button>
+            {showAvatar && (
+              <div className="absolute right-0 top-11 z-50 w-48 overflow-hidden rounded-2xl border border-border bg-background shadow-xl">
+                <div className="border-b border-border px-4 py-3">
+                  <div className="text-xs font-medium">Admin</div>
+                  <div className="text-[11px] text-ink-soft">Backoffice</div>
+                </div>
+                <div className="p-1.5 space-y-0.5">
+                  <button
+                    onClick={() => { setShowAvatar(false); navigate({ to: "/perfil-profissional" }); }}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
+                  >
+                    <User className="h-4 w-4" /> Meu Perfil
+                  </button>
+                  <button
+                    onClick={() => { setShowAvatar(false); }}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
+                  >
+                    <Settings className="h-4 w-4" /> Configurações
+                  </button>
+                  <div className="my-1 h-px bg-border" />
+                  <button
+                    onClick={() => { setShowAvatar(false); window.location.href = "/entrar"; }}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" /> Sair
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

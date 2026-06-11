@@ -1,10 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import React, { useState, useRef, type FormEvent } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import React, { useState, useRef, useEffect, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
   ChevronRight, FileText, MapPin, MessageSquare, Plus,
   Send, Upload, User, BookOpen, StickyNote,
-  AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X,
+  AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X, Bot,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -178,8 +178,54 @@ const SEED_MSGS: Record<string, LocalMsg[]> = {
   ],
 };
 
+/* ─────────────────────────────────────────────── AI replies pool */
+const AI_REPLIES: Record<string, string[]> = {
+  default: [
+    "Entendido! Vou providenciar o mais rápido possível.",
+    "Certo, obrigado pela atualização!",
+    "Ok, já estou separando os documentos.",
+    "Perfeito, aguardo a próxima atualização.",
+    "Tudo bem! Qualquer dúvida pode chamar aqui.",
+  ],
+  documento: [
+    "Vou digitalizar e enviar ainda hoje.",
+    "Entendido! Quais documentos exatamente você precisa?",
+    "Já tenho esses documentos em mãos, envio até amanhã.",
+    "Posso enviar por e-mail também ou só aqui no sistema?",
+  ],
+  prazo: [
+    "Quanto tempo leva em média esse processo?",
+    "Tem como agilizar? Estou com prazo apertado.",
+    "Ok, vou aguardar dentro do prazo informado.",
+  ],
+  prefeitura: [
+    "Precisa de algum documento meu para o protocolo?",
+    "A prefeitura costuma demorar muito nessa etapa?",
+    "Vou acompanhar pelo sistema então.",
+  ],
+};
+
+function getAIReply(msgText: string): string {
+  const t = msgText.toLowerCase();
+  if (t.includes("document") || t.includes("arquivo") || t.includes("iptu") || t.includes("escritura")) {
+    const pool = AI_REPLIES.documento;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  if (t.includes("prazo") || t.includes("dias") || t.includes("tempo") || t.includes("quando")) {
+    const pool = AI_REPLIES.prazo;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  if (t.includes("prefeitura") || t.includes("protocolo") || t.includes("órgão")) {
+    const pool = AI_REPLIES.prefeitura;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  const pool = AI_REPLIES.default;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 /* ─────────────────────────────────────────────── Component */
 function ProfissionalPage() {
+  const navigate = useNavigate();
   const [mainSection,  setMainSection]  = useState<MainSection>("processos");
   const [selectedId,   setSelectedId]   = useState<string | null>(null);
   const [activeStage,  setActiveStage]  = useState(1);
@@ -187,8 +233,23 @@ function ProfissionalPage() {
   const [chatInput,    setChatInput]    = useState("");
   const [pendencyInput,    setPendencyInput]    = useState("");
   const [showPendencyForm, setShowPendencyForm] = useState(false);
+  const [showAvatarMenu,   setShowAvatarMenu]   = useState(false);
+  const [aiMode,           setAiMode]           = useState(false);
+  const [aiTyping,         setAiTyping]         = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+
+  /* Fecha dropdown ao clicar fora */
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setShowAvatarMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
 
   /* ── Persistent state ── */
   const [acceptedIds, setAcceptedIds] = useState<string[]>(
@@ -360,19 +421,16 @@ function ProfissionalPage() {
     setChatInput("");
     setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
 
-    /* Simula resposta automática do cliente após 4s */
+    /* Resposta automática do cliente (IA contextual) após 3-5s */
     const proc = MOCK_PROCESSES.find((p) => p.id === pid);
-    const autoReplies = [
-      "Entendido! Vou providenciar.",
-      "Certo, obrigado pela informação!",
-      "Ok, já estou separando os documentos.",
-      "Perfeito, aguardo a próxima atualização.",
-    ];
     if (proc) {
+      const delay = 3000 + Math.random() * 2000;
+      setAiTyping(true);
       setTimeout(() => {
+        setAiTyping(false);
         const reply: LocalMsg = {
           id: crypto.randomUUID(),
-          text: autoReplies[Math.floor(Math.random() * autoReplies.length)],
+          text: getAIReply(text),
           isClient: true,
           sender: proc.client,
           ts: new Date().toISOString(),
@@ -390,7 +448,7 @@ function ProfissionalPage() {
           });
         }
         setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
-      }, 4000);
+      }, delay);
     }
   };
 
@@ -506,33 +564,25 @@ function ProfissionalPage() {
               </span>
             </div>
           ) : (
-            <>
-              <div className="h-5 w-px bg-border hidden sm:block" />
-              <div className="flex items-center gap-2 text-sm">
-                <Briefcase className="h-4 w-4 text-ink-soft" />
-                <span className="font-medium">Painel do Profissional</span>
-              </div>
-            </>
+            <div className="h-5 w-px bg-border hidden sm:block" />
           )}
 
           <div className="ml-auto flex items-center gap-2">
+            {/* Sino */}
             <button
               onClick={() => {
-                /* Pedir permissão de notificação ao clicar no sino */
                 if (typeof Notification !== "undefined" && Notification.permission === "default") {
                   Notification.requestPermission();
                 }
-                /* Ir para o processo com mais não-lidos */
                 const withUnread = acceptedIds
                   .map((pid) => ({ pid, count: unreadCount(pid) }))
                   .filter((x) => x.count > 0)
                   .sort((a, b) => b.count - a.count);
                 if (withUnread.length > 0) {
                   openProcess(withUnread[0].pid);
-                  setTimeout(() => {
-                    setRightTab("chat");
-                    markChatRead(withUnread[0].pid);
-                  }, 50);
+                  setTimeout(() => { setRightTab("chat"); markChatRead(withUnread[0].pid); }, 50);
+                } else {
+                  setMainSection("notificacoes"); setSelectedId(null);
                 }
               }}
               className="relative grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-elevated"
@@ -544,8 +594,44 @@ function ProfissionalPage() {
                 </span>
               )}
             </button>
-            <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs font-medium">
-              {PROF_INITIALS}
+
+            {/* Avatar + dropdown */}
+            <div ref={avatarRef} className="relative">
+              <button
+                onClick={() => setShowAvatarMenu((v) => !v)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs font-medium hover:opacity-80 transition-opacity"
+              >
+                {PROF_INITIALS}
+              </button>
+              {showAvatarMenu && (
+                <div className="absolute right-0 top-11 z-50 w-48 overflow-hidden rounded-2xl border border-border bg-background shadow-xl">
+                  <div className="border-b border-border px-4 py-3">
+                    <div className="text-xs font-medium">{PROF_NAME}</div>
+                    <div className="text-[11px] text-ink-soft">Profissional</div>
+                  </div>
+                  <div className="p-1.5 space-y-0.5">
+                    <button
+                      onClick={() => { setShowAvatarMenu(false); navigate({ to: "/perfil-profissional" }); }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
+                    >
+                      <User className="h-4 w-4" /> Meu Perfil
+                    </button>
+                    <button
+                      onClick={() => { setShowAvatarMenu(false); setMainSection("configuracoes"); setSelectedId(null); }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
+                    >
+                      <Settings className="h-4 w-4" /> Configurações
+                    </button>
+                    <div className="my-1 h-px bg-border" />
+                    <button
+                      onClick={() => { setShowAvatarMenu(false); window.location.href = "/entrar"; }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" /> Sair
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1228,22 +1314,49 @@ function ProfissionalPage() {
                         </div>
                       ))
                     )}
+                    {/* Indicador de digitando (IA) */}
+                    {aiTyping && (
+                      <div className="flex justify-start">
+                        <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-surface px-3 py-2 text-xs text-ink-soft">
+                          <Bot className="h-3 w-3 text-accent" />
+                          <span className="flex gap-0.5">
+                            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft/60 [animation-delay:0ms]" />
+                            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft/60 [animation-delay:150ms]" />
+                            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft/60 [animation-delay:300ms]" />
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <form onSubmit={sendMsg} className="flex shrink-0 items-center gap-2 border-t border-border p-3">
-                    <input
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Mensagem para o cliente…"
-                      className="flex-1 rounded-full bg-surface px-4 py-2 text-xs outline-none placeholder:text-ink-soft/60"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!chatInput.trim()}
-                      className="grid h-8 w-8 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                    </button>
-                  </form>
+                  {/* Barra inferior do chat */}
+                  <div className="shrink-0 border-t border-border">
+                    {/* Modo IA toggle */}
+                    <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+                      <button
+                        onClick={() => setAiMode((v) => !v)}
+                        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors ${aiMode ? "bg-accent/15 text-accent" : "bg-surface text-ink-soft hover:bg-surface-elevated"}`}
+                      >
+                        <Bot className="h-3 w-3" />
+                        {aiMode ? "IA ativa" : "Ativar IA"}
+                      </button>
+                      {aiMode && <span className="text-[10px] text-ink-soft">Cliente responde automaticamente</span>}
+                    </div>
+                    <form onSubmit={sendMsg} className="flex items-center gap-2 px-3 pb-3">
+                      <input
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={aiMode ? "Mensagem (IA responderá)…" : "Mensagem para o cliente…"}
+                        className="flex-1 rounded-full bg-surface px-4 py-2 text-xs outline-none placeholder:text-ink-soft/60"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!chatInput.trim()}
+                        className="grid h-8 w-8 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                      </button>
+                    </form>
+                  </div>
                 </>
               )}
             </aside>

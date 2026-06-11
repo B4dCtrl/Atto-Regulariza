@@ -117,7 +117,7 @@ function PoliticaDeCookiesPage() {
 
         <h2>7. Controlador e encarregado</h2>
         <p>
-          Gzg Arquitetura LTDA (marca <strong>Ato Regulariza</strong>) · CNPJ 40.420.802/0001-75<br />
+          Gzg Arquitetura LTDA (marca <strong>Ato Regulariza</strong>)<br />
           Encarregado (DPO): Gabriel Zanchet Gomes<br />
           Canal do titular: <a href="mailto:contato@atoregulariza.com">contato@atoregulariza.com</a>
         </p>
