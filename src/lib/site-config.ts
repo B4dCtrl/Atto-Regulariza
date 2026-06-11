@@ -14,5 +14,8 @@ export const LOGIN_PAUSED = true;
 /** Chave de acesso da equipe (use ?dev=ESTA_CHAVE na URL ou o botão "Acesso da equipe"). */
 export const DEV_ACCESS_KEY = "atto-dev-2026";
 
+/** Duração do acesso após autenticação (1 hora em ms). */
+export const DEV_EXPIRY_MS = 60 * 60 * 1_000;
+
 /** Chave do localStorage que marca o navegador como "modo equipe". */
 export const DEV_STORAGE_KEY = "regulariza_dev_access";

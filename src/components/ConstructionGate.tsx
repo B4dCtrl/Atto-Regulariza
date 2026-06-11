@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Construction } from "@/components/landing/Construction";
-import { CONSTRUCTION_MODE, DEV_ACCESS_KEY, DEV_STORAGE_KEY as STORAGE_KEY } from "@/lib/site-config";
+import { CONSTRUCTION_MODE, DEV_ACCESS_KEY, DEV_EXPIRY_MS, DEV_STORAGE_KEY as STORAGE_KEY } from "@/lib/site-config";
 
 /**
  * Porteiro de pré-lançamento.
@@ -26,7 +26,7 @@ export function ConstructionGate({ children }: { children: ReactNode }) {
       const key = params.get("dev");
 
       if (key === DEV_ACCESS_KEY) {
-        localStorage.setItem(STORAGE_KEY, "1");
+        localStorage.setItem(STORAGE_KEY, String(Date.now() + DEV_EXPIRY_MS));
         // remove o ?dev da URL por estética/segurança
         params.delete("dev");
         const qs = params.toString();
@@ -39,7 +39,11 @@ export function ConstructionGate({ children }: { children: ReactNode }) {
         localStorage.removeItem(STORAGE_KEY);
       }
 
-      setUnlocked(localStorage.getItem(STORAGE_KEY) === "1");
+      // Verifica expiração: valor armazenado é timestamp de expiração
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const valid  = !!stored && Number(stored) > Date.now();
+      if (!valid) localStorage.removeItem(STORAGE_KEY); // limpa se expirado
+      setUnlocked(valid);
     } catch {
       setUnlocked(false);
     }

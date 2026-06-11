@@ -1,19 +1,27 @@
-import { motion } from "framer-motion";
-import { MessageCircle, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, ArrowRight, Lock } from "lucide-react";
+import { useState, type FormEvent } from "react";
 import { WHATSAPP } from "@/lib/brand";
-import { DEV_STORAGE_KEY } from "@/lib/site-config";
+import { DEV_ACCESS_KEY, DEV_EXPIRY_MS, DEV_STORAGE_KEY } from "@/lib/site-config";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function Construction() {
-  // Equipe entra direto, sem senha
-  function entrarEquipe() {
-    try {
-      localStorage.setItem(DEV_STORAGE_KEY, "1");
-    } catch {
-      /* noop */
+  const [showField, setShowField] = useState(false);
+  const [pwd, setPwd]             = useState("");
+  const [erro, setErro]           = useState(false);
+
+  function tentarEntrar(e: FormEvent) {
+    e.preventDefault();
+    if (pwd === DEV_ACCESS_KEY) {
+      try {
+        localStorage.setItem(DEV_STORAGE_KEY, String(Date.now() + DEV_EXPIRY_MS));
+      } catch { /* noop */ }
+      window.location.href = "/";
+    } else {
+      setErro(true);
+      setPwd("");
     }
-    window.location.href = "/";
   }
 
   return (
@@ -82,16 +90,47 @@ export function Construction() {
 
         <div className="mt-12 text-xs text-ink-soft/60">Ato Regulariza · 2026</div>
 
-        {/* Acesso da equipe — entra direto, sem senha */}
+        {/* Acesso da equipe — requer senha, expira em 1 h */}
         <div className="mt-6">
-          <button
-            type="button"
-            onClick={entrarEquipe}
-            className="inline-flex items-center gap-1.5 text-xs text-ink-soft/50 transition-colors hover:text-accent"
-          >
-            Entrar como equipe
-            <ArrowRight className="h-3 w-3" />
-          </button>
+          {!showField ? (
+            <button
+              type="button"
+              onClick={() => setShowField(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-ink-soft/50 transition-colors hover:text-accent"
+            >
+              Entrar como equipe
+              <ArrowRight className="h-3 w-3" />
+            </button>
+          ) : (
+            <AnimatePresence>
+              <motion.form
+                onSubmit={tentarEntrar}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className="flex flex-col items-center gap-2"
+              >
+                <div className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${erro ? "border-red-300 bg-red-50" : "border-border bg-surface-elevated"}`}>
+                  <Lock className="h-3 w-3 text-ink-soft" />
+                  <input
+                    autoFocus
+                    type="password"
+                    value={pwd}
+                    onChange={(e) => { setPwd(e.target.value); setErro(false); }}
+                    placeholder="Senha da equipe"
+                    className="w-36 bg-transparent outline-none placeholder:text-ink-soft/50"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-full bg-foreground px-2.5 py-1 text-[10px] text-background hover:bg-foreground/80"
+                  >
+                    Entrar
+                  </button>
+                </div>
+                {erro && <span className="text-[10px] text-red-500">Senha incorreta.</span>}
+              </motion.form>
+            </AnimatePresence>
+          )}
         </div>
       </motion.div>
     </div>
