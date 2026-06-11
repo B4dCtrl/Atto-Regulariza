@@ -48,11 +48,11 @@ function Index() {
       <main className="w-full overflow-x-hidden">
         <Hero />
         <LogoBar />
+        <HowItWorks />
         <BlurHeadline />
         <BentoFeatures />
 
         <Environments />
-        <HowItWorks />
         <Audiences />
         <Testimonial />
         <FinalCTA />
