@@ -440,17 +440,6 @@ function EntrarPage() {
             )}
           </p>
 
-          {/* Acesso de demonstração à área de membros */}
-          <div className="mt-6 rounded-xl border border-dashed border-border bg-surface/50 p-3 text-center">
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/dashboard" })}
-              data-cursor="expand"
-              className="text-sm font-medium text-accent underline-offset-4 hover:underline"
-            >
-              Acessar área de membros (demonstração) →
-            </button>
-          </div>
         </motion.div>
       </div>
     </div>

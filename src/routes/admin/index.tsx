@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { Kanban } from "@/components/admin/Kanban";
 import { ChatbotPanel } from "@/components/admin/ChatbotPanel";
@@ -8,6 +8,18 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Back office — Regulariza" }] }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw redirect({ to: "/entrar" });
+    // Verifica role admin
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id);
+    const isAdmin = roles?.some((r) => r.role === "admin");
+    if (!isAdmin) throw redirect({ to: "/dashboard" });
+    return { userId: session.user.id };
+  },
   component: AdminHome,
 });
 

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect, type DragEvent, type ChangeEvent, type FormEvent } from "react";
 import {
@@ -18,11 +18,13 @@ export const Route = createFileRoute("/dashboard")({
       { name: "description", content: "Acompanhe sua regularização em tempo real, envie documentos e converse com seu especialista." },
     ],
   }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw redirect({ to: "/entrar" });
+    return { userId: session.user.id };
+  },
   component: DashboardPage,
 });
-
-// UUID fixo do imóvel demo — espelhado no SQL seed
-const DEMO_PROPERTY_ID = "11111111-1111-1111-1111-111111111111";
 
 type PropertyRow    = Tables<"properties">;
 type StageRow       = Tables<"process_stages">;
@@ -48,8 +50,10 @@ function statusStyle(s: string) {
 }
 
 function DashboardContent() {
+  const { userId } = Route.useRouteContext();
   const [showTourDialog, setShowTourDialog] = useState(true);
   const [activeSection, setActiveSection] = useState<string>("overview");
+  const [propertyId, setPropertyId]       = useState<string | null>(null);
   const [property, setProperty]           = useState<PropertyRow | null>(null);
   const [stages,   setStages]             = useState<StageRow[]>([]);
   const [docs,     setDocs]               = useState<DocRow[]>([]);
@@ -61,20 +65,33 @@ function DashboardContent() {
   const fileRef   = useRef<HTMLInputElement>(null);
   const chatRef   = useRef<HTMLDivElement>(null);
 
-  /* ── Initial load ── */
+  /* ── Busca imóvel do cliente logado ── */
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      const [{ data: prop }, { data: stagesData }, { data: docsData }, { data: msgsData }] =
+      // 1. Encontra o imóvel deste cliente
+      const { data: propData } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("client_id", userId)
+        .limit(1)
+        .single();
+
+      if (cancelled || !propData) { setLoading(false); return; }
+
+      const pid = propData.id;
+      setPropertyId(pid);
+      setProperty(propData);
+
+      // 2. Carrega etapas, docs e mensagens em paralelo
+      const [{ data: stagesData }, { data: docsData }, { data: msgsData }] =
         await Promise.all([
-          supabase.from("properties").select("*").eq("id", DEMO_PROPERTY_ID).single(),
-          supabase.from("process_stages").select("*").eq("property_id", DEMO_PROPERTY_ID).order("stage_number"),
-          supabase.from("documents").select("*").eq("property_id", DEMO_PROPERTY_ID).order("created_at"),
-          supabase.from("messages").select("*").eq("property_id", DEMO_PROPERTY_ID).order("created_at"),
+          supabase.from("process_stages").select("*").eq("property_id", pid).order("stage_number"),
+          supabase.from("documents").select("*").eq("property_id", pid).order("created_at"),
+          supabase.from("messages").select("*").eq("property_id", pid).order("created_at"),
         ]);
       if (cancelled) return;
-      if (prop)       setProperty(prop);
       if (stagesData) setStages(stagesData);
       if (docsData)   setDocs(docsData);
       if (msgsData)   setMsgs(msgsData);
@@ -83,22 +100,23 @@ function DashboardContent() {
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [userId]);
 
   /* ── Realtime subscriptions ── */
   useEffect(() => {
+    if (!propertyId) return;
     const channel = supabase
-      .channel(`dashboard-${DEMO_PROPERTY_ID}`)
+      .channel(`dashboard-${propertyId}`)
       /* property progress/status changes → barra de progresso atualiza */
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "properties", filter: `id=eq.${DEMO_PROPERTY_ID}` },
+        { event: "*", schema: "public", table: "properties", filter: `id=eq.${propertyId}` },
         ({ new: next }) => { if (next) setProperty(next as PropertyRow); }
       )
       /* stage changes → timeline atualiza */
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "process_stages", filter: `property_id=eq.${DEMO_PROPERTY_ID}` },
+        { event: "*", schema: "public", table: "process_stages", filter: `property_id=eq.${propertyId}` },
         ({ eventType, new: next, old: prev }) => {
           setStages((cur) => {
             if (eventType === "DELETE") return cur.filter((s) => s.id !== (prev as StageRow).id);
@@ -110,13 +128,13 @@ function DashboardContent() {
       /* new documents */
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "documents", filter: `property_id=eq.${DEMO_PROPERTY_ID}` },
+        { event: "INSERT", schema: "public", table: "documents", filter: `property_id=eq.${propertyId}` },
         ({ new: next }) => { if (next) setDocs((d) => [...d, next as DocRow]); }
       )
       /* document status updates (admin approves) */
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "documents", filter: `property_id=eq.${DEMO_PROPERTY_ID}` },
+        { event: "UPDATE", schema: "public", table: "documents", filter: `property_id=eq.${propertyId}` },
         ({ new: next }) => {
           if (next) setDocs((d) => d.map((doc) => doc.id === (next as DocRow).id ? next as DocRow : doc));
         }
@@ -124,7 +142,7 @@ function DashboardContent() {
       /* new messages */
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `property_id=eq.${DEMO_PROPERTY_ID}` },
+        { event: "INSERT", schema: "public", table: "messages", filter: `property_id=eq.${propertyId}` },
         ({ new: next }) => {
           if (next) {
             setMsgs((m) => [...m, next as MessageRow]);
@@ -146,7 +164,7 @@ function DashboardContent() {
   const addFiles = async (files: FileList | null) => {
     if (!files) return;
     const inserts = Array.from(files).map((f) => ({
-      property_id: DEMO_PROPERTY_ID,
+      property_id: propertyId,
       name: f.name,
       size_text: `${Math.max(1, Math.round(f.size / 1024))} KB`,
       status: "Enviado",
@@ -169,7 +187,7 @@ function DashboardContent() {
     setSendingMsg(true);
     setChatInput("");
     await supabase.from("messages").insert({
-      property_id: DEMO_PROPERTY_ID,
+      property_id: propertyId,
       sender_name: "Marina Silveira",
       content: text,
       is_client: true,

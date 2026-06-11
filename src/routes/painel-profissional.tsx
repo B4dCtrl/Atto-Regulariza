@@ -1,4 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 import React, { useState, useRef, useEffect, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
@@ -15,6 +16,11 @@ export const Route = createFileRoute("/painel-profissional")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw redirect({ to: "/entrar" });
+    return { userId: session.user.id };
+  },
   component: ProfissionalPage,
 });
 
