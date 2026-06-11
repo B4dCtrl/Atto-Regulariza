@@ -17,15 +17,6 @@ export function BlurHeadline() {
 
         {/* ── Headline ── */}
         <div className="mx-auto max-w-5xl text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={inView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.55, ease: EASE }}
-            className="mb-7 inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs text-ink-soft"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            Construído para clareza
-          </motion.div>
 
           <h2 className="font-serif text-[clamp(2rem,5.5vw,4.75rem)] leading-[1.05] tracking-tight text-balance">
             <motion.span
