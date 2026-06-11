@@ -5,25 +5,27 @@ import { ChatbotPanel } from "@/components/admin/ChatbotPanel";
 import { UploadZone } from "@/components/admin/UploadZone";
 import { Search, Bell, Plus, Loader2, User, Settings, LogOut, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { LOGIN_PAUSED } from "@/lib/site-config";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: "Back office — Regulariza" }] }),
   beforeLoad: async () => {
+    if (LOGIN_PAUSED) return { userId: null as string | null };
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar" });
-    // Verifica role admin
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", session.user.id);
     const isAdmin = roles?.some((r) => r.role === "admin");
     if (!isAdmin) throw redirect({ to: "/dashboard" });
-    return { userId: session.user.id };
+    return { userId: session.user.id as string | null };
   },
   component: AdminHome,
 });
 
 type KPI = { l: string; v: string };
+type NextAction = { name: string; next_action_deadline: string };
 
 function AdminHome() {
   const navigate = useNavigate();
@@ -33,11 +35,11 @@ function AdminHome() {
     { l: "Aguardando cliente",  v: "…" },
     { l: "Entregues no mês",    v: "…" },
   ]);
+  const [nextActions,   setNextActions]   = useState<NextAction[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [showAvatar,    setShowAvatar]    = useState(false);
   const [showSearch,    setShowSearch]    = useState(false);
   const [searchQuery,   setSearchQuery]   = useState("");
-  const [showNewModal,  setShowNewModal]  = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -49,8 +51,8 @@ function AdminHome() {
   }, []);
 
   async function loadKpis() {
-    const { data } = await supabase.from("properties").select("status, updated_at");
-    if (!data) return;
+    const { data } = await supabase.from("properties").select("status, updated_at, name, next_action_deadline");
+    if (!data) { setLoading(false); return; }
 
     const now        = new Date();
     const thisMonth  = now.getMonth();
@@ -71,6 +73,13 @@ function AdminHome() {
       { l: "Aguardando cliente", v: String(aguardando) },
       { l: "Entregues no mês",   v: String(entregues)  },
     ]);
+
+    const upcoming = data
+      .filter((p) => p.next_action_deadline)
+      .sort((a, b) => new Date(a.next_action_deadline!).getTime() - new Date(b.next_action_deadline!).getTime())
+      .slice(0, 5) as NextAction[];
+    setNextActions(upcoming);
+
     setLoading(false);
   }
 
@@ -166,7 +175,7 @@ function AdminHome() {
                   </button>
                   <div className="my-1 h-px bg-border" />
                   <button
-                    onClick={() => { setShowAvatar(false); window.location.href = "/entrar"; }}
+                    onClick={async () => { await supabase.auth.signOut(); window.location.href = "/entrar"; }}
                     className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
                   >
                     <LogOut className="h-4 w-4" /> Sair
@@ -201,12 +210,27 @@ function AdminHome() {
           <UploadZone />
           <div className="rounded-2xl bg-foreground p-5 text-background">
             <div className="text-[10px] uppercase tracking-widest text-background/60">Próximas ações</div>
-            <div className="mt-2 font-serif text-xl leading-snug">3 protocolos vencem nesta semana</div>
-            <ul className="mt-3 space-y-2 text-xs text-background/80">
-              <li className="flex justify-between"><span>Apto 142 · Vila Madalena</span><span>2d</span></li>
-              <li className="flex justify-between"><span>Lote 88 · Campo Grande</span><span>4d</span></li>
-              <li className="flex justify-between"><span>Sala 305 · Pinheiros</span><span>5d</span></li>
-            </ul>
+            <div className="mt-2 font-serif text-xl leading-snug">
+              {nextActions.length > 0
+                ? `${nextActions.length} prazo${nextActions.length !== 1 ? "s" : ""} agendado${nextActions.length !== 1 ? "s" : ""}`
+                : "Nenhum prazo agendado"}
+            </div>
+            {nextActions.length > 0 && (
+              <ul className="mt-3 space-y-2 text-xs text-background/80">
+                {nextActions.map((a) => {
+                  const ms   = new Date(a.next_action_deadline).getTime() - Date.now();
+                  const days = Math.ceil(ms / 86_400_000);
+                  return (
+                    <li key={a.name + a.next_action_deadline} className="flex justify-between gap-2">
+                      <span className="truncate">{a.name}</span>
+                      <span className={`shrink-0 ${days <= 0 ? "text-red-300" : days <= 2 ? "text-yellow-300" : ""}`}>
+                        {days <= 0 ? "Vencido" : `${days}d`}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </div>
       </div>

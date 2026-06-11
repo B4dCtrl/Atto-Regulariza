@@ -51,6 +51,15 @@ export type Database = {
           assigned_professional_id: string | null
           created_at: string
           updated_at: string
+          client_name: string | null
+          client_email: string | null
+          client_phone: string | null
+          client_cpf: string | null
+          tipo_imovel: string | null
+          situacao: string | null
+          objetivo: string | null
+          urgencia: string | null
+          notes: string | null
         }
         Insert: {
           id?: string
@@ -67,6 +76,15 @@ export type Database = {
           assigned_professional_id?: string | null
           created_at?: string
           updated_at?: string
+          client_name?: string | null
+          client_email?: string | null
+          client_phone?: string | null
+          client_cpf?: string | null
+          tipo_imovel?: string | null
+          situacao?: string | null
+          objetivo?: string | null
+          urgencia?: string | null
+          notes?: string | null
         }
         Update: {
           id?: string
@@ -83,6 +101,15 @@ export type Database = {
           assigned_professional_id?: string | null
           created_at?: string
           updated_at?: string
+          client_name?: string | null
+          client_email?: string | null
+          client_phone?: string | null
+          client_cpf?: string | null
+          tipo_imovel?: string | null
+          situacao?: string | null
+          objetivo?: string | null
+          urgencia?: string | null
+          notes?: string | null
         }
         Relationships: []
       }
