@@ -536,114 +536,14 @@ function ProfissionalPage() {
 
   /* ── Render ── */
   return (
-    <div className="min-h-screen bg-surface/50 text-foreground">
-      {/* ── Topbar ── */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-          {selectedProc ? (
-            <button
-              onClick={() => setSelectedId(null)}
-              className="flex items-center gap-1.5 text-sm text-ink-soft hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Processos</span>
-            </button>
-          ) : (
-            <Link to="/" className="flex items-center gap-1.5">
-              <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-              <span className="font-arsenica text-xl leading-none text-accent hidden sm:inline">ato</span>
-            </Link>
-          )}
-
-          {selectedProc ? (
-            <div className="hidden sm:flex items-center gap-2 text-sm min-w-0">
-              <ChevronRight className="h-4 w-4 shrink-0 text-ink-soft" />
-              <span className="font-medium truncate max-w-[220px]">{selectedProc.name}</span>
-              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs ${URGENCY_CLS[selectedProc.urgency]}`}>
-                {URGENCY_LABEL[selectedProc.urgency]}
-              </span>
-            </div>
-          ) : (
-            <div className="h-5 w-px bg-border hidden sm:block" />
-          )}
-
-          <div className="ml-auto flex items-center gap-2">
-            {/* Sino */}
-            <button
-              onClick={() => {
-                if (typeof Notification !== "undefined" && Notification.permission === "default") {
-                  Notification.requestPermission();
-                }
-                const withUnread = acceptedIds
-                  .map((pid) => ({ pid, count: unreadCount(pid) }))
-                  .filter((x) => x.count > 0)
-                  .sort((a, b) => b.count - a.count);
-                if (withUnread.length > 0) {
-                  openProcess(withUnread[0].pid);
-                  setTimeout(() => { setRightTab("chat"); markChatRead(withUnread[0].pid); }, 50);
-                } else {
-                  setMainSection("notificacoes"); setSelectedId(null);
-                }
-              }}
-              className="relative grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-elevated"
-            >
-              <Bell className="h-4 w-4 text-ink-soft" />
-              {totalUnread > 0 && (
-                <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                  {totalUnread > 9 ? "9+" : totalUnread}
-                </span>
-              )}
-            </button>
-
-            {/* Avatar + dropdown */}
-            <div ref={avatarRef} className="relative">
-              <button
-                onClick={() => setShowAvatarMenu((v) => !v)}
-                className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs font-medium hover:opacity-80 transition-opacity"
-              >
-                {PROF_INITIALS}
-              </button>
-              {showAvatarMenu && (
-                <div className="absolute right-0 top-11 z-50 w-48 overflow-hidden rounded-2xl border border-border bg-background shadow-xl">
-                  <div className="border-b border-border px-4 py-3">
-                    <div className="text-xs font-medium">{PROF_NAME}</div>
-                    <div className="text-[11px] text-ink-soft">Profissional</div>
-                  </div>
-                  <div className="p-1.5 space-y-0.5">
-                    <button
-                      onClick={() => { setShowAvatarMenu(false); navigate({ to: "/perfil-profissional" }); }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
-                    >
-                      <User className="h-4 w-4" /> Meu Perfil
-                    </button>
-                    <button
-                      onClick={() => { setShowAvatarMenu(false); setMainSection("configuracoes"); setSelectedId(null); }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
-                    >
-                      <Settings className="h-4 w-4" /> Configurações
-                    </button>
-                    <div className="my-1 h-px bg-border" />
-                    <button
-                      onClick={() => { setShowAvatarMenu(false); window.location.href = "/entrar"; }}
-                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut className="h-4 w-4" /> Sair
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex h-[calc(100vh-3.5rem)]">
-        {/* ═══ SIDEBAR ═══ */}
-        <aside className="group sticky top-14 hidden h-[calc(100vh-3.5rem)] w-16 shrink-0 md:block">
-          <div className="absolute inset-y-0 left-0 z-20 flex h-full w-16 flex-col overflow-hidden border-r border-border bg-background p-3 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]">
-            <Link to="/" className="mb-4 flex shrink-0 items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+    <div className="flex h-screen overflow-hidden bg-surface/50 text-foreground">
+      {/* ═══ SIDEBAR ═══ */}
+      <aside className="group sticky top-0 hidden h-screen w-16 shrink-0 md:block">
+        <div className="absolute inset-y-0 left-0 z-20 flex h-full w-16 flex-col overflow-hidden border-r border-border bg-background p-3 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]">
+            {/* Logo */}
+            <Link to="/" className="mb-5 flex shrink-0 items-center gap-2.5 px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               <img src="/logo-ato.png" alt="Ato" className="h-5 w-5 shrink-0 rounded" />
-              <span className="whitespace-nowrap text-sm font-medium">profissional</span>
+              <span className="whitespace-nowrap font-arsenica text-lg leading-none text-accent">ato</span>
             </Link>
             <nav className="space-y-0.5">
               {([
@@ -682,7 +582,23 @@ function ProfissionalPage() {
                 </button>
               </nav>
             </div>
-            <div className="mt-auto">
+            <div className="mt-auto space-y-0.5">
+              {/* Sino no sidebar */}
+              <button
+                onClick={() => {
+                  if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
+                  const withUnread = acceptedIds.map((pid) => ({ pid, count: unreadCount(pid) })).filter((x) => x.count > 0).sort((a, b) => b.count - a.count);
+                  if (withUnread.length > 0) { openProcess(withUnread[0].pid); setTimeout(() => { setRightTab("chat"); markChatRead(withUnread[0].pid); }, 50); }
+                  else { setMainSection("notificacoes"); setSelectedId(null); }
+                }}
+                className="relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
+              >
+                <Bell className="h-4 w-4 shrink-0" />
+                {totalUnread > 0 && <span className="absolute left-6 top-1.5 h-2 w-2 rounded-full bg-red-500" />}
+                <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  Notificações {totalUnread > 0 && <span className="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">{totalUnread}</span>}
+                </span>
+              </button>
               <button
                 onClick={() => { window.location.href = "/entrar"; }}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
@@ -690,6 +606,37 @@ function ProfissionalPage() {
                 <LogOut className="h-4 w-4 shrink-0" />
                 <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">Sair</span>
               </button>
+              {/* Avatar */}
+              <div ref={avatarRef} className="relative">
+                <button
+                  onClick={() => setShowAvatarMenu((v) => !v)}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-surface transition-colors"
+                >
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-medium text-background">
+                    {PROF_INITIALS}
+                  </div>
+                  <div className="min-w-0 text-left opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    <div className="truncate text-xs font-medium whitespace-nowrap">{PROF_NAME}</div>
+                    <div className="truncate text-[11px] text-ink-soft whitespace-nowrap">Profissional</div>
+                  </div>
+                </button>
+                {showAvatarMenu && (
+                  <div className="absolute bottom-12 left-2 z-50 w-48 overflow-hidden rounded-2xl border border-border bg-background shadow-xl">
+                    <div className="p-1.5 space-y-0.5">
+                      <button onClick={() => { setShowAvatarMenu(false); navigate({ to: "/perfil-profissional" }); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors">
+                        <User className="h-4 w-4" /> Meu Perfil
+                      </button>
+                      <button onClick={() => { setShowAvatarMenu(false); setMainSection("configuracoes"); setSelectedId(null); }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors">
+                        <Settings className="h-4 w-4" /> Configurações
+                      </button>
+                      <div className="my-1 h-px bg-border" />
+                      <button onClick={() => { setShowAvatarMenu(false); window.location.href = "/entrar"; }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                        <LogOut className="h-4 w-4" /> Sair
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </aside>
@@ -911,7 +858,7 @@ function ProfissionalPage() {
             key={`work-${selectedId}`}
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
-            className="grid h-[calc(100vh-3.5rem)] grid-cols-[210px_1fr_272px] overflow-hidden"
+            className="grid h-screen grid-cols-[210px_1fr_272px] overflow-hidden"
           >
             {/* ── COL 1: Stage list ── */}
             <aside className="flex flex-col overflow-hidden border-r border-border bg-background">
@@ -1364,7 +1311,6 @@ function ProfissionalPage() {
             )}
           </AnimatePresence>
         </main>
-      </div>
 
       {/* ── MODAL PENDÊNCIA ── */}
       {showPendencyForm && selectedId && (

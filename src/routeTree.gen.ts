@@ -18,6 +18,7 @@ import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PainelProfissionalRouteImport } from './routes/painel-profissional'
 import { Route as InstitucionalRouteImport } from './routes/institucional'
 import { Route as GestaoRouteImport } from './routes/gestao'
+import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AvisoDePrivacidadeRouteImport } from './routes/aviso-de-privacidade'
@@ -77,6 +78,11 @@ const InstitucionalRoute = InstitucionalRouteImport.update({
 const GestaoRoute = GestaoRouteImport.update({
   id: '/gestao',
   path: '/gestao',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipeRoute = EquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EntrarRoute = EntrarRouteImport.update({
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
+  '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
   '/painel-profissional': typeof PainelProfissionalRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
+  '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
   '/painel-profissional': typeof PainelProfissionalRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
+  '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
   '/painel-profissional': typeof PainelProfissionalRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/aviso-de-privacidade'
     | '/dashboard'
     | '/entrar'
+    | '/equipe'
     | '/gestao'
     | '/institucional'
     | '/painel-profissional'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/aviso-de-privacidade'
     | '/dashboard'
     | '/entrar'
+    | '/equipe'
     | '/gestao'
     | '/institucional'
     | '/painel-profissional'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/aviso-de-privacidade'
     | '/dashboard'
     | '/entrar'
+    | '/equipe'
     | '/gestao'
     | '/institucional'
     | '/painel-profissional'
@@ -320,6 +332,7 @@ export interface RootRouteChildren {
   AvisoDePrivacidadeRoute: typeof AvisoDePrivacidadeRoute
   DashboardRoute: typeof DashboardRoute
   EntrarRoute: typeof EntrarRoute
+  EquipeRoute: typeof EquipeRoute
   GestaoRoute: typeof GestaoRoute
   InstitucionalRoute: typeof InstitucionalRoute
   PainelProfissionalRoute: typeof PainelProfissionalRoute
@@ -394,6 +407,13 @@ declare module '@tanstack/react-router' {
       path: '/gestao'
       fullPath: '/gestao'
       preLoaderRoute: typeof GestaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipe': {
+      id: '/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof EquipeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/entrar': {
@@ -547,6 +567,7 @@ const rootRouteChildren: RootRouteChildren = {
   AvisoDePrivacidadeRoute: AvisoDePrivacidadeRoute,
   DashboardRoute: DashboardRoute,
   EntrarRoute: EntrarRoute,
+  EquipeRoute: EquipeRoute,
   GestaoRoute: GestaoRoute,
   InstitucionalRoute: InstitucionalRoute,
   PainelProfissionalRoute: PainelProfissionalRoute,

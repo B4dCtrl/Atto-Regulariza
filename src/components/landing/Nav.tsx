@@ -220,6 +220,12 @@ export function Nav() {
             >
               Preços
             </Link>
+            <Link
+              to="/equipe"
+              className="rounded-full px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:bg-foreground/6 hover:text-foreground"
+            >
+              Equipe
+            </Link>
           </motion.div>
 
           {/* Divisor links → CTAs (some ao separar) */}

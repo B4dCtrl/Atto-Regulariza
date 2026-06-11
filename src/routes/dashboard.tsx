@@ -192,46 +192,20 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-surface/50 text-foreground">
-      {/* Topbar */}
-      <header id={TOUR_TOPICS.WELCOME} className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
-        <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-1.5">
-            <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-            <span className="font-arsenica text-xl leading-none text-accent hidden sm:inline">ato</span>
-          </Link>
-          <div className="h-5 w-px bg-border hidden sm:block" />
-          <div className="flex items-center gap-2 text-sm">
-            <Building2 className="h-4 w-4 text-ink-soft" />
-            <span className="font-medium">{property?.name ?? "Meu Imóvel"}</span>
-            <span className="text-ink-soft hidden md:inline">
-              / {property?.city} · {property?.state}
-            </span>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button className="hidden md:flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-xs text-ink-soft">
-              <Search className="h-3.5 w-3.5" /> Buscar
-            </button>
-            <button className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-elevated">
-              <Bell className="h-4 w-4 text-ink-soft" />
-            </button>
-            <Link
-              to="/perfil"
-              className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-xs font-medium text-background transition-opacity hover:opacity-80"
-            >
-              MS
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex">
-        {/* Sidebar retrátil */}
-        <aside className="group sticky top-14 hidden h-[calc(100vh-3.5rem)] w-16 shrink-0 md:block">
+      <div className="flex h-screen overflow-hidden">
+        {/* ═══ SIDEBAR ═══ */}
+        <aside className="group sticky top-0 hidden h-screen w-16 shrink-0 md:block">
           <div
-            className="absolute inset-y-0 left-0 z-20 flex w-16 flex-col overflow-hidden border-r border-border
+            className="absolute inset-y-0 left-0 z-20 flex h-full w-16 flex-col overflow-hidden border-r border-border
                        bg-background p-3 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
                        group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]"
           >
+            {/* Logo */}
+            <Link to="/" className="mb-5 flex shrink-0 items-center gap-2.5 px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <img src="/logo-ato.png" alt="Ato" className="h-5 w-5 shrink-0 rounded" />
+              <span className="whitespace-nowrap font-arsenica text-lg leading-none text-accent">ato</span>
+            </Link>
+
             <nav className="space-y-1">
               {navItems.map((it) => (
                 <button
@@ -266,11 +240,25 @@ function DashboardContent() {
                 Enviar agora <ArrowUpRight className="h-3 w-3" />
               </button>
             </div>
+
+            {/* Avatar no fundo */}
+            <div className="mt-auto flex items-center gap-3 px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <Link
+                to="/perfil"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foreground text-xs font-medium text-background hover:opacity-80 transition-opacity"
+              >
+                MS
+              </Link>
+              <div className="min-w-0">
+                <div className="truncate text-xs font-medium">Meu perfil</div>
+                <div className="truncate text-[11px] text-ink-soft">cliente</div>
+              </div>
+            </div>
           </div>
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 p-4 sm:p-8 max-w-6xl mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-6xl mx-auto w-full">
 
           {/* ── VISÃO GERAL ── */}
           <AnimatePresence mode="wait">
