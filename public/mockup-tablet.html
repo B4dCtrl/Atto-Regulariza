@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup Tablet — Ato Regulariza</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0ece6;
+      font-family: system-ui, sans-serif;
+      padding: 40px;
+    }
+
+    /* ── Tablet frame ── */
+    .tablet {
+      position: relative;
+      width: 600px;
+      background: #1c1c1e;
+      border-radius: 36px;
+      padding: 20px 16px;
+      box-shadow:
+        0 0 0 1px #3a3a3c,
+        0 2px 0 1px #48484a,
+        0 40px 80px -12px rgba(0,0,0,0.55),
+        0 20px 40px -8px rgba(0,0,0,0.30),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    /* Câmera frontal */
+    .tablet::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2c2c2e;
+      box-shadow: 0 0 0 1px #3a3a3c;
+      z-index: 10;
+    }
+
+    /* Botão lateral direito (power) */
+    .tablet::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: 80px;
+      width: 3px;
+      height: 40px;
+      background: #2a2a2c;
+      border-radius: 0 2px 2px 0;
+      box-shadow: 0 60px 0 #2a2a2c, 0 -60px 0 #2a2a2c;
+    }
+
+    /* Botões volume (esquerda) */
+    .vol {
+      position: absolute;
+      left: -3px;
+      top: 100px;
+      width: 3px;
+      height: 32px;
+      background: #2a2a2c;
+      border-radius: 2px 0 0 2px;
+    }
+    .vol::after {
+      content: '';
+      position: absolute;
+      top: 46px;
+      left: 0;
+      width: 3px;
+      height: 32px;
+      background: #2a2a2c;
+      border-radius: 2px 0 0 2px;
+    }
+
+    /* Tela */
+    .screen {
+      width: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #fff;
+      aspect-ratio: 4/3;
+      position: relative;
+    }
+
+    .screen iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      transform-origin: top left;
+    }
+
+    /* Reflexo sutil na tela */
+    .screen::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.06) 0%,
+        transparent 50%
+      );
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* ── Variante: fundo escuro ── */
+    body.dark {
+      background: #111;
+    }
+
+    /* ── Label rodapé ── */
+    .label {
+      text-align: center;
+      margin-top: 32px;
+      color: #8a7f72;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+    .label strong {
+      color: #4a4039;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div>
+    <div class="tablet">
+      <div class="vol"></div>
+      <div class="screen">
+        <iframe
+          src="https://www.atoregulariza.com.br/dashboard"
+          title="Dashboard — Ato Regulariza"
+          scrolling="yes"
+        ></iframe>
+      </div>
+    </div>
+    <p class="label"><strong>ato</strong> regulariza &nbsp;·&nbsp; atoregulariza.com.br</p>
+  </div>
+
+</body>
+</html>
