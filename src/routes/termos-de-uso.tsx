@@ -39,8 +39,8 @@ function TermosDeUsoPage() {
 
         <p>
           Estes Termos regem o uso do site e da plataforma <strong>Ato Regulariza</strong>, operados por{" "}
-          <strong>Gzg Arquitetura LTDA</strong>. Ao navegar, você concorda com
-          as condições abaixo.
+          <strong>Gabriel Zanchet Gomes</strong> (CPF 032.300.791-08), fundador e proprietário. Ao navegar,
+          você concorda com as condições abaixo.
         </p>
 
         <h2>1. Objeto</h2>
@@ -75,7 +75,7 @@ function TermosDeUsoPage() {
 
         <h2>5. Links e serviços de terceiros</h2>
         <p>
-          O site pode conter links para serviços de terceiros (por exemplo, WhatsApp). A Gzg Arquitetura
+          O site pode conter links para serviços de terceiros (por exemplo, WhatsApp). Gabriel Zanchet Gomes (Ato Regulariza)
           não se responsabiliza pelo conteúdo, pelas práticas ou pelas políticas desses serviços, que se
           submetem a seus próprios termos.
         </p>
@@ -89,7 +89,7 @@ function TermosDeUsoPage() {
 
         <h2>7. Limitação de responsabilidade</h2>
         <p>
-          A Gzg Arquitetura empenha-se para manter as informações corretas e o site disponível, mas não
+          Gabriel Zanchet Gomes (Ato Regulariza) empenha-se para manter as informações corretas e o site disponível, mas não
           garante ausência de interrupções ou erros. O conteúdo é fornecido "no estado em que se
           encontra", com finalidade informativa.
         </p>
@@ -108,7 +108,8 @@ function TermosDeUsoPage() {
 
         <h2>10. Contato</h2>
         <p>
-          Gzg Arquitetura LTDA (marca Ato Regulariza)<br />
+          <strong>Gabriel Zanchet Gomes</strong> — CPF 032.300.791-08<br />
+          Fundador e proprietário · marca <strong>Ato Regulariza</strong><br />
           <a href="mailto:contato@atoregulariza.com">contato@atoregulariza.com</a> · WhatsApp +55 67 99851-3179
         </p>
       </main>

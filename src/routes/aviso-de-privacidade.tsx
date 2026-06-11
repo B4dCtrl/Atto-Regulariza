@@ -38,14 +38,15 @@ function AvisoDePrivacidadePage() {
         <p className="updated">Última atualização: junho de 2026</p>
 
         <p>
-          Este Aviso descreve, em conformidade com o art. 9º da Lei nº 13.709/2018 (LGPD), como a{" "}
-          <strong>Gzg Arquitetura LTDA</strong>, por meio da plataforma e do site{" "}
+          Este Aviso descreve, em conformidade com o art. 9º da Lei nº 13.709/2018 (LGPD), como{" "}
+          <strong>Gabriel Zanchet Gomes</strong>, fundador e proprietário da plataforma e do site{" "}
           <strong>Ato Regulariza</strong>, trata dados pessoais coletados neste site.
         </p>
 
         <h2>1. Controlador</h2>
         <p>
-          Gzg Arquitetura LTDA (marca <strong>Ato Regulariza</strong>)
+          <strong>Gabriel Zanchet Gomes</strong> — CPF 032.300.791-08<br />
+          Fundador e proprietário da marca <strong>Ato Regulariza</strong>
         </p>
 
         <h2>2. Encarregado (DPO)</h2>

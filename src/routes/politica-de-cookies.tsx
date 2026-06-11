@@ -92,7 +92,7 @@ function PoliticaDeCookiesPage() {
             <tr><th>Serviço</th><th>Operador</th><th>Categoria</th><th>Origem</th></tr>
           </thead>
           <tbody>
-            <tr><td>Sessão do site</td><td>Gzg Arquitetura LTDA</td><td>Necessário</td><td>BR</td></tr>
+            <tr><td>Sessão do site</td><td>Gabriel Zanchet Gomes (Ato Regulariza)</td><td>Necessário</td><td>BR</td></tr>
             <tr><td>Google Analytics 4 <span className="prov">(prov.)</span></td><td>Google LLC</td><td>Analítico</td><td>EUA</td></tr>
             <tr><td>Hotjar <span className="prov">(prov.)</span></td><td>Hotjar Ltd.</td><td>Analítico</td><td>Malta</td></tr>
             <tr><td>Crisp Chat <span className="prov">(prov.)</span></td><td>Crisp IM SARL</td><td>Funcional</td><td>França</td></tr>
@@ -117,7 +117,8 @@ function PoliticaDeCookiesPage() {
 
         <h2>7. Controlador e encarregado</h2>
         <p>
-          Gzg Arquitetura LTDA (marca <strong>Ato Regulariza</strong>)<br />
+          <strong>Gabriel Zanchet Gomes</strong> — CPF 032.300.791-08<br />
+          Fundador e proprietário da marca <strong>Ato Regulariza</strong><br />
           Encarregado (DPO): Gabriel Zanchet Gomes<br />
           Canal do titular: <a href="mailto:contato@atoregulariza.com">contato@atoregulariza.com</a>
         </p>
