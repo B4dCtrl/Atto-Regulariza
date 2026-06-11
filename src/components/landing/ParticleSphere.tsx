@@ -178,7 +178,7 @@ export function ParticleSphere() {
     });
 
     const points = new THREE.Points(geo, mat);
-    points.position.x = 1.85;      // 1.1 + 25% para a direita
+    points.position.x = 2.50;      // deslocado para a direita
     points.scale.setScalar(0.9);   // 10% menor
     scene.add(points);
 
