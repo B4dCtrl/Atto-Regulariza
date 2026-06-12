@@ -23,6 +23,7 @@ type PropertyRow = Tables<"properties">;
 type StageRow    = Tables<"process_stages">;
 type DocRow      = Tables<"documents">;
 type MsgRow      = Tables<"messages">;
+type ProfileRow  = Tables<"profiles">;
 
 const STATUS_LABEL: Record<string, string> = {
   entrada:      "Entrada",
@@ -57,9 +58,12 @@ function ProjetoPage() {
   const [sending,  setSending]  = useState(false);
   const [tab,      setTab]      = useState<"info" | "docs" | "msgs">("info");
   const [advancing, setAdvancing] = useState(false);
+  const [professionals, setProfessionals] = useState<ProfileRow[]>([]);
+  const [assigning, setAssigning]         = useState(false);
 
   useEffect(() => {
     loadAll();
+    loadProfessionals();
     const ch = supabase
       .channel(`admin-proj-${propertyId}`)
       .on(
@@ -71,6 +75,15 @@ function ProjetoPage() {
     return () => { supabase.removeChannel(ch); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyId]);
+
+  async function loadProfessionals() {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("role", "profissional")
+      .order("name");
+    if (data) setProfessionals(data as ProfileRow[]);
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -119,6 +132,52 @@ function ProjetoPage() {
         .eq("stage_number", i + 1);
     }
     setAdvancing(false);
+    loadAll();
+  }
+
+  async function assignProfessional(profId: string | null) {
+    if (!property) return;
+    setAssigning(true);
+
+    const patch: Partial<PropertyRow> = {
+      assigned_professional_id: profId,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Ao designar pela 1ª vez (ainda em "entrada"/sem andamento), inicia a análise.
+    if (profId && property.status === "entrada") {
+      const { stage, progress } = STATUS_MAP["analise"];
+      patch.status = "analise";
+      patch.current_stage = stage;
+      patch.progress = progress;
+      for (let i = 0; i < STAGE_LABELS.length; i++) {
+        await supabase
+          .from("process_stages")
+          .update({
+            state: i + 1 < stage ? "done" : i + 1 === stage ? "active" : "pending",
+            completed_at: i + 1 < stage ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("property_id", propertyId)
+          .eq("stage_number", i + 1);
+      }
+    }
+
+    await supabase.from("properties").update(patch).eq("id", propertyId);
+
+    // Mensagem automática avisando o cliente que um especialista assumiu.
+    if (profId) {
+      const prof = professionals.find((p) => p.id === profId);
+      await supabase.from("messages").insert({
+        property_id: propertyId,
+        sender_id: profId,
+        sender_name: prof?.name ?? "Especialista",
+        content: `Olá! Sou ${prof?.name ?? "seu especialista"} e vou acompanhar a regularização do seu imóvel. Em breve trago o diagnóstico e os próximos passos.`,
+        is_client: false,
+      });
+    }
+
+    setAssigning(false);
     loadAll();
   }
 
@@ -335,6 +394,63 @@ function ProjetoPage() {
             <div className="text-[11px] text-ink-soft text-center">
               Etapa atual: <strong>{STATUS_LABEL[property.status]}</strong>
             </div>
+          </div>
+
+          {/* Profissional designado */}
+          <div className="rounded-2xl bg-background ring-1 ring-border p-5 space-y-3">
+            <h3 className="font-medium text-sm">Profissional designado</h3>
+            {(() => {
+              const assigned = professionals.find((p) => p.id === property.assigned_professional_id);
+              if (property.assigned_professional_id) {
+                return (
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background text-xs">
+                      {assigned?.initials ?? "—"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{assigned?.name ?? "Profissional"}</div>
+                      <div className="text-[11px] text-ink-soft truncate">{assigned?.specialization ?? "—"}</div>
+                    </div>
+                    <button
+                      onClick={() => assignProfessional(null)}
+                      disabled={assigning}
+                      className="text-xs text-ink-soft hover:text-red-500 disabled:opacity-40 transition-colors"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <>
+                  {professionals.length === 0 ? (
+                    <p className="text-[11px] text-ink-soft">
+                      Nenhum profissional cadastrado ainda. Eles aparecem aqui após criar conta em
+                      /cadastro-profissional.
+                    </p>
+                  ) : (
+                    <select
+                      defaultValue=""
+                      disabled={assigning}
+                      onChange={(e) => { if (e.target.value) assignProfessional(e.target.value); }}
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground transition-colors disabled:opacity-50"
+                    >
+                      <option value="">Selecionar profissional…</option>
+                      {professionals.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}{p.specialization ? ` — ${p.specialization}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {assigning && (
+                    <div className="flex items-center gap-2 text-[11px] text-ink-soft">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Designando…
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Próxima ação / prazo */}

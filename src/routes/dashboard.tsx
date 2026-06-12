@@ -139,7 +139,18 @@ function DashboardContent() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "properties", filter: `id=eq.${propertyId}` },
-        ({ new: next }) => { if (next) setProperty(next as PropertyRow); }
+        ({ new: next }) => {
+          if (!next) return;
+          const np = next as PropertyRow;
+          setProperty(np);
+          // Profissional acabou de ser designado → carrega o perfil para exibir na hora
+          if (np.assigned_professional_id) {
+            supabase.from("profiles").select("*").eq("id", np.assigned_professional_id).single()
+              .then(({ data }) => { if (data) setProfessional(data); });
+          } else {
+            setProfessional(null);
+          }
+        }
       )
       /* stage changes → timeline atualiza */
       .on(
