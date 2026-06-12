@@ -11,6 +11,11 @@ import type { Tables } from "@/integrations/supabase/types";
 import { TourProvider, TourAlertDialog, useTour, TourHelpButton } from "@/components/ui/tour";
 import { getTourSteps, TOUR_TOPICS } from "@/components/onboarding/TourTopics";
 import { FirstTimeTutorial } from "@/components/onboarding/FirstTimeTutorial";
+import {
+  SearchingProfessionalCard,
+  SearchingProfessionalMini,
+  SearchingProfessionalsModal,
+} from "@/components/onboarding/ProfessionalSearch";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -31,6 +36,14 @@ type PropertyRow    = Tables<"properties">;
 type StageRow       = Tables<"process_stages">;
 type DocRow         = Tables<"documents">;
 type MessageRow     = Tables<"messages">;
+type ProfileRow     = Tables<"profiles">;
+
+/** Iniciais a partir de um nome ("Maria Silva" → "MS"). */
+function initialsOf(name?: string | null): string {
+  if (!name) return "—";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "—";
+}
 
 const navItems = [
   { icon: Home,          label: "Visão geral",  id: "overview"   },
@@ -54,6 +67,8 @@ function DashboardContent() {
   const { userId } = Route.useRouteContext();
   const [showTourDialog, setShowTourDialog] = useState(true);
   const [showTutorial, setShowTutorial]     = useState(false);
+  const [showSearching, setShowSearching]   = useState(false);
+  const [professional, setProfessional]     = useState<ProfileRow | null>(null);
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [propertyId, setPropertyId]       = useState<string | null>(null);
   const [property, setProperty]           = useState<PropertyRow | null>(null);
@@ -97,6 +112,17 @@ function DashboardContent() {
       if (stagesData) setStages(stagesData);
       if (docsData)   setDocs(docsData);
       if (msgsData)   setMsgs(msgsData);
+
+      // 3. Carrega o profissional designado (se houver)
+      if (propData.assigned_professional_id) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", propData.assigned_professional_id)
+          .single();
+        if (!cancelled && prof) setProfessional(prof);
+      }
+
       setLoading(false);
     }
 
@@ -157,8 +183,17 @@ function DashboardContent() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  /* ── Tutorial de primeiro acesso ── */
+  /* ── Tutorial de primeiro acesso ──
+     Disparado pelo wizard via /dashboard?welcome=1 (confiável). Caso o parâmetro
+     não esteja presente, recai sobre a flag first_login dos metadados. */
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("welcome") === "1") {
+      setShowTutorial(true);
+      // Limpa o parâmetro da URL sem recarregar a página
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.user_metadata?.first_login) {
         setShowTutorial(true);
@@ -200,16 +235,23 @@ function DashboardContent() {
     setChatInput("");
     await supabase.from("messages").insert({
       property_id: propertyId,
-      sender_name: "Marina Silveira",
+      sender_id: userId,
+      sender_name: clientName,
       content: text,
       is_client: true,
     });
     setSendingMsg(false);
   };
 
-  const progress     = property?.progress      ?? 10;
-  const currentStage = property?.current_stage ?? 1;
+  const progress     = property?.progress      ?? 0;
+  const currentStage = property?.current_stage ?? 0;
   const propStatus   = property?.status        ?? "entrada";
+
+  const hasProfessional = !!professional;
+  const clientName      = property?.client_name ?? "Cliente";
+  const clientInitials  = initialsOf(clientName);
+  /** Processo ainda sem diagnóstico: aguardando equipe analisar o cadastro. */
+  const awaitingDiagnosis = !property?.assigned_professional_id && progress === 0;
 
   /* ─── Skeleton while loading ─── */
   if (loading) {
@@ -223,7 +265,14 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-surface/50 text-foreground">
       <AnimatePresence>
-        {showTutorial && <FirstTimeTutorial onDone={() => setShowTutorial(false)} />}
+        {showTutorial && (
+          <FirstTimeTutorial
+            onDone={() => { setShowTutorial(false); setShowSearching(true); }}
+          />
+        )}
+        {showSearching && (
+          <SearchingProfessionalsModal onDone={() => setShowSearching(false)} />
+        )}
       </AnimatePresence>
       <div className="flex h-screen overflow-hidden">
         {/* ═══ SIDEBAR ═══ */}
@@ -280,10 +329,10 @@ function DashboardContent() {
                 to="/perfil"
                 className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foreground text-xs font-medium text-background hover:opacity-80 transition-opacity"
               >
-                MS
+                {clientInitials}
               </Link>
               <div className="min-w-0">
-                <div className="truncate text-xs font-medium">Meu perfil</div>
+                <div className="truncate text-xs font-medium">{clientName}</div>
                 <div className="truncate text-[11px] text-ink-soft">cliente</div>
               </div>
             </div>
@@ -318,14 +367,14 @@ function DashboardContent() {
                       : propStatus === "analise"      ? "Em análise"
                       : propStatus === "profissional" ? "Com o profissional"
                       : propStatus === "entregue"     ? "Entregue ✓"
-                      : "Entrada recebida"}
+                      : "Aguardando diagnóstico"}
                   </div>
                 </div>
 
                 <div className="mt-6" id={TOUR_TOPICS.PROGRESS_BAR}>
                   <div className="flex items-center justify-between text-xs text-ink-soft mb-2">
                     <span>Progresso geral</span>
-                    <span>{progress}% concluído</span>
+                    <span>{awaitingDiagnosis ? "Aguardando início" : `${progress}% concluído`}</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
                     <motion.div
@@ -335,6 +384,22 @@ function DashboardContent() {
                     />
                   </div>
                 </div>
+
+                {awaitingDiagnosis && (
+                  <div className="mt-5 flex items-start gap-3 rounded-2xl bg-surface p-4">
+                    <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+                      <Clock className="h-4 w-4" />
+                    </span>
+                    <div className="text-sm">
+                      <div className="font-medium">Recebemos seu cadastro</div>
+                      <div className="text-ink-soft mt-0.5">
+                        Nossa equipe está analisando as informações do seu imóvel para fazer o
+                        diagnóstico inicial e designar o especialista do seu caso. O andamento
+                        começa assim que isso acontecer.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
 
               {/* Timeline */}
@@ -344,10 +409,12 @@ function DashboardContent() {
                     <div className="text-xs text-ink-soft">Etapas</div>
                     <h2 className="font-serif text-2xl tracking-tight">Onde sua regularização está</h2>
                   </div>
-                  <div className="hidden sm:flex items-center gap-1 text-xs text-ink-soft">
-                    <Clock className="h-3.5 w-3.5" />
-                    {currentStage < 5 ? `~${(5 - currentStage) * 7} dias para conclusão` : "Concluído!"}
-                  </div>
+                  {property?.next_action_deadline && (
+                    <div className="hidden sm:flex items-center gap-1 text-xs text-ink-soft">
+                      <Clock className="h-3.5 w-3.5" />
+                      Próximo prazo: {new Date(property.next_action_deadline).toLocaleDateString("pt-BR")}
+                    </div>
+                  )}
                 </div>
 
                 <div className="relative grid gap-6 md:grid-cols-5">
@@ -479,7 +546,7 @@ function DashboardContent() {
                       {[
                         { icon: Calendar,    l: "Dias",      v: String(Math.floor((Date.now() - new Date(property?.created_at ?? Date.now()).getTime()) / 86400000)) },
                         { icon: TrendingUp,  l: "Concluído", v: `${progress}%` },
-                        { icon: Clock,       l: "Próx. etapa", v: currentStage < 5 ? `~${(5 - currentStage) * 7}d` : "—" },
+                        { icon: Clock,       l: "Etapa",     v: awaitingDiagnosis ? "—" : String(currentStage) },
                       ].map((m) => (
                         <div key={m.l} className="rounded-2xl bg-surface p-3">
                           <m.icon className="h-3.5 w-3.5 text-ink-soft" />
@@ -492,38 +559,54 @@ function DashboardContent() {
 
                   {/* Chat preview */}
                   <section id={TOUR_TOPICS.CHAT} className="rounded-3xl bg-background ring-1 ring-border p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs">
-                          CR
+                    {hasProfessional ? (
+                      <>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs">
+                              {professional?.initials ?? initialsOf(professional?.name)}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium">{professional?.name ?? "Especialista"}</div>
+                              <div className="text-xs text-ink-soft">
+                                {professional?.specialization ?? "Sua especialista"}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="h-2 w-2 rounded-full bg-accent" />
                         </div>
-                        <div>
-                          <div className="text-sm font-medium">Carla Rocha</div>
-                          <div className="text-xs text-ink-soft">Arquiteta · sua especialista</div>
+                        <div className="space-y-2 max-h-32 overflow-hidden">
+                          {msgs.slice(-2).map((m) => (
+                            <div
+                              key={m.id}
+                              className={`rounded-2xl px-3 py-2 text-sm ${
+                                m.is_client
+                                  ? "rounded-br-md bg-accent text-accent-foreground ml-auto max-w-[85%]"
+                                  : "rounded-bl-md bg-surface text-foreground"
+                              }`}
+                            >
+                              {m.content}
+                            </div>
+                          ))}
+                          {msgs.length === 0 && (
+                            <p className="text-xs text-ink-soft">Nenhuma mensagem ainda.</p>
+                          )}
                         </div>
-                      </div>
-                      <span className="h-2 w-2 rounded-full bg-accent" />
-                    </div>
-                    <div className="space-y-2 max-h-32 overflow-hidden">
-                      {msgs.slice(-2).map((m) => (
-                        <div
-                          key={m.id}
-                          className={`rounded-2xl px-3 py-2 text-sm ${
-                            m.is_client
-                              ? "rounded-br-md bg-accent text-accent-foreground ml-auto max-w-[85%]"
-                              : "rounded-bl-md bg-surface text-foreground"
-                          }`}
+                        <button
+                          onClick={() => setActiveSection("messages")}
+                          className="mt-4 w-full rounded-full border border-border bg-surface-elevated py-2 text-xs text-ink-soft hover:border-foreground/30"
                         >
-                          {m.content}
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => setActiveSection("messages")}
-                      className="mt-4 w-full rounded-full border border-border bg-surface-elevated py-2 text-xs text-ink-soft hover:border-foreground/30"
-                    >
-                      Abrir conversa
-                    </button>
+                          Abrir conversa
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <SearchingProfessionalMini />
+                        <p className="mt-4 text-xs text-ink-soft leading-relaxed">
+                          Assim que seu especialista assumir o caso, a conversa será liberada aqui.
+                        </p>
+                      </>
+                    )}
                   </section>
                 </div>
               </div>
@@ -603,13 +686,19 @@ function DashboardContent() {
                   {/* Header */}
                   <div className="flex items-center gap-3 border-b border-border px-6 py-4">
                     <div className="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background text-sm">
-                      CR
+                      {hasProfessional ? (professional?.initials ?? initialsOf(professional?.name)) : "…"}
                     </div>
                     <div>
-                      <div className="font-medium">Carla Rocha</div>
-                      <div className="text-xs text-ink-soft">Arquiteta · online agora</div>
+                      <div className="font-medium">
+                        {hasProfessional ? professional?.name : "Especialista sendo designado"}
+                      </div>
+                      <div className="text-xs text-ink-soft">
+                        {hasProfessional
+                          ? (professional?.specialization ?? "Sua especialista")
+                          : "Você será avisado quando ele assumir"}
+                      </div>
                     </div>
-                    <span className="ml-auto h-2 w-2 rounded-full bg-accent" />
+                    {hasProfessional && <span className="ml-auto h-2 w-2 rounded-full bg-accent" />}
                   </div>
 
                   {/* Messages */}
@@ -657,42 +746,34 @@ function DashboardContent() {
           {/* ── PROFISSIONAL ── */}
           {activeSection === "professional" && (
             <motion.div key="professional" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                <div className="text-xs text-ink-soft mb-1">Responsável pelo processo</div>
-                <h2 className="font-serif text-2xl tracking-tight mb-6">Seu especialista</h2>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="grid h-16 w-16 place-items-center rounded-full bg-foreground text-background text-xl">
-                    CR
-                  </div>
-                  <div>
-                    <div className="text-lg font-medium">Carla Rocha</div>
-                    <div className="text-sm text-ink-soft">Arquiteta e Urbanista · CAU A-12345-6</div>
-                    <div className="mt-1 text-xs text-accent">● Online agora</div>
-                  </div>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    { label: "Processos concluídos", value: "48" },
-                    { label: "Tempo médio", value: "42 dias" },
-                    { label: "Satisfação", value: "4.9/5" },
-                  ].map((m) => (
-                    <div key={m.label} className="rounded-2xl bg-surface p-4">
-                      <div className="font-serif text-3xl">{m.value}</div>
-                      <div className="text-xs text-ink-soft mt-1">{m.label}</div>
+              {hasProfessional ? (
+                <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
+                  <div className="text-xs text-ink-soft mb-1">Responsável pelo processo</div>
+                  <h2 className="font-serif text-2xl tracking-tight mb-6">Seu especialista</h2>
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="grid h-16 w-16 place-items-center rounded-full bg-foreground text-background text-xl">
+                      {professional?.initials ?? initialsOf(professional?.name)}
                     </div>
-                  ))}
-                </div>
-                <div className="mt-4 rounded-2xl bg-surface-elevated p-4 text-sm text-ink-soft">
-                  Dúvidas sobre o andamento do seu processo? Use a aba de mensagens ou entre em contato
-                  diretamente com a especialista.
-                </div>
-                <button
-                  onClick={() => setActiveSection("messages")}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm"
-                >
-                  <MessageSquare className="h-4 w-4" /> Enviar mensagem
-                </button>
-              </section>
+                    <div>
+                      <div className="text-lg font-medium">{professional?.name}</div>
+                      <div className="text-sm text-ink-soft">{professional?.specialization ?? "Especialista em regularização"}</div>
+                      <div className="mt-1 text-xs text-accent">● Designado ao seu caso</div>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-surface-elevated p-4 text-sm text-ink-soft">
+                    Dúvidas sobre o andamento do seu processo? Use a aba de mensagens para falar
+                    diretamente com seu especialista.
+                  </div>
+                  <button
+                    onClick={() => setActiveSection("messages")}
+                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm"
+                  >
+                    <MessageSquare className="h-4 w-4" /> Enviar mensagem
+                  </button>
+                </section>
+              ) : (
+                <SearchingProfessionalCard />
+              )}
             </motion.div>
           )}
 
@@ -722,8 +803,7 @@ function DashboardContent() {
           )}
           </AnimatePresence>
 
-          <div className="mt-8 flex items-center justify-between text-xs text-ink-soft">
-            <span>Sincronizado em tempo real · Supabase</span>
+          <div className="mt-8 flex items-center justify-end text-xs text-ink-soft">
             <Link to="/" className="hover:text-foreground">Voltar para o site</Link>
           </div>
         </main>

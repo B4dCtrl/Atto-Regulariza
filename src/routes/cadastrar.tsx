@@ -20,6 +20,7 @@ type WizardData = {
   area_m2:      string;
   objetivo:     string;
   urgencia:     string;
+  nome_projeto: string;
   nome:         string;
   email:        string;
   senha:        string;
@@ -76,7 +77,7 @@ const EMPTY: WizardData = {
   tipo_imovel: "", tem_escritura: "", situacao: "",
   cidade: "", estado: "", area_m2: "",
   objetivo: "", urgencia: "",
-  nome: "", email: "", senha: "",
+  nome_projeto: "", nome: "", email: "", senha: "",
 };
 
 const TOTAL_STEPS = 6;
@@ -98,6 +99,10 @@ function CadastrarPage() {
   const situacoes = data.tem_escritura === "sim"
     ? SITUACOES_COM_ESCRITURA
     : SITUACOES_SEM_ESCRITURA;
+
+  const situacaoLabel =
+    [...SITUACOES_COM_ESCRITURA, ...SITUACOES_SEM_ESCRITURA].find((s) => s.id === data.situacao)?.label
+    ?? data.situacao;
 
   function canNext(): boolean {
     if (step === 1) return !!data.tipo_imovel;
@@ -156,12 +161,15 @@ function CadastrarPage() {
       return;
     }
 
-    // Criar propriedade vinculada ao usuário
-    const tipoLabel = TIPOS.find((t) => t.id === data.tipo_imovel)?.label ?? data.tipo_imovel;
+    // Nome do projeto: usa o que o cliente digitou ou, se vazio, "Nome — Situação"
+    const projectName = data.nome_projeto.trim() || `${data.nome} — ${situacaoLabel}`;
+
+    // Criar propriedade vinculada ao usuário.
+    // progress 0 / stage 0: sem andamento até a equipe dar o diagnóstico.
     const { data: prop } = await supabase
       .from("properties")
       .insert({
-        name:         `${tipoLabel} — ${data.cidade}`,
+        name:         projectName,
         city:         data.cidade,
         state:        data.estado,
         client_id:    uid,
@@ -172,8 +180,8 @@ function CadastrarPage() {
         objetivo:     data.objetivo,
         urgencia:     data.urgencia,
         status:       "entrada",
-        current_stage: 1,
-        progress:     10,
+        current_stage: 0,
+        progress:     0,
       })
       .select("id")
       .single();
@@ -185,7 +193,7 @@ function CadastrarPage() {
           property_id:  prop.id,
           stage_number: i + 1,
           label,
-          state:        i === 0 ? "active" : "pending",
+          state:        "pending",
         })),
       );
     }
@@ -193,7 +201,8 @@ function CadastrarPage() {
     // Marcar lead como convertido
     await supabase.from("leads").update({ converted: true }).eq("email", data.email);
 
-    navigate({ to: "/dashboard" });
+    // ?welcome=1 dispara o tutorial + popup de busca de profissional no dashboard
+    navigate({ to: "/dashboard", search: { welcome: "1" } as never });
   }
 
   return (
@@ -402,6 +411,20 @@ function CadastrarPage() {
                     placeholder="Maria da Silva"
                     className={inp()}
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Nome do projeto <span className="text-ink-soft font-normal">(opcional)</span>
+                  </label>
+                  <input
+                    value={data.nome_projeto}
+                    onChange={(e) => set("nome_projeto", e.target.value)}
+                    placeholder={data.nome ? `${data.nome} — ${situacaoLabel}` : "Ex: Casa da praia"}
+                    className={inp()}
+                  />
+                  <p className="mt-1 text-[11px] text-ink-soft">
+                    Como você quer chamar este processo. Se deixar em branco, usaremos seu nome e a situação.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Email</label>

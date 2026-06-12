@@ -300,7 +300,6 @@ function GestaoPage() {
         {/* Footer */}
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 text-xs text-ink-soft">
           <div className="flex items-center gap-4">
-            <span>Sincronizado em tempo real · Supabase Realtime</span>
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-accent" /> online
             </span>
