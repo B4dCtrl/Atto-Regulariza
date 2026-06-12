@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, type DragEvent, type ChangeEvent, type For
 import {
   Home, FileText, MessageSquare, User, History, Bell, Search,
   Check, Clock, Upload, AlertCircle, ArrowUpRight,
-  Building2, Calendar, TrendingUp, Send, X, Loader2,
+  Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -68,6 +68,8 @@ function DashboardContent() {
   const [showTourDialog, setShowTourDialog] = useState(true);
   const [showTutorial, setShowTutorial]     = useState(false);
   const [showSearching, setShowSearching]   = useState(false);
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
   const [professional, setProfessional]     = useState<ProfileRow | null>(null);
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [propertyId, setPropertyId]       = useState<string | null>(null);
@@ -213,6 +215,20 @@ function DashboardContent() {
     });
   }, []);
 
+  /* ── Fecha o menu do avatar ao clicar fora ── */
+  useEffect(() => {
+    function onOut(e: MouseEvent) {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) setShowAvatarMenu(false);
+    }
+    document.addEventListener("mousedown", onOut);
+    return () => document.removeEventListener("mousedown", onOut);
+  }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.href = "/entrar";
+  }
+
   /* ── Scroll chat on msgs change ── */
   useEffect(() => {
     chatRef.current?.scrollTo({ top: 9e9 });
@@ -334,18 +350,48 @@ function DashboardContent() {
               </button>
             </div>
 
-            {/* Avatar no fundo */}
-            <div className="mt-auto flex items-center gap-3 px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              <Link
-                to="/perfil"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foreground text-xs font-medium text-background hover:opacity-80 transition-opacity"
+            {/* Avatar no fundo — menu */}
+            <div ref={avatarRef} className="relative mt-auto">
+              <button
+                onClick={() => setShowAvatarMenu((v) => !v)}
+                className="flex w-full items-center gap-3 rounded-xl px-1 py-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-surface"
               >
-                {clientInitials}
-              </Link>
-              <div className="min-w-0">
-                <div className="truncate text-xs font-medium">{clientName}</div>
-                <div className="truncate text-[11px] text-ink-soft">cliente</div>
-              </div>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foreground text-xs font-medium text-background">
+                  {clientInitials}
+                </span>
+                <span className="min-w-0 text-left">
+                  <span className="block truncate text-xs font-medium">{clientName}</span>
+                  <span className="block truncate text-[11px] text-ink-soft">cliente</span>
+                </span>
+              </button>
+
+              {showAvatarMenu && (
+                <div className="absolute bottom-12 left-1 z-50 w-48 overflow-hidden rounded-2xl border border-border bg-background shadow-xl">
+                  <div className="p-1.5 space-y-0.5">
+                    <Link
+                      to="/perfil"
+                      onClick={() => setShowAvatarMenu(false)}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
+                    >
+                      <User className="h-4 w-4" /> Meu perfil
+                    </Link>
+                    <Link
+                      to="/perfil"
+                      onClick={() => setShowAvatarMenu(false)}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
+                    >
+                      <Settings className="h-4 w-4" /> Configurações
+                    </Link>
+                    <div className="my-1 h-px bg-border" />
+                    <button
+                      onClick={() => { setShowAvatarMenu(false); handleLogout(); }}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="h-4 w-4" /> Sair
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </aside>
