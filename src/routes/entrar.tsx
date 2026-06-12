@@ -440,7 +440,7 @@ function EntrarPage() {
                 </Link>
 
                 <Link
-                  to="/cadastro-profissional"
+                  to="/admin/cadastro-profissional"
                   onClick={() => setShowRoleModal(false)}
                   className="group flex items-center gap-4 rounded-2xl border border-border p-5 hover:border-foreground/40 hover:bg-surface transition-all"
                 >

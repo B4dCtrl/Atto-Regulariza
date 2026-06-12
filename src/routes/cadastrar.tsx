@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
@@ -6,6 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cadastrar")({
   head: () => ({ meta: [{ title: "Regularize seu imóvel — Ato Regulariza" }] }),
+  // Já logado? Não faz sentido criar conta — vai para o painel.
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id);
+    const isAdmin = roles?.some((r) => r.role === "admin");
+    throw redirect({ to: isAdmin ? "/admin" : "/dashboard" });
+  },
   component: CadastrarPage,
 });
 

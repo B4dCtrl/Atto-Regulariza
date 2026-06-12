@@ -10,6 +10,7 @@ import {
 import { CustomCursor } from "@/components/ui/custom-cursor";
 import { ConstructionGate } from "@/components/ConstructionGate";
 import { StaffBar } from "@/components/StaffBar";
+import { useInactivityLogout } from "@/hooks/useInactivityLogout";
 
 import appCss from "../styles.css?url";
 
@@ -129,6 +130,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useInactivityLogout(); // auto-logout após 10 min de inatividade (todas as páginas)
 
   return (
     <QueryClientProvider client={queryClient}>
