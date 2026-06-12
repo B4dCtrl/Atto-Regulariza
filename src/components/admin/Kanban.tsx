@@ -1,4 +1,5 @@
 import { useState, useEffect, type DragEvent } from "react";
+import { Link } from "@tanstack/react-router";
 import { GripVertical, Building2, Clock, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -159,30 +160,38 @@ export function Kanban() {
 
             <div className="space-y-2 min-h-[120px]">
               {list.map((c) => (
-                <div
-                  key={c.id}
-                  draggable
-                  onDragStart={onDragStart(c.id)}
-                  className="group cursor-grab active:cursor-grabbing rounded-xl bg-background ring-1 ring-border p-3 hover:ring-foreground/30 transition-all hover:-translate-y-0.5"
-                >
-                  <div className="flex items-start gap-2">
-                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-surface">
-                      <Building2 className="h-4 w-4 text-ink-soft" />
+                <div key={c.id} className="relative">
+                  <div
+                    draggable
+                    onDragStart={onDragStart(c.id)}
+                    className="group cursor-grab active:cursor-grabbing rounded-xl bg-background ring-1 ring-border p-3 hover:ring-foreground/30 transition-all hover:-translate-y-0.5"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="grid h-8 w-8 place-items-center rounded-lg bg-surface">
+                        <Building2 className="h-4 w-4 text-ink-soft" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{c.imovel}</div>
+                        <div className="text-[11px] text-ink-soft truncate">{c.bairro}</div>
+                      </div>
+                      <GripVertical className="h-3.5 w-3.5 text-ink-soft/50 opacity-0 group-hover:opacity-100" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{c.imovel}</div>
-                      <div className="text-[11px] text-ink-soft truncate">{c.bairro}</div>
+                    <div className="mt-3 flex items-center justify-between text-[11px] text-ink-soft">
+                      <span className="flex items-center gap-1 truncate">
+                        <User className="h-3 w-3" /> {c.cliente}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {c.prazo}
+                      </span>
                     </div>
-                    <GripVertical className="h-3.5 w-3.5 text-ink-soft/50 opacity-0 group-hover:opacity-100" />
                   </div>
-                  <div className="mt-3 flex items-center justify-between text-[11px] text-ink-soft">
-                    <span className="flex items-center gap-1 truncate">
-                      <User className="h-3 w-3" /> {c.cliente}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {c.prazo}
-                    </span>
-                  </div>
+                  <Link
+                    to="/admin/projeto/$id"
+                    params={{ id: c.id }}
+                    className="absolute inset-0 rounded-xl"
+                    aria-label={`Abrir projeto ${c.imovel}`}
+                    draggable={false}
+                  />
                 </div>
               ))}
 

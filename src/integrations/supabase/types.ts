@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      leads: {
+        Row: {
+          id:          string
+          name:        string | null
+          email:       string
+          phone:       string | null
+          city:        string | null
+          state:       string | null
+          tipo_imovel: string | null
+          situacao:    string | null
+          objetivo:    string | null
+          urgencia:    string | null
+          notes:       string | null
+          source:      string | null
+          converted:   boolean
+          created_at:  string
+        }
+        Insert: {
+          id?:          string
+          name?:        string | null
+          email:        string
+          phone?:       string | null
+          city?:        string | null
+          state?:       string | null
+          tipo_imovel?: string | null
+          situacao?:    string | null
+          objetivo?:    string | null
+          urgencia?:    string | null
+          notes?:       string | null
+          source?:      string | null
+          converted?:   boolean
+          created_at?:  string
+        }
+        Update: {
+          id?:          string
+          name?:        string | null
+          email?:       string
+          phone?:       string | null
+          city?:        string | null
+          state?:       string | null
+          tipo_imovel?: string | null
+          situacao?:    string | null
+          objetivo?:    string | null
+          urgencia?:    string | null
+          notes?:       string | null
+          source?:      string | null
+          converted?:   boolean
+          created_at?:  string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

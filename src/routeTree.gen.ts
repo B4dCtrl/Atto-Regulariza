@@ -21,6 +21,7 @@ import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CadastrarRouteImport } from './routes/cadastrar'
 import { Route as AvisoDePrivacidadeRouteImport } from './routes/aviso-de-privacidade'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -34,6 +35,7 @@ import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
 import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/cadastro-profissional'
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
+import { Route as AdminProjetoIdRouteImport } from './routes/admin/projeto.$id'
 
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   id: '/termos-de-uso',
@@ -93,6 +95,11 @@ const EntrarRoute = EntrarRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastrarRoute = CadastrarRouteImport.update({
+  id: '/cadastrar',
+  path: '/cadastrar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AvisoDePrivacidadeRoute = AvisoDePrivacidadeRouteImport.update({
@@ -161,11 +168,17 @@ const AdminCadastroClienteRoute = AdminCadastroClienteRouteImport.update({
   path: '/cadastro-cliente',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminProjetoIdRoute = AdminProjetoIdRouteImport.update({
+  id: '/projeto/$id',
+  path: '/projeto/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
+  '/cadastrar': typeof CadastrarRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
   '/equipe': typeof EquipeRoute
@@ -188,10 +201,12 @@ export interface FileRoutesByFullPath {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/projeto/$id': typeof AdminProjetoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
+  '/cadastrar': typeof CadastrarRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
   '/equipe': typeof EquipeRoute
@@ -214,12 +229,14 @@ export interface FileRoutesByTo {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/projeto/$id': typeof AdminProjetoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
+  '/cadastrar': typeof CadastrarRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
   '/equipe': typeof EquipeRoute
@@ -242,6 +259,7 @@ export interface FileRoutesById {
   '/admin/processos': typeof AdminProcessosRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/projeto/$id': typeof AdminProjetoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -249,6 +267,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/aviso-de-privacidade'
+    | '/cadastrar'
     | '/dashboard'
     | '/entrar'
     | '/equipe'
@@ -271,10 +290,12 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
+    | '/admin/projeto/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/aviso-de-privacidade'
+    | '/cadastrar'
     | '/dashboard'
     | '/entrar'
     | '/equipe'
@@ -297,11 +318,13 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin'
+    | '/admin/projeto/$id'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/aviso-de-privacidade'
+    | '/cadastrar'
     | '/dashboard'
     | '/entrar'
     | '/equipe'
@@ -324,12 +347,14 @@ export interface FileRouteTypes {
     | '/admin/processos'
     | '/precos/institucional'
     | '/admin/'
+    | '/admin/projeto/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AvisoDePrivacidadeRoute: typeof AvisoDePrivacidadeRoute
+  CadastrarRoute: typeof CadastrarRoute
   DashboardRoute: typeof DashboardRoute
   EntrarRoute: typeof EntrarRoute
   EquipeRoute: typeof EquipeRoute
@@ -430,6 +455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cadastrar': {
+      id: '/cadastrar'
+      path: '/cadastrar'
+      fullPath: '/cadastrar'
+      preLoaderRoute: typeof CadastrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/aviso-de-privacidade': {
       id: '/aviso-de-privacidade'
       path: '/aviso-de-privacidade'
@@ -521,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCadastroClienteRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/projeto/$id': {
+      id: '/admin/projeto/$id'
+      path: '/projeto/$id'
+      fullPath: '/admin/projeto/$id'
+      preLoaderRoute: typeof AdminProjetoIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -534,6 +573,7 @@ interface AdminRouteChildren {
   AdminLeadsRoute: typeof AdminLeadsRoute
   AdminProcessosRoute: typeof AdminProcessosRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminProjetoIdRoute: typeof AdminProjetoIdRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -546,6 +586,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLeadsRoute: AdminLeadsRoute,
   AdminProcessosRoute: AdminProcessosRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminProjetoIdRoute: AdminProjetoIdRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -565,6 +606,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AvisoDePrivacidadeRoute: AvisoDePrivacidadeRoute,
+  CadastrarRoute: CadastrarRoute,
   DashboardRoute: DashboardRoute,
   EntrarRoute: EntrarRoute,
   EquipeRoute: EquipeRoute,

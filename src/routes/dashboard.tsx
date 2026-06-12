@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { TourProvider, TourAlertDialog, useTour, TourHelpButton } from "@/components/ui/tour";
 import { getTourSteps, TOUR_TOPICS } from "@/components/onboarding/TourTopics";
+import { FirstTimeTutorial } from "@/components/onboarding/FirstTimeTutorial";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -52,6 +53,7 @@ function statusStyle(s: string) {
 function DashboardContent() {
   const { userId } = Route.useRouteContext();
   const [showTourDialog, setShowTourDialog] = useState(true);
+  const [showTutorial, setShowTutorial]     = useState(false);
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [propertyId, setPropertyId]       = useState<string | null>(null);
   const [property, setProperty]           = useState<PropertyRow | null>(null);
@@ -155,6 +157,16 @@ function DashboardContent() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  /* ── Tutorial de primeiro acesso ── */
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.user_metadata?.first_login) {
+        setShowTutorial(true);
+        supabase.auth.updateUser({ data: { first_login: false } });
+      }
+    });
+  }, []);
+
   /* ── Scroll chat on msgs change ── */
   useEffect(() => {
     chatRef.current?.scrollTo({ top: 9e9 });
@@ -210,6 +222,9 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-surface/50 text-foreground">
+      <AnimatePresence>
+        {showTutorial && <FirstTimeTutorial onDone={() => setShowTutorial(false)} />}
+      </AnimatePresence>
       <div className="flex h-screen overflow-hidden">
         {/* ═══ SIDEBAR ═══ */}
         <aside className="group sticky top-0 hidden h-screen w-16 shrink-0 md:block">
@@ -219,7 +234,7 @@ function DashboardContent() {
                        group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]"
           >
             {/* Logo */}
-            <Link to="/" className="mb-5 flex shrink-0 items-center gap-2.5 px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <Link to="/dashboard" className="mb-5 flex shrink-0 items-center gap-2.5 px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               <img src="/logo-ato.png" alt="Ato" className="h-5 w-5 shrink-0 rounded" />
               <span className="whitespace-nowrap font-arsenica text-lg leading-none text-accent">ato</span>
             </Link>
