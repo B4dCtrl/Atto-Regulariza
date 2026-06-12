@@ -8,8 +8,8 @@
  *
  * Quando for lançar de verdade: CONSTRUCTION_MODE = false e LOGIN_PAUSED = false.
  */
-export const CONSTRUCTION_MODE = true;
-export const LOGIN_PAUSED = true;
+export const CONSTRUCTION_MODE = false;
+export const LOGIN_PAUSED = false;
 
 /** Chave de acesso da equipe (use ?dev=ESTA_CHAVE na URL ou o botão "Acesso da equipe"). */
 export const DEV_ACCESS_KEY = "atto-dev-2026";
