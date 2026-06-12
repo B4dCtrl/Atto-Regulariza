@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, type FormEvent } from "react";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, X, Building2, Briefcase } from "lucide-react";
@@ -15,6 +15,17 @@ export const Route = createFileRoute("/entrar")({
       },
     ],
   }),
+  // Se já houver sessão ativa, vai direto ao painel — não exige login de novo.
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id);
+    const isAdmin = roles?.some((r) => r.role === "admin");
+    throw redirect({ to: isAdmin ? "/admin" : "/dashboard" });
+  },
   component: EntrarPage,
 });
 
@@ -266,20 +277,9 @@ function EntrarPage() {
             {/* Campo senha (oculto em forgot) */}
             {!isForgot && (
               <label className="block">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-ink-soft">Senha</span>
-                  {isLogin && (
-                    <button
-                      type="button"
-                      onClick={() => { setMode("forgot"); clearMessages(); }}
-                      className="text-xs text-ink-soft hover:text-foreground transition-colors"
-                    >
-                      Esqueci minha senha
-                    </button>
-                  )}
-                </div>
+                <span className="text-xs text-ink-soft">Senha</span>
                 <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2.5 focus-within:border-foreground/40 transition-colors">
-                  <Lock className="h-4 w-4 text-ink-soft" />
+                  <Lock className="h-4 w-4 shrink-0 text-ink-soft" />
                   <input
                     type={showPass ? "text" : "password"}
                     required
@@ -292,12 +292,24 @@ function EntrarPage() {
                   <button
                     type="button"
                     onClick={() => setShowPass((v) => !v)}
-                    className="text-ink-soft hover:text-foreground transition-colors"
+                    className="shrink-0 text-ink-soft hover:text-foreground transition-colors"
                     tabIndex={-1}
+                    aria-label={showPass ? "Ocultar senha" : "Mostrar senha"}
                   >
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {isLogin && (
+                  <div className="mt-1.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => { setMode("forgot"); clearMessages(); }}
+                      className="text-xs text-ink-soft hover:text-foreground transition-colors"
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
+                )}
               </label>
             )}
 
