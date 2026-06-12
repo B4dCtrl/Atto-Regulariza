@@ -78,8 +78,8 @@ function CadastroProfissionalPage() {
       return;
     }
 
-    // Cria o perfil de profissional (RLS permite id = auth.uid())
-    await supabase.from("profiles").insert({
+    // Cria/atualiza o perfil de profissional (upsert evita conflito com trigger de signup)
+    await supabase.from("profiles").upsert({
       id: uid,
       name: nome,
       initials: initialsOf(nome),

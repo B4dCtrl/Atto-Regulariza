@@ -8,6 +8,9 @@ import {
   AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X, Bot,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Tables } from "@/integrations/supabase/types";
+
+type PropertyRow = Tables<"properties">;
 
 export const Route = createFileRoute("/painel-profissional")({
   head: () => ({
@@ -230,7 +233,27 @@ function getAIReply(msgText: string): string {
 }
 
 /* ─────────────────────────────────────────────── Component */
+/** Mapeia uma propriedade do Supabase para o formato usado pela UI do painel. */
+function propToProc(p: PropertyRow): MockProcess {
+  const urgency: Urgency =
+    p.urgencia === "urgente" ? "alta" : p.urgencia === "sem_pressa" ? "baixa" : "media";
+  return {
+    id: p.id,
+    name: p.name,
+    client: p.client_name ?? "Cliente",
+    clientPhone: p.client_phone ?? "—",
+    clientEmail: p.client_email ?? "—",
+    city: p.city ?? "—",
+    state: p.state ?? "—",
+    type: p.tipo_imovel ?? p.objetivo ?? "Regularização",
+    area: 0,
+    urgency,
+    situation: p.situacao ?? p.notes ?? "—",
+  };
+}
+
 function ProfissionalPage() {
+  const { userId } = Route.useRouteContext();
   const navigate = useNavigate();
   const [mainSection,  setMainSection]  = useState<MainSection>("processos");
   const [selectedId,   setSelectedId]   = useState<string | null>(null);
@@ -240,8 +263,6 @@ function ProfissionalPage() {
   const [pendencyInput,    setPendencyInput]    = useState("");
   const [showPendencyForm, setShowPendencyForm] = useState(false);
   const [showAvatarMenu,   setShowAvatarMenu]   = useState(false);
-  const [aiMode,           setAiMode]           = useState(false);
-  const [aiTyping,         setAiTyping]         = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
@@ -257,22 +278,22 @@ function ProfissionalPage() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  /* ── Persistent state ── */
-  const [acceptedIds, setAcceptedIds] = useState<string[]>(
-    () => storeGet<string[]>("rz-accepted-procs", ["p1", "p2"])
-  );
+  /* ── Dados reais do Supabase ── */
+  const [processes,   setProcesses]   = useState<MockProcess[]>([]);
+  const [profProfile, setProfProfile] = useState<{ name: string; initials: string }>({
+    name: "Profissional", initials: "··",
+  });
+
+  /* ── Estado de trabalho do profissional (localStorage, por processo real) ── */
   const [doneStages, setDoneStages] = useState<Record<string, number[]>>(
     () => storeGet("rz-done-stages", {})
   );
   const [allFields, setAllFields] = useState<Record<string, Record<number, Record<string, FieldVal>>>>(
     () => storeGet("rz-stage-fields", {})
   );
-  const [allMsgs, setAllMsgs] = useState<Record<string, LocalMsg[]>>(
-    () => storeGet("rz-prof-msgs", SEED_MSGS)
-  );
-  const [allDocs, setAllDocs] = useState<Record<string, LocalDoc[]>>(
-    () => storeGet("rz-prof-docs", {})
-  );
+  /* Chat e docs agora vêm do Supabase (em memória, por processo selecionado) */
+  const [allMsgs, setAllMsgs] = useState<Record<string, LocalMsg[]>>({});
+  const [allDocs, setAllDocs] = useState<Record<string, LocalDoc[]>>({});
   const [allPendencies, setAllPendencies] = useState<Record<string, Pendency[]>>(
     () => storeGet("rz-pendencies", {})
   );
@@ -287,12 +308,84 @@ function ProfissionalPage() {
   const [noteInput, setNoteInput] = useState("");
 
   /* ── Derived ── */
-  const selectedProc  = MOCK_PROCESSES.find((p) => p.id === selectedId) ?? null;
-  const myProcs       = MOCK_PROCESSES.filter((p) =>  acceptedIds.includes(p.id));
-  const availProcs    = MOCK_PROCESSES.filter((p) => !acceptedIds.includes(p.id));
+  const acceptedIds   = processes.map((p) => p.id);
+  const selectedProc  = processes.find((p) => p.id === selectedId) ?? null;
+  const myProcs       = processes;
+  const availProcs: MockProcess[] = [];
   const msgs          = selectedId ? (allMsgs[selectedId] ?? []) : [];
   const docs          = selectedId ? (allDocs[selectedId] ?? []) : [];
   const stageDef      = STAGE_DEFS.find((s) => s.num === activeStage) ?? STAGE_DEFS[0];
+
+  /* ── Carrega processos atribuídos a este profissional + seu perfil ── */
+  useEffect(() => {
+    if (!userId) return;
+
+    supabase.from("profiles").select("name, initials").eq("id", userId).maybeSingle()
+      .then(({ data }) => {
+        if (data) setProfProfile({
+          name: data.name ?? "Profissional",
+          initials: data.initials ?? (data.name ? data.name.split(/\s+/).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "··"),
+        });
+      });
+
+    function loadProcs() {
+      supabase.from("properties").select("*")
+        .eq("assigned_professional_id", userId)
+        .order("updated_at", { ascending: false })
+        .then(({ data }) => { if (data) setProcesses(data.map((p) => propToProc(p as PropertyRow))); });
+    }
+    loadProcs();
+
+    const ch = supabase
+      .channel(`prof-procs-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "properties" }, loadProcs)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [userId]);
+
+  /* ── Carrega chat + docs do processo selecionado (Supabase + realtime) ── */
+  useEffect(() => {
+    if (!selectedId) return;
+    const pid = selectedId;
+
+    function loadMsgs() {
+      supabase.from("messages").select("*").eq("property_id", pid).order("created_at")
+        .then(({ data }) => {
+          if (!data) return;
+          setAllMsgs((prev) => ({
+            ...prev,
+            [pid]: data.map((m) => ({
+              id: m.id, text: m.content, isClient: m.is_client,
+              sender: m.sender_name, ts: m.created_at,
+            })),
+          }));
+        });
+    }
+    function loadDocs() {
+      supabase.from("documents").select("*").eq("property_id", pid).order("created_at")
+        .then(({ data }) => {
+          if (!data) return;
+          setAllDocs((prev) => ({
+            ...prev,
+            [pid]: data.map((d) => ({
+              id: d.id, name: d.name, size: d.size_text ?? "—",
+              ts: d.created_at,
+              status: (d.status as LocalDoc["status"]) ?? "Enviado",
+              by: d.uploaded_by === userId ? "prof" : "client",
+            })),
+          }));
+        });
+    }
+    loadMsgs();
+    loadDocs();
+
+    const ch = supabase
+      .channel(`prof-detail-${pid}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `property_id=eq.${pid}` }, loadMsgs)
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${pid}` }, loadDocs)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [selectedId, userId]);
 
   /* ── Unread counts ── */
   const unreadCount = (pid: string) => {
@@ -354,11 +447,39 @@ function ProfissionalPage() {
     });
   };
 
+  /* Reflete o progresso do profissional na propriedade → o cliente vê em tempo real. */
+  async function syncProgressToProperty(pid: string, doneArr: number[]) {
+    const count = doneArr.length;
+    const progressPct = Math.round((count / 5) * 100);
+    const status =
+      count >= 5 ? "entregue"
+      : count >= 4 ? "prefeitura"
+      : count >= 2 ? "profissional"
+      : count >= 1 ? "analise"
+      : "entrada";
+    const clientStage = Math.min(count + 1, 5);
+    await supabase.from("properties")
+      .update({ status, progress: progressPct, current_stage: clientStage, updated_at: new Date().toISOString() })
+      .eq("id", pid);
+    // Espelha nas etapas do cliente (1..count concluídas, próxima ativa)
+    for (let i = 1; i <= 5; i++) {
+      await supabase.from("process_stages")
+        .update({
+          state: i <= count ? "done" : i === count + 1 ? "active" : "pending",
+          completed_at: i <= count ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("property_id", pid).eq("stage_number", i);
+    }
+  }
+
   /* ── Actions ── */
   const completeStage = (pid: string, n: number) => {
     setDoneStages((prev) => {
-      const next = { ...prev, [pid]: [...(prev[pid] ?? []).filter((x) => x !== n), n] };
+      const arr = [...(prev[pid] ?? []).filter((x) => x !== n), n];
+      const next = { ...prev, [pid]: arr };
       storeSet("rz-done-stages", next);
+      syncProgressToProperty(pid, arr);
       return next;
     });
     if (n < 5) setActiveStage(n + 1);
@@ -366,8 +487,10 @@ function ProfissionalPage() {
 
   const undoStage = (pid: string, n: number) => {
     setDoneStages((prev) => {
-      const next = { ...prev, [pid]: (prev[pid] ?? []).filter((x) => x !== n) };
+      const arr = (prev[pid] ?? []).filter((x) => x !== n);
+      const next = { ...prev, [pid]: arr };
       storeSet("rz-done-stages", next);
+      syncProgressToProperty(pid, arr);
       return next;
     });
   };
@@ -394,13 +517,12 @@ function ProfissionalPage() {
     });
   };
 
-  const acceptProcess = (pid: string) => {
-    const next = [...acceptedIds, pid];
-    setAcceptedIds(next);
-    storeSet("rz-accepted-procs", next);
-    setSelectedId(pid);
-    setActiveStage(1);
-    setRightTab("briefing");
+  // Admin atribui diretamente — não há mais "aceitar". Recusar devolve ao admin.
+  // Usa RPC SECURITY DEFINER (a policy de update não permite o profissional se remover).
+  const declineProcess = async (pid: string) => {
+    await supabase.rpc("decline_property" as never, { _property_id: pid } as never);
+    setProcesses((prev) => prev.filter((p) => p.id !== pid));
+    setSelectedId(null);
   };
 
   const openProcess = (pid: string) => {
@@ -409,70 +531,35 @@ function ProfissionalPage() {
     setRightTab("briefing");
   };
 
-  const sendMsg = (e: FormEvent) => {
+  const sendMsg = async (e: FormEvent) => {
     e.preventDefault();
     const text = chatInput.trim();
     if (!text || !selectedId) return;
     const pid = selectedId;
-    const msg: LocalMsg = {
-      id: crypto.randomUUID(),
-      text, isClient: false, sender: PROF_NAME,
-      ts: new Date().toISOString(),
-    };
-    setAllMsgs((prev) => {
-      const next = { ...prev, [pid]: [...(prev[pid] ?? []), msg] };
-      storeSet("rz-prof-msgs", next);
-      return next;
-    });
     setChatInput("");
-    setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
-
-    /* Resposta automática do cliente (IA contextual) após 3-5s */
-    const proc = MOCK_PROCESSES.find((p) => p.id === pid);
-    if (proc) {
-      const delay = 3000 + Math.random() * 2000;
-      setAiTyping(true);
-      setTimeout(() => {
-        setAiTyping(false);
-        const reply: LocalMsg = {
-          id: crypto.randomUUID(),
-          text: getAIReply(text),
-          isClient: true,
-          sender: proc.client,
-          ts: new Date().toISOString(),
-        };
-        setAllMsgs((prev) => {
-          const next = { ...prev, [pid]: [...(prev[pid] ?? []), reply] };
-          storeSet("rz-prof-msgs", next);
-          return next;
-        });
-        /* Browser notification se permitido */
-        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-          new Notification(`Mensagem de ${proc.client}`, {
-            body: reply.text,
-            icon: "/logo-ato.png",
-          });
-        }
-        setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
-      }, delay);
-    }
+    await supabase.from("messages").insert({
+      property_id: pid,
+      sender_id: userId,
+      sender_name: profProfile.name,
+      content: text,
+      is_client: false,
+    });
+    // realtime recarrega; rola para o fim
+    setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 200);
   };
 
-  const uploadDocs = (files: FileList | null) => {
+  const uploadDocs = async (files: FileList | null) => {
     if (!files || !selectedId) return;
-    const nd: LocalDoc[] = Array.from(files).map((f) => ({
-      id: crypto.randomUUID(),
+    const pid = selectedId;
+    const rows = Array.from(files).map((f) => ({
+      property_id: pid,
       name: f.name,
-      size: `${Math.max(1, Math.round(f.size / 1024))} KB`,
-      ts: new Date().toISOString(),
-      status: "Enviado" as const,
-      by: "prof" as const,
+      size_text: `${Math.max(1, Math.round(f.size / 1024))} KB`,
+      status: "Enviado",
+      uploaded_by: userId,
     }));
-    setAllDocs((prev) => {
-      const next = { ...prev, [selectedId]: [...(prev[selectedId] ?? []), ...nd] };
-      storeSet("rz-prof-docs", next);
-      return next;
-    });
+    await supabase.from("documents").insert(rows);
+    // realtime recarrega a lista
   };
 
   /* ── Field renderer ── */
@@ -619,10 +706,10 @@ function ProfissionalPage() {
                   className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-surface transition-colors"
                 >
                   <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-medium text-background">
-                    {PROF_INITIALS}
+                    {profProfile.initials}
                   </div>
                   <div className="min-w-0 text-left opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                    <div className="truncate text-xs font-medium whitespace-nowrap">{PROF_NAME}</div>
+                    <div className="truncate text-xs font-medium whitespace-nowrap">{profProfile.name}</div>
                     <div className="truncate text-[11px] text-ink-soft whitespace-nowrap">Profissional</div>
                   </div>
                 </button>
@@ -669,7 +756,8 @@ function ProfissionalPage() {
               </div>
               {myProcs.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-background p-8 text-center text-sm text-ink-soft">
-                  Você ainda não aceitou nenhum caso. Veja os disponíveis abaixo.
+                  Nenhum processo atribuído a você ainda. A equipe designa os casos conforme sua
+                  especialização — eles aparecem aqui automaticamente.
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -711,47 +799,6 @@ function ProfissionalPage() {
               )}
             </section>
 
-            {/* Casos disponíveis */}
-            <section>
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-ink-soft">Novos para aceitar</div>
-                  <h2 className="font-serif text-2xl tracking-tight">Casos disponíveis</h2>
-                </div>
-                <span className="text-xs text-ink-soft">{availProcs.length} caso{availProcs.length !== 1 ? "s" : ""}</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {availProcs.map((p) => (
-                  <div key={p.id} className="rounded-2xl bg-background ring-1 ring-border p-4 text-sm">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface ring-1 ring-border text-ink-soft">
-                        <Building2 className="h-4 w-4" />
-                      </div>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] ${URGENCY_CLS[p.urgency]}`}>
-                        {URGENCY_LABEL[p.urgency]}
-                      </span>
-                    </div>
-                    <div className="font-medium leading-tight">{p.name}</div>
-                    <div className="mt-0.5 text-xs text-ink-soft">{p.type}</div>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-ink-soft">
-                      <MapPin className="h-3 w-3" />{p.city}/{p.state} · {p.area.toLocaleString("pt-BR")}m²
-                    </div>
-                    <p className="mt-2 text-xs text-ink-soft line-clamp-2 leading-relaxed">{p.situation}</p>
-                    <button
-                      onClick={() => acceptProcess(p.id)}
-                      className="mt-3 w-full rounded-xl bg-foreground py-2 text-xs text-background hover:bg-foreground/90 transition-colors"
-                    >
-                      Aceitar caso
-                    </button>
-                  </div>
-                ))}
-                {availProcs.length === 0 && (
-                  <div className="col-span-full py-8 text-center text-sm text-ink-soft">
-                    Nenhum caso disponível no momento.
-                  </div>
-                )}
-              </div>
-            </section>
           </motion.div>
             )}
 
@@ -1068,7 +1115,7 @@ function ProfissionalPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Building2 className="h-3 w-3 shrink-0" />
-                    {selectedProc.type} · {selectedProc.area.toLocaleString("pt-BR")}m²
+                    {selectedProc.type}
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-ink-soft/80 leading-relaxed line-clamp-2">
@@ -1128,10 +1175,6 @@ function ProfissionalPage() {
                       <MapPin className="h-3 w-3 shrink-0" />
                       <span>{selectedProc?.city} · {selectedProc?.state}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-ink-soft">
-                      <span className="h-3 w-3 shrink-0 text-center text-[10px]">m²</span>
-                      <span>{selectedProc?.area.toLocaleString("pt-BR")} m²</span>
-                    </div>
                   </div>
 
                   {/* Contact */}
@@ -1145,6 +1188,16 @@ function ProfissionalPage() {
                       <Mail className="h-3 w-3 shrink-0" />
                       <span className="truncate">{selectedProc?.clientEmail}</span>
                     </div>
+                    <button
+                      onClick={() => {
+                        if (selectedId && window.confirm("Recusar este caso? Ele volta para a equipe redistribuir.")) {
+                          declineProcess(selectedId);
+                        }
+                      }}
+                      className="mt-2 w-full rounded-lg border border-border py-1.5 text-[11px] text-ink-soft hover:border-red-300 hover:text-red-500 transition-colors"
+                    >
+                      Recusar caso
+                    </button>
                   </div>
 
                   {/* Timeline / stage progress */}
@@ -1267,38 +1320,14 @@ function ProfissionalPage() {
                         </div>
                       ))
                     )}
-                    {/* Indicador de digitando (IA) */}
-                    {aiTyping && (
-                      <div className="flex justify-start">
-                        <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-surface px-3 py-2 text-xs text-ink-soft">
-                          <Bot className="h-3 w-3 text-accent" />
-                          <span className="flex gap-0.5">
-                            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft/60 [animation-delay:0ms]" />
-                            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft/60 [animation-delay:150ms]" />
-                            <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft/60 [animation-delay:300ms]" />
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                   {/* Barra inferior do chat */}
                   <div className="shrink-0 border-t border-border">
-                    {/* Modo IA toggle */}
-                    <div className="flex items-center gap-2 px-3 pt-2 pb-1">
-                      <button
-                        onClick={() => setAiMode((v) => !v)}
-                        className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors ${aiMode ? "bg-accent/15 text-accent" : "bg-surface text-ink-soft hover:bg-surface-elevated"}`}
-                      >
-                        <Bot className="h-3 w-3" />
-                        {aiMode ? "IA ativa" : "Ativar IA"}
-                      </button>
-                      {aiMode && <span className="text-[10px] text-ink-soft">Cliente responde automaticamente</span>}
-                    </div>
-                    <form onSubmit={sendMsg} className="flex items-center gap-2 px-3 pb-3">
+                    <form onSubmit={sendMsg} className="flex items-center gap-2 px-3 py-3">
                       <input
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        placeholder={aiMode ? "Mensagem (IA responderá)…" : "Mensagem para o cliente…"}
+                        placeholder="Mensagem para o cliente…"
                         className="flex-1 rounded-full bg-surface px-4 py-2 text-xs outline-none placeholder:text-ink-soft/60"
                       />
                       <button
