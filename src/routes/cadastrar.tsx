@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveLandingPath } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/cadastrar")({
   head: () => ({ meta: [{ title: "Regularize seu imóvel — Ato Regulariza" }] }),
@@ -10,12 +11,7 @@ export const Route = createFileRoute("/cadastrar")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id);
-    const isAdmin = roles?.some((r) => r.role === "admin");
-    throw redirect({ to: isAdmin ? "/admin" : "/dashboard" });
+    throw redirect({ to: await resolveLandingPath(session.user.id) });
   },
   component: CadastrarPage,
 });

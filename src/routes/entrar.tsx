@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, type FormEvent } from "react";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, X, Building2, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveLandingPath } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/entrar")({
   head: () => ({
@@ -19,12 +20,7 @@ export const Route = createFileRoute("/entrar")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id);
-    const isAdmin = roles?.some((r) => r.role === "admin");
-    throw redirect({ to: isAdmin ? "/admin" : "/dashboard" });
+    throw redirect({ to: await resolveLandingPath(session.user.id) });
   },
   component: EntrarPage,
 });
@@ -61,13 +57,8 @@ function EntrarPage() {
     if (authError || !data.user) {
       setError(translateError(authError?.message ?? ""));
     } else {
-      // Admins vão para o back-office; clientes para o painel
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id);
-      const isAdmin = roles?.some((r) => r.role === "admin");
-      await navigate({ to: isAdmin ? "/admin" : "/dashboard" });
+      // Admin → back-office, profissional → painel-profissional, cliente → dashboard
+      await navigate({ to: await resolveLandingPath(data.user.id) });
     }
 
     setLoading(false);
@@ -440,7 +431,7 @@ function EntrarPage() {
                 </Link>
 
                 <Link
-                  to="/admin/cadastro-profissional"
+                  to="/cadastro-profissional"
                   onClick={() => setShowRoleModal(false)}
                   className="group flex items-center gap-4 rounded-2xl border border-border p-5 hover:border-foreground/40 hover:bg-surface transition-all"
                 >

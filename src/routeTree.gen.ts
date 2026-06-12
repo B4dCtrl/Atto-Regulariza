@@ -21,6 +21,7 @@ import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as EntrarRouteImport } from './routes/entrar'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CadastroProfissionalRouteImport } from './routes/cadastro-profissional'
 import { Route as CadastrarRouteImport } from './routes/cadastrar'
 import { Route as AvisoDePrivacidadeRouteImport } from './routes/aviso-de-privacidade'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -95,6 +96,11 @@ const EntrarRoute = EntrarRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroProfissionalRoute = CadastroProfissionalRouteImport.update({
+  id: '/cadastro-profissional',
+  path: '/cadastro-profissional',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CadastrarRoute = CadastrarRouteImport.update({
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/cadastrar': typeof CadastrarRoute
+  '/cadastro-profissional': typeof CadastroProfissionalRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
   '/equipe': typeof EquipeRoute
@@ -207,6 +214,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/cadastrar': typeof CadastrarRoute
+  '/cadastro-profissional': typeof CadastroProfissionalRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
   '/equipe': typeof EquipeRoute
@@ -237,6 +245,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/cadastrar': typeof CadastrarRoute
+  '/cadastro-profissional': typeof CadastroProfissionalRoute
   '/dashboard': typeof DashboardRoute
   '/entrar': typeof EntrarRoute
   '/equipe': typeof EquipeRoute
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/aviso-de-privacidade'
     | '/cadastrar'
+    | '/cadastro-profissional'
     | '/dashboard'
     | '/entrar'
     | '/equipe'
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/'
     | '/aviso-de-privacidade'
     | '/cadastrar'
+    | '/cadastro-profissional'
     | '/dashboard'
     | '/entrar'
     | '/equipe'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/aviso-de-privacidade'
     | '/cadastrar'
+    | '/cadastro-profissional'
     | '/dashboard'
     | '/entrar'
     | '/equipe'
@@ -355,6 +367,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AvisoDePrivacidadeRoute: typeof AvisoDePrivacidadeRoute
   CadastrarRoute: typeof CadastrarRoute
+  CadastroProfissionalRoute: typeof CadastroProfissionalRoute
   DashboardRoute: typeof DashboardRoute
   EntrarRoute: typeof EntrarRoute
   EquipeRoute: typeof EquipeRoute
@@ -453,6 +466,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro-profissional': {
+      id: '/cadastro-profissional'
+      path: '/cadastro-profissional'
+      fullPath: '/cadastro-profissional'
+      preLoaderRoute: typeof CadastroProfissionalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cadastrar': {
@@ -607,6 +627,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AvisoDePrivacidadeRoute: AvisoDePrivacidadeRoute,
   CadastrarRoute: CadastrarRoute,
+  CadastroProfissionalRoute: CadastroProfissionalRoute,
   DashboardRoute: DashboardRoute,
   EntrarRoute: EntrarRoute,
   EquipeRoute: EquipeRoute,
