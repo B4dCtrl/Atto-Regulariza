@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, type FormEvent } from "react";
-import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, User } from "lucide-react";
+import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, X, Building2, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/entrar")({
@@ -18,18 +18,18 @@ export const Route = createFileRoute("/entrar")({
   component: EntrarPage,
 });
 
-type Mode = "login" | "signup" | "forgot";
+type Mode = "login" | "forgot";
 
 function EntrarPage() {
   const navigate = useNavigate();
   const [mode, setMode]           = useState<Mode>("login");
-  const [name, setName]           = useState("");
   const [email, setEmail]         = useState("");
   const [password, setPassword]   = useState("");
   const [showPass, setShowPass]   = useState(false);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [success, setSuccess]     = useState<string | null>(null);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   function clearMessages() {
     setError(null);
@@ -57,32 +57,6 @@ function EntrarPage() {
         .eq("user_id", data.user.id);
       const isAdmin = roles?.some((r) => r.role === "admin");
       await navigate({ to: isAdmin ? "/admin" : "/dashboard" });
-    }
-
-    setLoading(false);
-  }
-
-  /* ── Cadastro e-mail/senha ──────────────────────────────────── */
-  async function handleEmailSignup(e: FormEvent) {
-    e.preventDefault();
-    clearMessages();
-    setLoading(true);
-
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { full_name: name.trim() || undefined },
-      },
-    });
-
-    if (authError) {
-      setError(translateError(authError.message));
-    } else {
-      setSuccess(
-        "Cadastro realizado! Verifique seu e-mail para confirmar a conta antes de entrar."
-      );
     }
 
     setLoading(false);
@@ -139,24 +113,17 @@ function EntrarPage() {
   }
 
   const isLogin  = mode === "login";
-  const isSignup = mode === "signup";
   const isForgot = mode === "forgot";
 
-  const onSubmit = isForgot
-    ? handleForgot
-    : isSignup
-    ? handleEmailSignup
-    : handleEmailLogin;
+  const onSubmit = isForgot ? handleForgot : handleEmailLogin;
 
   const titles = {
     login:  "Bem-vindo de volta.",
-    signup: "Crie sua conta.",
     forgot: "Redefinir senha.",
   };
 
   const subs = {
     login:  "Acesse seu painel e veja onde está sua regularização.",
-    signup: "Em 24h você terá um especialista no seu caso.",
     forgot: "Enviaremos um link para redefinir sua senha.",
   };
 
@@ -280,23 +247,6 @@ function EntrarPage() {
 
           {/* Formulário */}
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
-            {/* Campo nome — só no cadastro */}
-            {isSignup && (
-              <label className="block">
-                <span className="text-xs text-ink-soft">Nome completo</span>
-                <div className="mt-1 flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 py-2.5 focus-within:border-foreground/40 transition-colors">
-                  <User className="h-4 w-4 text-ink-soft" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => { setName(e.target.value); clearMessages(); }}
-                    placeholder="Seu nome"
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft/60"
-                  />
-                </div>
-              </label>
-            )}
-
             {/* Campo e-mail */}
             <label className="block">
               <span className="text-xs text-ink-soft">E-mail</span>
@@ -359,13 +309,7 @@ function EntrarPage() {
                          bg-foreground py-3 pl-5 pr-3 text-sm text-background
                          transition-all hover:scale-[1.01] disabled:opacity-60"
             >
-              {loading
-                ? "Aguarde..."
-                : isForgot
-                ? "Enviar link"
-                : isSignup
-                ? "Criar conta"
-                : "Entrar no meu painel"}
+              {loading ? "Aguarde..." : isForgot ? "Enviar link" : "Entrar no meu painel"}
               {!loading && (
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-accent transition-transform group-hover:rotate-12">
                   <ArrowUpRight className="h-4 w-4" />
@@ -415,26 +359,15 @@ function EntrarPage() {
                   Entrar
                 </button>
               </>
-            ) : isLogin ? (
+            ) : (
               <>
                 Ainda não tem conta?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("signup"); clearMessages(); }}
+                  onClick={() => { setShowRoleModal(true); clearMessages(); }}
                   className="text-foreground underline-offset-4 hover:underline"
                 >
                   Criar conta grátis
-                </button>
-              </>
-            ) : (
-              <>
-                Já tem conta?{" "}
-                <button
-                  type="button"
-                  onClick={() => { setMode("login"); clearMessages(); }}
-                  className="text-foreground underline-offset-4 hover:underline"
-                >
-                  Entrar
                 </button>
               </>
             )}
@@ -442,6 +375,90 @@ function EntrarPage() {
 
         </motion.div>
       </div>
+
+      {/* ── Modal de seleção de perfil ─────────────────────────── */}
+      <AnimatePresence>
+        {showRoleModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setShowRoleModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.22 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-3xl bg-background p-8 shadow-2xl ring-1 ring-border"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h2 className="font-serif text-2xl tracking-tight">Criar conta grátis</h2>
+                  <p className="text-sm text-ink-soft mt-1">Como você quer usar a plataforma?</p>
+                </div>
+                <button
+                  onClick={() => setShowRoleModal(false)}
+                  className="grid h-8 w-8 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Opções */}
+              <div className="space-y-3">
+                <Link
+                  to="/cadastrar"
+                  onClick={() => setShowRoleModal(false)}
+                  className="group flex items-center gap-4 rounded-2xl border border-border p-5 hover:border-foreground/40 hover:bg-surface transition-all"
+                >
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-accent/10 text-accent group-hover:bg-accent group-hover:text-background transition-colors">
+                    <Building2 className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">Sou cliente</div>
+                    <div className="text-xs text-ink-soft mt-0.5">
+                      Quero regularizar meu imóvel
+                    </div>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 text-ink-soft opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+
+                <Link
+                  to="/cadastro-profissional"
+                  onClick={() => setShowRoleModal(false)}
+                  className="group flex items-center gap-4 rounded-2xl border border-border p-5 hover:border-foreground/40 hover:bg-surface transition-all"
+                >
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-foreground/5 text-foreground group-hover:bg-foreground group-hover:text-background transition-colors">
+                    <Briefcase className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm">Sou profissional</div>
+                    <div className="text-xs text-ink-soft mt-0.5">
+                      Quero trabalhar com regularização
+                    </div>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 text-ink-soft opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              </div>
+
+              <p className="mt-5 text-center text-xs text-ink-soft">
+                Já tem conta?{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowRoleModal(false)}
+                  className="text-foreground underline-offset-4 hover:underline"
+                >
+                  Entrar
+                </button>
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
