@@ -1,22 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import { ArrowLeft, User, MapPin, Bell, Shield, Camera, Check } from "lucide-react";
-
-/* ── Storage helpers ── */
-function storeGet<T>(key: string, def: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? (JSON.parse(v) as T) : def;
-  } catch {
-    return def;
-  }
-}
-function storeSet(key: string, val: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-}
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/perfil")({
   head: () => ({ meta: [{ title: "Meu Perfil — Regulariza" }] }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw redirect({ to: "/entrar" });
+    return { userId: session.user.id };
+  },
   component: PerfilPage,
 });
 
@@ -49,12 +42,12 @@ type Profile = {
   notifMarketing: boolean;
 };
 
-const DEFAULT: Profile = {
-  nome: "Marina Silveira",
-  email: "marina@email.com",
-  telefone: "(11) 98765-4321",
-  cpf: "123.456.789-00",
-  nascimento: "1990-03-15",
+const EMPTY_PROFILE: Profile = {
+  nome: "",
+  email: "",
+  telefone: "",
+  cpf: "",
+  nascimento: "",
   cep: "",
   logradouro: "",
   numero: "",
@@ -63,7 +56,7 @@ const DEFAULT: Profile = {
   cidade: "",
   estado: "",
   notifEmail: true,
-  notifSms: true,
+  notifSms: false,
   notifPush: false,
   notifAtualizacoes: true,
   notifMarketing: false,
@@ -189,23 +182,53 @@ function SaveBtn({
 
 /* ── Page ── */
 function PerfilPage() {
+  const { userId } = Route.useRouteContext();
   const [active, setActive] = useState<Section>("conta");
-  const [profile, setProfile] = useState<Profile>(() => storeGet("rz-client-profile", DEFAULT));
+  const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [senha, setSenha] = useState({ atual: "", nova: "", confirmar: "" });
+
+  useEffect(() => {
+    supabase.from("profiles").select("*").eq("id", userId).maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        const s = (data.settings ?? {}) as Record<string, boolean>;
+        setProfile((p) => ({
+          ...p,
+          nome: data.name ?? "", email: data.email ?? "",
+          telefone: data.phone ?? "", cpf: data.cpf ?? "",
+          cidade: data.city ?? "", estado: data.state ?? "",
+          notifEmail: s.notifEmail ?? true, notifSms: s.notifSms ?? false,
+          notifPush: s.notifPush ?? false, notifAtualizacoes: s.notifAtualizacoes ?? true,
+          notifMarketing: s.notifMarketing ?? false,
+        }));
+      });
+  }, [userId]);
 
   const set = (field: keyof Profile, val: string | boolean) =>
     setProfile((p) => ({ ...p, [field]: val }));
 
-  const save = (section: string) => {
-    storeSet("rz-client-profile", profile);
+  async function salvar(section: string) {
+    await supabase.from("profiles").upsert({
+      id: userId,
+      name: profile.nome, email: profile.email, phone: profile.telefone,
+      cpf: profile.cpf, city: profile.cidade, state: profile.estado,
+      role: "cliente",
+      settings: {
+        notifEmail: profile.notifEmail, notifSms: profile.notifSms,
+        notifPush: profile.notifPush, notifAtualizacoes: profile.notifAtualizacoes,
+        notifMarketing: profile.notifMarketing,
+      },
+    });
+    await supabase.auth.updateUser({ data: { name: profile.nome } });
     setSaved((s) => ({ ...s, [section]: true }));
     setTimeout(() => setSaved((s) => ({ ...s, [section]: false })), 2200);
-  };
+  }
 
   const initials = profile.nome
     .split(" ")
     .map((n) => n[0])
+    .filter(Boolean)
     .slice(0, 2)
     .join("")
     .toUpperCase();
@@ -343,7 +366,7 @@ function PerfilPage() {
                   />
                 </div>
 
-                <SaveBtn onClick={() => save("conta")} saved={!!saved["conta"]} />
+                <SaveBtn onClick={() => salvar("conta")} saved={!!saved["conta"]} />
               </section>
             )}
 
@@ -392,7 +415,7 @@ function PerfilPage() {
                   />
                   <StateField value={profile.estado} onChange={(v) => set("estado", v)} />
                 </div>
-                <SaveBtn onClick={() => save("endereco")} saved={!!saved["endereco"]} />
+                <SaveBtn onClick={() => salvar("endereco")} saved={!!saved["endereco"]} />
               </section>
             )}
 
@@ -440,7 +463,7 @@ function PerfilPage() {
                     />
                   </div>
                 </div>
-                <SaveBtn onClick={() => save("notificacoes")} saved={!!saved["notificacoes"]} />
+                <SaveBtn onClick={() => salvar("notificacoes")} saved={!!saved["notificacoes"]} />
               </section>
             )}
 
@@ -474,7 +497,7 @@ function PerfilPage() {
                   </div>
                   <SaveBtn
                     label="Alterar senha"
-                    onClick={() => save("seguranca")}
+                    onClick={() => salvar("seguranca")}
                     saved={!!saved["seguranca"]}
                   />
                 </section>
