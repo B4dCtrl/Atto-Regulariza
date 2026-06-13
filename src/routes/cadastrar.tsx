@@ -168,6 +168,16 @@ function CadastrarPage() {
       return;
     }
 
+    // Criar perfil do cliente na tabela profiles
+    await supabase.from("profiles").upsert({
+      id: uid,
+      name: data.nome,
+      email: data.email,
+      role: "cliente",
+      city: data.cidade,
+      state: data.estado,
+    });
+
     // Nome do projeto: usa o que o cliente digitou ou, se vazio, "Nome — Situação"
     const projectName = data.nome_projeto.trim() || `${data.nome} — ${situacaoLabel}`;
 
