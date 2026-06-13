@@ -45,6 +45,7 @@ function CadastroProfissionalPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+  const [confirmSent, setConfirmSent] = useState(false);
 
   async function submit() {
     if (!nome.trim() || !email.trim() || senha.length < 6 || !espec) {
@@ -77,16 +78,53 @@ function CadastroProfissionalPage() {
       return;
     }
 
-    // Cria/atualiza o perfil de profissional (upsert evita conflito com trigger de signup)
+    // Cria/atualiza o perfil de profissional (upsert evita conflito com trigger de signup).
+    // Se a confirmação de e-mail estiver ligada, não há sessão e este upsert é bloqueado
+    // pelo RLS — nesse caso o perfil é criado no 1º acesso ao painel (self-heal).
     await supabase.from("profiles").upsert({
       id: uid,
       name: nome,
+      email,
       initials: initialsOf(nome),
       role: "profissional",
       specialization: registro.trim() ? `${espec} · ${registro.trim()}` : espec,
     });
 
+    setLoading(false);
+
+    // Confirmação ligada → sem sessão: mostra tela "confirme seu e-mail".
+    if (!authData.session) {
+      setConfirmSent(true);
+      return;
+    }
+
     navigate({ to: "/painel-profissional" });
+  }
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-screen bg-surface/40 flex flex-col items-center justify-center px-4 py-12">
+        <div className="mb-8 text-center">
+          <div className="font-arsenica text-2xl text-accent">ato</div>
+          <div className="text-xs uppercase tracking-widest text-ink-soft">Regulariza · Profissionais</div>
+        </div>
+        <div className="w-full max-w-[460px] rounded-3xl bg-background ring-1 ring-border p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-accent/10 text-accent">
+            <Check className="h-7 w-7" />
+          </div>
+          <h1 className="font-serif text-2xl mb-2">Conta criada! Confirme seu e-mail</h1>
+          <p className="text-sm text-ink-soft leading-relaxed">
+            Enviamos um e-mail de confirmação para <strong className="text-foreground">{email}</strong>.
+            Clique no link da mensagem da <strong className="text-foreground">Ato Regulariza</strong> para
+            ativar sua conta e acessar o painel do profissional.
+          </p>
+          <p className="mt-4 text-xs text-ink-soft">
+            Não recebeu? Verifique a caixa de spam. Já confirmou?{" "}
+            <Link to="/entrar" className="underline hover:text-foreground">Entrar</Link>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

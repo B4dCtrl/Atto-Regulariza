@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { createClientIntake } from "@/lib/api/intake.functions";
 
 export const Route = createFileRoute("/cadastrar")({
   head: () => ({ meta: [{ title: "Regularize seu imóvel — Ato Regulariza" }] }),
@@ -97,6 +98,7 @@ function CadastrarPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+  const [confirmSent, setConfirmSent] = useState(false);
 
   const set = (k: keyof WizardData, v: string) => setData((d) => ({ ...d, [k]: v }));
 
@@ -167,58 +169,64 @@ function CadastrarPage() {
       return;
     }
 
-    // Criar perfil do cliente na tabela profiles
-    await supabase.from("profiles").upsert({
-      id: uid,
-      name: data.nome,
-      email: data.email,
-      role: "cliente",
-      city: data.cidade,
-      state: data.estado,
-    });
-
-    // Nome do projeto: usa o que o cliente digitou ou, se vazio, "Nome — Situação"
-    const projectName = data.nome_projeto.trim() || `${data.nome} — ${situacaoLabel}`;
-
-    // Criar propriedade vinculada ao usuário.
-    // progress 0 / stage 0: sem andamento até a equipe dar o diagnóstico.
-    const { data: prop } = await supabase
-      .from("properties")
-      .insert({
-        name:         projectName,
-        city:         data.cidade,
-        state:        data.estado,
-        client_id:    uid,
-        client_name:  data.nome,
-        client_email: data.email,
+    // Cria perfil + imóvel + etapas no servidor (service role) — funciona com ou
+    // sem sessão (necessário porque properties_insert exige admin e a confirmação
+    // de e-mail deixa o cadastro sem sessão).
+    try {
+      await createClientIntake({ data: {
+        userId:       uid,
+        email:        data.email,
+        nome:         data.nome,
+        cidade:       data.cidade,
+        estado:       data.estado,
         tipo_imovel:  data.tipo_imovel,
         situacao:     data.situacao,
         objetivo:     data.objetivo,
         urgencia:     data.urgencia,
-        status:       "entrada",
-        current_stage: 0,
-        progress:     0,
-      })
-      .select("id")
-      .single();
-
-    if (prop?.id) {
-      const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
-      await supabase.from("process_stages").insert(
-        STAGE_LABELS.map((label, i) => ({
-          property_id:  prop.id,
-          stage_number: i + 1,
-          label,
-          state:        "pending",
-        })),
-      );
+        nome_projeto: data.nome_projeto,
+      }});
+    } catch (e) {
+      setError(`Conta criada, mas houve um erro ao montar seu processo: ${(e as Error).message}`);
+      setLoading(false);
+      return;
     }
 
-    // Marcar lead como convertido
-    await supabase.from("leads").update({ converted: true }).eq("email", data.email);
+    setLoading(false);
 
-    // ?welcome=1 dispara o tutorial + popup de busca de profissional no dashboard
+    // Confirmação de e-mail ligada → não há sessão. Mostra tela "confirme seu e-mail".
+    if (!authData.session) {
+      setConfirmSent(true);
+      return;
+    }
+
+    // Sem confirmação → já está logado: ?welcome=1 dispara tutorial + busca de profissional.
     navigate({ to: "/dashboard", search: { welcome: "1" } as never });
+  }
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-screen bg-surface/40 flex flex-col items-center justify-center px-4 py-12">
+        <div className="mb-8 text-center">
+          <div className="font-arsenica text-2xl text-accent">ato</div>
+          <div className="text-xs uppercase tracking-widest text-ink-soft">Regulariza</div>
+        </div>
+        <div className="w-full max-w-[460px] rounded-3xl bg-background ring-1 ring-border p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-accent/10 text-accent">
+            <Check className="h-7 w-7" />
+          </div>
+          <h1 className="font-serif text-2xl mb-2">Conta criada! Confirme seu e-mail</h1>
+          <p className="text-sm text-ink-soft leading-relaxed">
+            Enviamos um e-mail de confirmação para <strong className="text-foreground">{data.email}</strong>.
+            Clique no link da mensagem da <strong className="text-foreground">Ato Regulariza</strong> para
+            ativar sua conta e acessar seu painel.
+          </p>
+          <p className="mt-4 text-xs text-ink-soft">
+            Não recebeu? Verifique a caixa de spam. Já confirmou?{" "}
+            <a href="/entrar" className="underline hover:text-foreground">Entrar</a>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
