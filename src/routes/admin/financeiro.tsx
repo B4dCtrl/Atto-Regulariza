@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
-  DollarSign, Save, Plus, Trash2, Star,
+  Save, Plus, Trash2, Star,
   Check, RefreshCw, Info,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/financeiro")({
   head: () => ({ meta: [{ title: "Financeiro — Gestão Regulariza" }] }),
@@ -84,38 +85,65 @@ export const DEFAULT_PLANS: PricePlan[] = [
   },
 ];
 
-const STORAGE_KEY = "regulariza-prices";
-
-function loadPlans(): PricePlan[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return DEFAULT_PLANS;
-    const parsed: PricePlan[] = JSON.parse(stored);
-    // Merge: ensure all default IDs exist
-    return DEFAULT_PLANS.map((def) => parsed.find((p) => p.id === def.id) ?? def);
-  } catch {
-    return DEFAULT_PLANS;
-  }
-}
-
 function FinanceiroPage() {
-  const [plans,   setPlans]   = useState<PricePlan[]>(loadPlans);
+  const [plans,   setPlans]   = useState<PricePlan[]>(DEFAULT_PLANS);
   const [saved,   setSaved]   = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
 
-  // Reload on mount
-  useEffect(() => { setPlans(loadPlans()); }, []);
+  // Load from Supabase on mount
+  useEffect(() => {
+    supabase.from("pricing_plans").select("*").order("sort").then(({ data }) => {
+      if (data && data.length > 0) {
+        setPlans(data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price ?? "",
+          period: p.period ?? "",
+          desc: p.descr ?? "",
+          features: p.features ?? [],
+          popular: p.popular ?? undefined,
+          tag: p.tag ?? undefined,
+          note: p.note ?? undefined,
+          visible: p.visible ?? true,
+        })));
+      }
+    });
+  }, []);
 
-  const save = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+  async function savePlan(p: PricePlan, sort: number) {
+    await supabase.from("pricing_plans").upsert({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      period: p.period,
+      descr: p.desc,
+      features: p.features,
+      popular: !!p.popular,
+      tag: p.tag ?? null,
+      note: p.note ?? null,
+      visible: p.visible,
+      sort,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async function deletePlan(id: string) {
+    await supabase.from("pricing_plans").delete().eq("id", id);
+  }
+
+  const saveAll = async () => {
+    await Promise.all(plans.map((p, i) => savePlan(p, i)));
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   };
 
   const reset = () => {
-    if (!confirm("Restaurar todos os preços para os valores padrão?")) return;
-    localStorage.removeItem(STORAGE_KEY);
+    if (!confirm("Restaurar todos os preços para os valores padrão? Isso sobrescreverá os dados no banco.")) return;
     setPlans(DEFAULT_PLANS);
+    Promise.all(DEFAULT_PLANS.map((p, i) => savePlan(p, i))).then(() => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    });
   };
 
   const updatePlan = (id: string, patch: Partial<PricePlan>) => {
@@ -140,6 +168,25 @@ function FinanceiroPage() {
     updatePlan(id, { features: plan.features.filter((_, i) => i !== idx) });
   };
 
+  const handleDeletePlan = async (id: string) => {
+    if (!confirm("Remover este plano permanentemente?")) return;
+    await deletePlan(id);
+    setPlans((cur) => cur.filter((p) => p.id !== id));
+  };
+
+  const handleAddPlan = () => {
+    const newPlan: PricePlan = {
+      id: crypto.randomUUID().slice(0, 8),
+      name: "Novo plano",
+      price: "",
+      period: "",
+      desc: "",
+      features: [],
+      visible: false,
+    };
+    setPlans((cur) => [...cur, newPlan]);
+  };
+
   return (
     <div className="mx-auto max-w-[1400px] p-6 lg:p-8">
       {/* Header */}
@@ -153,13 +200,19 @@ function FinanceiroPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={handleAddPlan}
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm text-ink-soft hover:border-foreground/30 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" /> Novo plano
+          </button>
+          <button
             onClick={reset}
             className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm text-ink-soft hover:border-foreground/30 transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Restaurar padrão
           </button>
           <button
-            onClick={save}
+            onClick={saveAll}
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all ${
               saved ? "bg-green-600 text-white" : "bg-foreground text-background hover:bg-foreground/90"
             }`}
@@ -173,7 +226,7 @@ function FinanceiroPage() {
       {/* Info */}
       <div className="mb-6 flex items-start gap-3 rounded-2xl border border-border bg-surface p-4 text-sm text-ink-soft">
         <Info className="h-4 w-4 shrink-0 mt-0.5" />
-        <span>As alterações salvas aparecem imediatamente na página pública de preços (<code>/precos</code>) neste navegador. Para publicar globalmente, conecte ao banco de dados.</span>
+        <span>As alterações salvas são publicadas diretamente no banco de dados e aparecem imediatamente na página pública de preços (<code>/precos</code>).</span>
       </div>
 
       {/* Cards grid */}
@@ -215,6 +268,13 @@ function FinanceiroPage() {
                   className="rounded-full bg-surface px-3 py-1 text-[11px] text-ink-soft hover:bg-border transition-colors"
                 >
                   {editing === plan.id ? "Fechar" : "Editar"}
+                </button>
+                <button
+                  onClick={() => handleDeletePlan(plan.id)}
+                  title="Remover plano"
+                  className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -319,7 +379,7 @@ function FinanceiroPage() {
       {/* Sticky save */}
       <div className="sticky bottom-6 mt-8 flex justify-center">
         <button
-          onClick={save}
+          onClick={saveAll}
           className={`inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium shadow-[0_8px_32px_-8px_oklch(0.16_0.01_60_/_0.3)] transition-all ${
             saved ? "bg-green-600 text-white" : "bg-foreground text-background hover:bg-foreground/90"
           }`}
