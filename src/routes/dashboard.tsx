@@ -16,6 +16,7 @@ import {
   SearchingProfessionalMini,
   SearchingProfessionalsModal,
 } from "@/components/onboarding/ProfessionalSearch";
+import { resolveLandingPath } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -27,6 +28,9 @@ export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar" });
+    // Profissional/admin nunca devem cair no painel do cliente.
+    const dest = await resolveLandingPath(session.user.id);
+    if (dest !== "/dashboard") throw redirect({ to: dest });
     return { userId: session.user.id };
   },
   component: DashboardPage,

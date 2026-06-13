@@ -349,16 +349,13 @@ function LeadsPage() {
                   </button>
                 )}
                 {selectedLead.status === "triagem" && (
-                  <>
-                    <div className="text-[10px] uppercase tracking-widest text-ink-soft mb-1">Atribuir para</div>
-                    <button
-                      onClick={() => advance(selectedLead)}
-                      className="flex items-center justify-between w-full rounded-xl border border-border px-4 py-2.5 text-sm hover:bg-surface transition-colors"
-                    >
-                      <span>Carla Rocha</span>
-                      <ChevronRight className="h-4 w-4 text-ink-soft" />
-                    </button>
-                  </>
+                  <button
+                    onClick={() => advance(selectedLead)}
+                    className="flex items-center justify-between w-full rounded-xl bg-foreground px-4 py-2.5 text-sm text-background hover:bg-foreground/90 transition-colors"
+                  >
+                    <span>Marcar como atribuído</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 )}
                 {selectedLead.status === "atribuido" && (
                   <button

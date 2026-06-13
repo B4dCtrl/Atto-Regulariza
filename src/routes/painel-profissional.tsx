@@ -89,19 +89,6 @@ interface LocalDoc {
   by: "prof" | "client";
 }
 
-/* ─────────────────────────────────────────────── Data */
-const MOCK_PROCESSES: MockProcess[] = [
-  { id:"p1", name:"Residência Jardim América",   client:"Roberto Alves",      clientPhone:"(11) 99234-5678", clientEmail:"roberto@email.com",   city:"São Paulo",        state:"SP", type:"Averbação de construção",      area:145,  urgency:"alta",  situation:"Construção não averbada desde 2018. Imóvel financiado, banco exige regularização." },
-  { id:"p2", name:"Apto Centro Histórico",        client:"Maria Clara Santos", clientPhone:"(19) 98765-4321", clientEmail:"mclaras@email.com",   city:"Campinas",         state:"SP", type:"Regularização fundiária",      area:88,   urgency:"media", situation:"Posse de fato há 12 anos. Sem escritura formal. Quer vender o imóvel." },
-  { id:"p3", name:"Sítio Santa Luzia",            client:"João Pereira Neto",  clientPhone:"(14) 99876-5432", clientEmail:"joao.neto@email.com", city:"Bauru",            state:"SP", type:"Georreferenciamento rural",    area:4500, urgency:"baixa", situation:"CCIR desatualizado. Precisa de laudo georreferenciado para herança." },
-  { id:"p4", name:"Sobrado Vila Nova",            client:"Cláudia Fernandes",  clientPhone:"(11) 97654-3210", clientEmail:"claudia.f@email.com", city:"São Bernardo",     state:"SP", type:"Regularização de construção",  area:220,  urgency:"alta",  situation:"Ampliação não aprovada. Prefeitura notificou para regularizar em 60 dias." },
-  { id:"p5", name:"Casa Parque das Flores",       client:"Anderson Lima",      clientPhone:"(16) 98543-2109", clientEmail:"a.lima@email.com",    city:"Ribeirão Preto",   state:"SP", type:"Averbação de demolição",       area:95,   urgency:"media", situation:"Demolição de galpão não averbada. Venda do lote pendente do processo." },
-  { id:"p6", name:"Galpão Industrial ZN",         client:"TechLog Transportes",clientPhone:"(11) 3245-6789",  clientEmail:"juridico@techlog.com",city:"São Paulo",        state:"SP", type:"Regularização empresarial",   area:1800, urgency:"alta",  situation:"Alvará de funcionamento bloqueado por irregularidade. Prejuízo diário." },
-  { id:"p7", name:"Apartamento Beira Mar",        client:"Solange Tavares",    clientPhone:"(13) 99345-6789", clientEmail:"sol.tav@email.com",   city:"Santos",           state:"SP", type:"Regularização de área",        area:67,   urgency:"baixa", situation:"Área do imóvel divergente da matrícula em 8m². Inventário aguardando." },
-  { id:"p8", name:"Chácara Horizonte Verde",      client:"Marcos Vinício",     clientPhone:"(17) 99876-1234", clientEmail:"mv.chacara@email.com",city:"Rio Preto",        state:"SP", type:"Usucapião rural",              area:2200, urgency:"media", situation:"Ocupação há 22 anos sem documentação formal. Três famílias envolvidas." },
-  { id:"p9", name:"Terreno Condomínio Fechado",   client:"Patrícia Gomes",     clientPhone:"(11) 91234-5678", clientEmail:"patricia.g@email.com",city:"Alphaville",       state:"SP", type:"Desdobramento de lote",        area:360,  urgency:"baixa", situation:"Lote a ser subdividido entre herdeiros conforme partilha judicial." },
-];
-
 const STAGE_DEFS: StageDef[] = [
   {
     num: 1, label: "Análise documental",
@@ -260,11 +247,24 @@ function ProfissionalPage() {
     if (!userId) return;
 
     supabase.from("profiles").select("name, initials").eq("id", userId).maybeSingle()
-      .then(({ data }) => {
-        if (data) setProfProfile({
-          name: data.name ?? "Profissional",
-          initials: data.initials ?? (data.name ? data.name.split(/\s+/).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "··"),
+      .then(async ({ data }) => {
+        if (data) {
+          setProfProfile({
+            name: data.name ?? "Profissional",
+            initials: data.initials ?? (data.name ? data.name.split(/\s+/).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "··"),
+          });
+          return;
+        }
+        // Sem linha em profiles (signup com confirmação de e-mail) → cria agora,
+        // já autenticado, a partir dos metadados do cadastro.
+        const { data: { user } } = await supabase.auth.getUser();
+        const nome = (user?.user_metadata?.name as string) ?? "Profissional";
+        const initials = nome.split(/\s+/).filter(Boolean).map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "··";
+        await supabase.from("profiles").upsert({
+          id: userId, name: nome, email: user?.email ?? null,
+          role: "profissional", initials,
         });
+        setProfProfile({ name: nome, initials });
       });
 
     function loadProcs() {
@@ -799,7 +799,7 @@ function ProfissionalPage() {
                   <div className="space-y-2">
                     {acceptedIds.map((pid) => {
                       const count = unreadCount(pid);
-                      const proc  = MOCK_PROCESSES.find((p) => p.id === pid);
+                      const proc  = processes.find((p) => p.id === pid);
                       if (!proc || count === 0) return null;
                       return (
                         <div key={pid} onClick={() => { openProcess(pid); setRightTab("chat"); markChatRead(pid); }}

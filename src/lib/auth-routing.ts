@@ -11,12 +11,18 @@ export type LandingPath = "/admin" | "/painel-profissional" | "/dashboard";
  * Usado em todos os pontos de redirecionamento pós-login para manter o site coeso.
  */
 export async function resolveLandingPath(userId: string): Promise<LandingPath> {
-  const [{ data: roles }, { data: profile }] = await Promise.all([
+  const [{ data: roles }, { data: profile }, { data: userRes }] = await Promise.all([
     supabase.from("user_roles").select("role").eq("user_id", userId),
     supabase.from("profiles").select("role").eq("id", userId).maybeSingle(),
+    supabase.auth.getUser(),
   ]);
 
   if (roles?.some((r) => r.role === "admin")) return "/admin";
-  if (profile?.role === "profissional") return "/painel-profissional";
+
+  // Papel vem de profiles OU dos metadados do signup (confiável mesmo quando a
+  // linha em profiles ainda não existe — ex.: signup com confirmação de e-mail).
+  const metaRole = userRes?.user?.user_metadata?.role;
+  if (profile?.role === "profissional" || metaRole === "profissional") return "/painel-profissional";
+
   return "/dashboard";
 }
