@@ -1,0 +1,60 @@
+<!--
+  Template de e-mail "Confirm signup" da Ato Regulariza (PT-BR).
+  Onde colar: Supabase › Authentication › Emails › "Confirm signup" › Message body.
+  Assunto sugerido: Bem-vindo à Ato Regulariza — confirme seu e-mail
+  Variável obrigatória: {{ .ConfirmationURL }} (link de confirmação gerado pelo Supabase).
+-->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f1ea;padding:32px 0;font-family:Arial,Helvetica,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e7e0d6;">
+        <!-- Cabeçalho -->
+        <tr>
+          <td style="background:#1c1917;padding:28px 32px;">
+            <span style="font-size:22px;font-weight:bold;color:#e2693f;letter-spacing:0.5px;">ato</span>
+            <span style="font-size:11px;color:#b9b2a8;letter-spacing:2px;text-transform:uppercase;margin-left:6px;">Regulariza</span>
+          </td>
+        </tr>
+        <!-- Corpo -->
+        <tr>
+          <td style="padding:36px 32px 12px 32px;">
+            <h1 style="margin:0 0 12px 0;font-size:24px;color:#1c1917;font-weight:bold;">Bem-vindo à Ato Regulariza 👋</h1>
+            <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#44403c;">
+              Que bom ter você com a gente! Você está a um passo de acompanhar a regularização do seu imóvel
+              em tempo real, com um especialista dedicado ao seu caso.
+            </p>
+            <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;color:#44403c;">
+              Para ativar sua conta, é só confirmar seu e-mail:
+            </p>
+            <!-- Botão -->
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="border-radius:999px;background:#e2693f;">
+                  <a href="{{ .ConfirmationURL }}" target="_blank"
+                     style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:999px;">
+                    Confirmar meu e-mail
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:24px 0 0 0;font-size:13px;line-height:1.6;color:#78716c;">
+              Se o botão não funcionar, copie e cole este link no navegador:<br>
+              <a href="{{ .ConfirmationURL }}" style="color:#e2693f;word-break:break-all;">{{ .ConfirmationURL }}</a>
+            </p>
+          </td>
+        </tr>
+        <!-- Rodapé -->
+        <tr>
+          <td style="padding:24px 32px 32px 32px;border-top:1px solid #efe9df;">
+            <p style="margin:0;font-size:12px;line-height:1.6;color:#a8a29e;">
+              Se você não criou uma conta na Ato Regulariza, pode ignorar este e-mail com segurança.
+            </p>
+            <p style="margin:8px 0 0 0;font-size:12px;color:#a8a29e;">
+              — Equipe Ato Regulariza
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
