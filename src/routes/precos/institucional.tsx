@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ArrowUpRight, Building2, HardHat, Landmark,
@@ -87,12 +88,6 @@ const faqs = [
 
 const SEGMENTS_OPTIONS = ["Imobiliária", "Construtora", "Órgão público / Institucional", "Incorporadora", "Outro"];
 
-function storeLeadAppend(lead: object) {
-  try {
-    const existing = JSON.parse(localStorage.getItem("regulariza-leads") ?? "[]");
-    localStorage.setItem("regulariza-leads", JSON.stringify([lead, ...existing]));
-  } catch { /* noop */ }
-}
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -106,28 +101,21 @@ function PrecosInstitucionalPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading,   setLoading]   = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    const lead = {
-      id:              crypto.randomUUID(),
+    await supabase.from("leads").insert({
       name,
-      phone,
       email,
-      city:            "",
-      state:           "",
-      propertyType:    segment || "Empresa",
-      situation:       situation || `Consulta B2B — ${company}`,
-      urgency:         "media" as const,
-      status:          "novo" as const,
-      professionalName: null,
-      notes:           `Empresa: ${company} | Segmento: ${segment}`,
-      createdAt:       new Date().toISOString(),
-    };
+      phone,
+      situacao: situation || `Consulta B2B — ${company}`,
+      notes: `Origem: página institucional · Empresa: ${company} · Segmento: ${segment}`,
+      source: "institucional",
+    });
 
-    storeLeadAppend(lead);
-    setTimeout(() => { setLoading(false); setSubmitted(true); }, 700);
+    setLoading(false);
+    setSubmitted(true);
   }
 
   const inputCls =
