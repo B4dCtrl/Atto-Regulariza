@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Upload, FileText, Download, Trash2, Search, FolderOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/documentos-padrao")({
   head: () => ({ meta: [{ title: "Documentos Padrão — Ato Regulariza" }] }),
@@ -35,94 +36,47 @@ const CAT_CLS: Record<DocCategory, string> = {
   "Orientação":     "bg-yellow-50 text-yellow-700",
 };
 
-const SEED_DOCS: PadraoDoc[] = [
-  {
-    id: "d1", category: "Contrato",
-    name: "Contrato de Prestação de Serviços — PF",
-    description: "Modelo padrão para contratos com clientes pessoa física. Inclui cláusulas de prazo, remuneração e responsabilidade técnica.",
-    size: "124 KB", uploadedAt: "2026-05-10",
-  },
-  {
-    id: "d2", category: "Contrato",
-    name: "Contrato de Prestação de Serviços — PJ",
-    description: "Versão para empresas e condomínios. Adaptado para múltiplos imóveis e projetos recorrentes.",
-    size: "138 KB", uploadedAt: "2026-05-10",
-  },
-  {
-    id: "d3", category: "Checklist",
-    name: "Checklist de Documentos — Averbação de Construção",
-    description: "Lista completa de documentos exigidos para averbação de construção no cartório. Versão 2026.",
-    size: "48 KB", uploadedAt: "2026-05-15",
-  },
-  {
-    id: "d4", category: "Checklist",
-    name: "Checklist de Documentos — Usucapião",
-    description: "Documentação necessária para usucapião urbana e rural (extrajudicial e judicial).",
-    size: "52 KB", uploadedAt: "2026-05-15",
-  },
-  {
-    id: "d5", category: "Checklist",
-    name: "Checklist Prefeitura — Regularização de Área",
-    description: "Checklist específico para aprovação de projetos de regularização junto à prefeitura.",
-    size: "44 KB", uploadedAt: "2026-05-18",
-  },
-  {
-    id: "d6", category: "Formulário",
-    name: "Formulário de Triagem de Caso",
-    description: "Questionário inicial para análise do caso do cliente: tipo de imóvel, situação, urgência e histórico.",
-    size: "36 KB", uploadedAt: "2026-05-20",
-  },
-  {
-    id: "d7", category: "Formulário",
-    name: "Ficha de Vistoria Técnica",
-    description: "Formulário padronizado para registro de vistorias. Campos para área, irregularidades e fotografias.",
-    size: "62 KB", uploadedAt: "2026-05-22",
-  },
-  {
-    id: "d8", category: "Modelo Técnico",
-    name: "Modelo de Laudo Técnico de Vistoria",
-    description: "Template DOCX com estrutura completa para laudos técnicos. Compatível com requisitos do CREA e CAU.",
-    size: "210 KB", uploadedAt: "2026-05-22",
-  },
-  {
-    id: "d9", category: "Modelo Técnico",
-    name: "Modelo de Memorial Descritivo",
-    description: "Memorial descritivo padrão para projetos de regularização e averbação.",
-    size: "88 KB", uploadedAt: "2026-05-25",
-  },
-  {
-    id: "d10", category: "Orientação",
-    name: "Guia do Cliente — Como Funciona o Processo",
-    description: "Documento explicativo para enviar ao cliente no início. Explica as etapas, prazos e o que ele precisa fazer.",
-    size: "890 KB", uploadedAt: "2026-06-01",
-  },
-  {
-    id: "d11", category: "Orientação",
-    name: "Tabela de Prazos por Órgão — 2026",
-    description: "Prazos médios de resposta da Prefeitura, Cartório, INCRA e Receita Federal por estado.",
-    size: "76 KB", uploadedAt: "2026-06-03",
-  },
-];
-
-const STORAGE_KEY = "regulariza-docs-padrao";
-
-function storeGet<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; }
-  catch { return fallback; }
-}
-function storeSet(key: string, val: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* noop */ }
-}
-
 /* ──────── Component */
 function DocumentosPadraoPage() {
-  const [docs,      setDocs]      = useState<PadraoDoc[]>(() => storeGet(STORAGE_KEY, SEED_DOCS));
+  const [docs,      setDocs]      = useState<PadraoDoc[]>([]);
   const [search,    setSearch]    = useState("");
   const [filterCat, setFilterCat] = useState<DocCategory | "all">("all");
   const [uploading, setUploading] = useState(false);
   const [newCat,    setNewCat]    = useState<DocCategory>("Formulário");
   const [newDesc,   setNewDesc]   = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function loadDocs() {
+    const { data } = await supabase
+      .from("document_templates")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setDocs((data ?? []).map((d) => ({
+      id: d.id,
+      name: d.name,
+      category: (d.category as DocCategory) ?? "Orientação",
+      description: d.description ?? "",
+      size: d.size_text ?? "—",
+      uploadedAt: d.created_at.slice(0, 10),
+    })));
+  }
+
+  useEffect(() => { loadDocs(); }, []);
+
+  async function addDoc(doc: { name: string; category: DocCategory; description: string; size: string }) {
+    await supabase.from("document_templates").insert({
+      name: doc.name,
+      category: doc.category,
+      description: doc.description,
+      size_text: doc.size,
+    });
+    await loadDocs();
+  }
+
+  async function removeDoc(id: string) {
+    await supabase.from("document_templates").delete().eq("id", id);
+    await loadDocs();
+  }
 
   const filtered = docs.filter((d) => {
     const okCat  = filterCat === "all" || d.category === filterCat;
@@ -131,29 +85,24 @@ function DocumentosPadraoPage() {
     return okCat && okSrch;
   });
 
-  const upload = (files: FileList | null) => {
+  const upload = async (files: FileList | null) => {
     if (!files) return;
     setUploading(true);
-    const nd: PadraoDoc[] = Array.from(files).map((f) => ({
-      id:          crypto.randomUUID(),
-      name:        f.name,
-      category:    newCat,
-      description: newDesc.trim() || "Documento da biblioteca padrão.",
-      size:        `${Math.max(1, Math.round(f.size / 1024))} KB`,
-      uploadedAt:  new Date().toISOString().split("T")[0],
-    }));
-    const next = [...docs, ...nd];
-    setDocs(next);
-    storeSet(STORAGE_KEY, next);
+    for (const f of Array.from(files)) {
+      await addDoc({
+        name:        f.name,
+        category:    newCat,
+        description: newDesc.trim() || "Documento da biblioteca padrão.",
+        size:        `${Math.max(1, Math.round(f.size / 1024))} KB`,
+      });
+    }
     setNewDesc("");
     setUploading(false);
   };
 
-  const remove = (id: string) => {
+  const remove = async (id: string) => {
     if (!confirm("Remover este documento da biblioteca?")) return;
-    const next = docs.filter((d) => d.id !== id);
-    setDocs(next);
-    storeSet(STORAGE_KEY, next);
+    await removeDoc(id);
   };
 
   return (
