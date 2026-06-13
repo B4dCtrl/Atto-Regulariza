@@ -1,25 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft, User, Award, MapPin, Clock, Bell, CreditCard,
   Camera, Check,
 } from "lucide-react";
-
-/* ── Storage helpers ── */
-function storeGet<T>(key: string, def: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? (JSON.parse(v) as T) : def;
-  } catch {
-    return def;
-  }
-}
-function storeSet(key: string, val: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
-}
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/perfil-profissional")({
-  head: () => ({ meta: [{ title: "Perfil Profissional — Regulariza" }] }),
+  head: () => ({ meta: [{ title: "Meu Perfil — Profissional" }] }),
+  beforeLoad: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw redirect({ to: "/entrar" });
+    return { userId: session.user.id };
+  },
   component: PerfilProfissionalPage,
 });
 
@@ -78,16 +71,16 @@ type ProfProfile = {
   tipoConta: string;
 };
 
-const DEFAULT: ProfProfile = {
-  nome: "Carla Rocha",
-  email: "carla@regulariza.com.br",
-  telefone: "(11) 97654-3210",
-  bio: "Arquiteta e urbanista com 10 anos de experiência em regularização fundiária e averbação de construção no estado de São Paulo.",
-  conselho: "CAU",
-  registro: "A-12345-6",
-  especialidades: ["Regularização fundiária", "Averbação de construção"],
-  estados: ["SP"],
-  cidadesPrincipais: "São Paulo, Guarulhos, Osasco",
+const EMPTY_PROFILE: ProfProfile = {
+  nome: "",
+  email: "",
+  telefone: "",
+  bio: "",
+  conselho: "",
+  registro: "",
+  especialidades: [],
+  estados: [],
+  cidadesPrincipais: "",
   aceitandoCasos: true,
   maxCasos: 8,
   notifMensagens: true,
@@ -225,18 +218,49 @@ function SaveBtn({
 
 /* ── Page ── */
 function PerfilProfissionalPage() {
+  const { userId } = Route.useRouteContext();
   const [active, setActive] = useState<Section>("dados");
-  const [prof, setProf] = useState<ProfProfile>(() => storeGet("rz-prof-profile", DEFAULT));
+  const [prof, setProf] = useState<ProfProfile>(EMPTY_PROFILE);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    supabase.from("profiles").select("*").eq("id", userId).maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        const s = (data.settings ?? {}) as Record<string, boolean>;
+        setProf((p) => ({
+          ...p,
+          nome: data.name ?? "", email: data.email ?? "", telefone: data.phone ?? "",
+          bio: data.bio ?? "", conselho: data.council ?? "", registro: data.registro ?? "",
+          especialidades: data.specialties ?? [], estados: data.regions ?? [],
+          aceitandoCasos: data.accepting ?? true, maxCasos: data.max_cases ?? 8,
+          notifMensagens: s.notifMensagens ?? true, notifAtribuicoes: s.notifAtribuicoes ?? true,
+          notifPrazo: s.notifPrazo ?? true,
+        }));
+      });
+  }, [userId]);
 
   const set = <K extends keyof ProfProfile>(field: K, val: ProfProfile[K]) =>
     setProf((p) => ({ ...p, [field]: val }));
 
-  const save = (section: string) => {
-    storeSet("rz-prof-profile", prof);
+  async function salvar(section: string) {
+    await supabase.from("profiles").upsert({
+      id: userId, role: "profissional",
+      name: prof.nome, email: prof.email, phone: prof.telefone,
+      bio: prof.bio, council: prof.conselho, registro: prof.registro,
+      specialties: prof.especialidades, regions: prof.estados,
+      accepting: prof.aceitandoCasos, max_cases: prof.maxCasos,
+      specialization: `${prof.conselho} ${prof.registro}`.trim(),
+      settings: {
+        notifMensagens: prof.notifMensagens,
+        notifAtribuicoes: prof.notifAtribuicoes,
+        notifPrazo: prof.notifPrazo,
+      },
+    });
+    await supabase.auth.updateUser({ data: { name: prof.nome } });
     setSaved((s) => ({ ...s, [section]: true }));
     setTimeout(() => setSaved((s) => ({ ...s, [section]: false })), 2200);
-  };
+  }
 
   const toggleEspecialidade = (e: string) =>
     set(
@@ -256,6 +280,7 @@ function PerfilProfissionalPage() {
 
   const initials = prof.nome
     .split(" ")
+    .filter((n) => n.length > 0)
     .map((n) => n[0])
     .slice(0, 2)
     .join("")
@@ -391,7 +416,7 @@ function PerfilProfissionalPage() {
                   </div>
                 </div>
 
-                <SaveBtn onClick={() => save("dados")} saved={!!saved["dados"]} />
+                <SaveBtn onClick={() => salvar("dados")} saved={!!saved["dados"]} />
               </section>
             )}
 
@@ -459,7 +484,7 @@ function PerfilProfissionalPage() {
                   </div>
                 </div>
 
-                <SaveBtn onClick={() => save("credenciais")} saved={!!saved["credenciais"]} />
+                <SaveBtn onClick={() => salvar("credenciais")} saved={!!saved["credenciais"]} />
               </section>
             )}
 
@@ -509,7 +534,7 @@ function PerfilProfissionalPage() {
                   hint="Separe por vírgulas. Prioridade na distribuição de processos."
                 />
 
-                <SaveBtn onClick={() => save("atuacao")} saved={!!saved["atuacao"]} />
+                <SaveBtn onClick={() => salvar("atuacao")} saved={!!saved["atuacao"]} />
               </section>
             )}
 
@@ -553,7 +578,7 @@ function PerfilProfissionalPage() {
                 </label>
 
                 <SaveBtn
-                  onClick={() => save("disponibilidade")}
+                  onClick={() => salvar("disponibilidade")}
                   saved={!!saved["disponibilidade"]}
                 />
               </section>
@@ -587,7 +612,7 @@ function PerfilProfissionalPage() {
                   />
                 </div>
                 <SaveBtn
-                  onClick={() => save("notificacoes")}
+                  onClick={() => salvar("notificacoes")}
                   saved={!!saved["notificacoes"]}
                 />
               </section>
@@ -638,7 +663,7 @@ function PerfilProfissionalPage() {
                   </div>
                   <SaveBtn
                     label="Salvar dados bancários"
-                    onClick={() => save("pagamentos")}
+                    onClick={() => salvar("pagamentos")}
                     saved={!!saved["pagamentos"]}
                   />
                 </section>
