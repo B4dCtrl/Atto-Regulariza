@@ -1,9 +1,8 @@
-import { createFileRoute, useNavigate, redirect, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Loader2, AlertCircle, Eye, EyeOff, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveLandingPath } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/cadastro-profissional")({
   head: () => ({
@@ -12,11 +11,11 @@ export const Route = createFileRoute("/cadastro-profissional")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  // Já logado? Vai para o painel correspondente.
+  // "Criar conta" = conta nova. Encerra qualquer sessão ativa para não cair em
+  // loop com o login anterior; o formulário aparece sempre limpo.
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    throw redirect({ to: await resolveLandingPath(session.user.id) });
+    if (session) await supabase.auth.signOut();
   },
   component: CadastroProfissionalPage,
 });

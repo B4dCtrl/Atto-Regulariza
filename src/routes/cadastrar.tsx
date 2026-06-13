@@ -1,17 +1,16 @@
-import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveLandingPath } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/cadastrar")({
   head: () => ({ meta: [{ title: "Regularize seu imóvel — Ato Regulariza" }] }),
-  // Já logado? Não faz sentido criar conta — vai para o painel.
+  // "Criar conta" = conta nova. Encerra qualquer sessão ativa para não cair em
+  // loop com o login anterior; o formulário aparece sempre limpo.
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    throw redirect({ to: await resolveLandingPath(session.user.id) });
+    if (session) await supabase.auth.signOut();
   },
   component: CadastrarPage,
 });
