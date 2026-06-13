@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ArrowUpRight, Sparkles, Building2, X, ChevronRight, MapPin, Phone, Mail, User } from "lucide-react";
 import {
@@ -129,12 +130,6 @@ const faqs = [
 const PROP_TYPES = ["Casa", "Apartamento", "Terreno", "Sítio / Chácara", "Galpão / Comercial", "Imóvel rural", "Outro"];
 const STATES     = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
-function storeLeadAppend(lead: object) {
-  try {
-    const existing = JSON.parse(localStorage.getItem("regulariza-leads") ?? "[]");
-    localStorage.setItem("regulariza-leads", JSON.stringify([lead, ...existing]));
-  } catch { /* noop */ }
-}
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -158,6 +153,21 @@ function PrecosPage() {
   const [situation,  setSituation]  = useState("");
   const [urgency,    setUrgency]    = useState<"alta"|"media"|"baixa">("media");
 
+  /* Dynamic plans */
+  const [planos, setPlanos] = useState(products);
+  useEffect(() => {
+    supabase.from("pricing_plans").select("*").eq("visible", true).order("sort")
+      .then(({ data }) => {
+        if (data && data.length) {
+          setPlanos(data.map((p) => ({
+            id: p.id, name: p.name, price: p.price ?? "", period: p.period ?? "",
+            desc: p.descr ?? "", features: p.features ?? [],
+            popular: p.popular, tag: p.tag ?? undefined, note: p.note ?? undefined,
+          })));
+        }
+      });
+  }, []);
+
   function openModal(productName: string) {
     setModalProduct(productName);
     setStep(1);
@@ -173,28 +183,23 @@ function PrecosPage() {
     setStep(2);
   }
 
-  function submitStep2(e: FormEvent) {
+  async function submitStep2(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
-
-    const lead = {
-      id:              crypto.randomUUID(),
+    await supabase.from("leads").insert({
       name,
-      phone,
       email,
+      phone,
       city,
       state,
-      propertyType:    propType || "Imóvel",
-      situation:       situation || `Interesse em: ${modalProduct}`,
-      urgency,
-      status:          "novo",
-      professionalName: null,
-      notes:           `Produto de interesse: ${modalProduct}`,
-      createdAt:       new Date().toISOString(),
-    };
-
-    storeLeadAppend(lead);
-    setTimeout(() => { setLoading(false); setDone(true); }, 600);
+      tipo_imovel: propType || "Imóvel",
+      situacao:    situation || `Interesse em: ${modalProduct}`,
+      urgencia:    urgency,
+      notes:       `Produto de interesse: ${modalProduct}`,
+      source:      "precos",
+    });
+    setLoading(false);
+    setDone(true);
   }
 
   const inputCls =
@@ -479,7 +484,7 @@ function PrecosPage() {
         {/* Pricing cards */}
         <section className="px-6 pb-20">
           <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-3">
-            {products.map((p, i) => (
+            {planos.map((p, i) => (
               <BlurReveal key={p.id}>
                 <div
                   className={`relative flex h-full flex-col rounded-3xl p-7 ring-1 transition-all hover:-translate-y-1 ${
