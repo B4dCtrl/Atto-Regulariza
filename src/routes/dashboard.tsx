@@ -289,6 +289,18 @@ function DashboardContent() {
     );
   }
 
+  if (!property) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface/50 p-6 text-center">
+        <p className="text-sm text-ink-soft">Nenhum imóvel vinculado a esta conta.</p>
+        <Link to="/cadastrar" className="rounded-full bg-foreground px-5 py-2.5 text-sm text-background hover:opacity-80 transition-opacity">
+          Cadastrar um imóvel
+        </Link>
+        <Link to="/" className="text-xs text-ink-soft underline hover:text-foreground">Voltar ao site</Link>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-surface/50 text-foreground">
       <AnimatePresence>
