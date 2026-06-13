@@ -5,7 +5,7 @@ import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
   ChevronRight, FileText, MapPin, MessageSquare, Plus,
   Send, Upload, User, BookOpen, StickyNote,
-  AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X, Bot,
+  AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tables } from "@/integrations/supabase/types";
@@ -90,9 +90,6 @@ interface LocalDoc {
 }
 
 /* ─────────────────────────────────────────────── Data */
-const PROF_NAME     = "Carla Rocha";
-const PROF_INITIALS = "CR";
-
 const MOCK_PROCESSES: MockProcess[] = [
   { id:"p1", name:"Residência Jardim América",   client:"Roberto Alves",      clientPhone:"(11) 99234-5678", clientEmail:"roberto@email.com",   city:"São Paulo",        state:"SP", type:"Averbação de construção",      area:145,  urgency:"alta",  situation:"Construção não averbada desde 2018. Imóvel financiado, banco exige regularização." },
   { id:"p2", name:"Apto Centro Histórico",        client:"Maria Clara Santos", clientPhone:"(19) 98765-4321", clientEmail:"mclaras@email.com",   city:"Campinas",         state:"SP", type:"Regularização fundiária",      area:88,   urgency:"media", situation:"Posse de fato há 12 anos. Sem escritura formal. Quer vender o imóvel." },
@@ -172,64 +169,6 @@ function storeGet<T>(key: string, fallback: T): T {
 }
 function storeSet(key: string, val: unknown) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* noop */ }
-}
-
-/* ─────────────────────────────────────────────── Seed chat messages */
-const SEED_MSGS: Record<string, LocalMsg[]> = {
-  p1: [
-    { id:"sm1", text:"Olá! Vi que o processo foi atribuído. Quais documentos preciso separar?", isClient:true,  sender:"Roberto Alves", ts: new Date(Date.now()-86_400_000).toISOString() },
-    { id:"sm2", text:"Boa tarde, Roberto! Preciso do IPTU atualizado, cópia da escritura e RG/CPF. Pode digitalizar e enviar por aqui.", isClient:false, sender:PROF_NAME,      ts: new Date(Date.now()-82_800_000).toISOString() },
-    { id:"sm3", text:"Entendido! Vou digitalizar ainda hoje.", isClient:true,  sender:"Roberto Alves", ts: new Date(Date.now()-79_200_000).toISOString() },
-  ],
-  p2: [
-    { id:"sm4", text:"Minha situação é complicada — já tentei regularizar antes e não consegui.", isClient:true, sender:"Maria Clara", ts: new Date(Date.now()-172_800_000).toISOString() },
-    { id:"sm5", text:"Entendo, Maria Clara. Esse tipo de caso é comum e tem solução. Me conta mais sobre a tentativa anterior para a gente começar do ponto certo.", isClient:false, sender:PROF_NAME, ts: new Date(Date.now()-169_200_000).toISOString() },
-  ],
-};
-
-/* ─────────────────────────────────────────────── AI replies pool */
-const AI_REPLIES: Record<string, string[]> = {
-  default: [
-    "Entendido! Vou providenciar o mais rápido possível.",
-    "Certo, obrigado pela atualização!",
-    "Ok, já estou separando os documentos.",
-    "Perfeito, aguardo a próxima atualização.",
-    "Tudo bem! Qualquer dúvida pode chamar aqui.",
-  ],
-  documento: [
-    "Vou digitalizar e enviar ainda hoje.",
-    "Entendido! Quais documentos exatamente você precisa?",
-    "Já tenho esses documentos em mãos, envio até amanhã.",
-    "Posso enviar por e-mail também ou só aqui no sistema?",
-  ],
-  prazo: [
-    "Quanto tempo leva em média esse processo?",
-    "Tem como agilizar? Estou com prazo apertado.",
-    "Ok, vou aguardar dentro do prazo informado.",
-  ],
-  prefeitura: [
-    "Precisa de algum documento meu para o protocolo?",
-    "A prefeitura costuma demorar muito nessa etapa?",
-    "Vou acompanhar pelo sistema então.",
-  ],
-};
-
-function getAIReply(msgText: string): string {
-  const t = msgText.toLowerCase();
-  if (t.includes("document") || t.includes("arquivo") || t.includes("iptu") || t.includes("escritura")) {
-    const pool = AI_REPLIES.documento;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  if (t.includes("prazo") || t.includes("dias") || t.includes("tempo") || t.includes("quando")) {
-    const pool = AI_REPLIES.prazo;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  if (t.includes("prefeitura") || t.includes("protocolo") || t.includes("órgão")) {
-    const pool = AI_REPLIES.prefeitura;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  const pool = AI_REPLIES.default;
-  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 /* ─────────────────────────────────────────────── Component */

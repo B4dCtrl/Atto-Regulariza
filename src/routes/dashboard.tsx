@@ -871,7 +871,7 @@ function DashboardContent() {
 
 function DashboardPage() {
   return (
-    <TourProvider onComplete={() => { console.log("Tour completado!"); }}>
+    <TourProvider onComplete={() => {}}>
       <DashboardContent />
       <DashboardTourSteps />
     </TourProvider>

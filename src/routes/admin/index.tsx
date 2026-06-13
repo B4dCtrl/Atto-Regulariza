@@ -168,7 +168,7 @@ function AdminHome() {
                     <User className="h-4 w-4" /> Meu Perfil
                   </button>
                   <button
-                    onClick={() => { setShowAvatar(false); }}
+                    onClick={() => { setShowAvatar(false); navigate({ to: "/perfil-profissional" }); }}
                     className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
                   >
                     <Settings className="h-4 w-4" /> Configurações
