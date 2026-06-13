@@ -5,6 +5,7 @@ import {
   Home, Trash2, ChevronRight,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/clientes")({
   head: () => ({ meta: [{ title: "Clientes — Gestão Regulariza" }] }),
@@ -44,13 +45,6 @@ interface Client {
   tutorial_concluido: boolean;
 }
 
-const STORAGE_KEY = "regulariza-clientes";
-
-function loadClients(): Client[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); }
-  catch { return []; }
-}
-
 function ClientesPage() {
   const [clients,  setClients]  = useState<Client[]>([]);
   const [search,   setSearch]   = useState("");
@@ -58,24 +52,30 @@ function ClientesPage() {
   const [selected, setSelected] = useState<Client | null>(null);
 
   useEffect(() => {
-    setClients(loadClients());
-    const handler = () => setClients(loadClients());
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
+    supabase.from("properties")
+      .select("id, client_name, client_email, client_phone, client_cpf, tipo_imovel, situacao, objetivo, city, state, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (!data) return;
+        setClients(data.map((p) => ({
+          id: p.id,
+          nome: p.client_name ?? "—",
+          email: p.client_email ?? "—",
+          telefone: p.client_phone ?? "",
+          cpf: p.client_cpf ?? "",
+          tipo_imovel: p.tipo_imovel ?? "",
+          situacao: p.situacao ?? "",
+          objetivo: p.objetivo ?? "",
+          cidade: p.city ?? "",
+          estado: p.state ?? "",
+          cadastrado_em: p.created_at,
+          tutorial_concluido: true,
+        })));
+      });
   }, []);
 
-  // Poll localStorage (same-tab updates)
-  useEffect(() => {
-    const iv = setInterval(() => setClients(loadClients()), 800);
-    return () => clearInterval(iv);
-  }, []);
-
-  const remove = (id: string) => {
-    if (!confirm("Remover este cliente?")) return;
-    const updated = clients.filter((c) => c.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setClients(updated);
-    if (selected?.id === id) setSelected(null);
+  const remove = (_id: string) => {
+    alert("Para remover um cliente, exclua o processo dele no Back office. Aqui é somente leitura.");
   };
 
   const filtered = clients.filter((c) => {
