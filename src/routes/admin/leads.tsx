@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Plus, X, Building2, Clock, MapPin, Check,
   ChevronRight, AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/admin/leads")({
   head: () => ({ meta: [{ title: "Leads — Ato Regulariza" }] }),
@@ -65,75 +67,41 @@ const ADVANCE_LABEL: Record<LeadStatus, string> = {
   recusado:  "",
 };
 
-/* ──────── Seed data */
-const SEED_LEADS: Lead[] = [
-  {
-    id: "l1", name: "Fernando Carvalho", phone: "(11) 99876-5432", email: "fcarvalho@email.com",
-    city: "Guarulhos", state: "SP", propertyType: "Casa",
-    situation: "Construção irregular — ampliou sem alvará em 2021. Banco exigiu regularização.",
-    urgency: "alta", status: "novo", professionalName: null, notes: "",
-    createdAt: new Date(Date.now() - 3_600_000).toISOString(),
-  },
-  {
-    id: "l2", name: "Renata Borges", phone: "(19) 98765-0000", email: "renata@email.com",
-    city: "Piracicaba", state: "SP", propertyType: "Apartamento",
-    situation: "Inventário pendente, imóvel sem escritura formal. Precisa vender.",
-    urgency: "media", status: "novo", professionalName: null, notes: "",
-    createdAt: new Date(Date.now() - 7_200_000).toISOString(),
-  },
-  {
-    id: "l3", name: "Carlos Eduardo Mello", phone: "(14) 99111-2233", email: "c.mello@empresa.com",
-    city: "Marília", state: "SP", propertyType: "Galpão",
-    situation: "Regularização de uso comercial em zona mista. AVCB vencido.",
-    urgency: "baixa", status: "triagem", professionalName: null, notes: "Verificar zoneamento municipal antes de triagem.",
-    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-  },
-  {
-    id: "l4", name: "Luísa Mendonça", phone: "(11) 91234-0000", email: "luisa.m@email.com",
-    city: "São Paulo", state: "SP", propertyType: "Terreno",
-    situation: "Usucapião extrajudicial — ocupação há 18 anos. Documentação parcial.",
-    urgency: "media", status: "atribuido", professionalName: "Carla Rocha", notes: "Documentação básica já conferida. Aguarda ART.",
-    createdAt: new Date(Date.now() - 172_800_000).toISOString(),
-  },
-  {
-    id: "l5", name: "Bruno Santana", phone: "(13) 99000-1111", email: "b.santana@email.com",
-    city: "Sorocaba", state: "SP", propertyType: "Casa",
-    situation: "IPTU desatualizado e área divergente da matrícula em 12m².",
-    urgency: "baixa", status: "ativo", professionalName: "Carla Rocha", notes: "",
-    createdAt: new Date(Date.now() - 259_200_000).toISOString(),
-  },
-  {
-    id: "l6", name: "Daniela Prado", phone: "(16) 97654-3210", email: "dprado@email.com",
-    city: "Ribeirão Preto", state: "SP", propertyType: "Sítio",
-    situation: "CAR não inscrito. Imóvel rural sem georreferenciamento atualizado.",
-    urgency: "baixa", status: "novo", professionalName: null, notes: "",
-    createdAt: new Date(Date.now() - 10_800_000).toISOString(),
-  },
-];
-
-const STORAGE_KEY = "regulariza-leads";
-
-function storeGet<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; }
-  catch { return fallback; }
-}
-function storeSet(key: string, val: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* noop */ }
+/* ──────── Mapper */
+type LeadRow = Tables<"leads">;
+function rowToLead(r: LeadRow): Lead {
+  return {
+    id: r.id, name: r.name ?? "—", phone: r.phone ?? "", email: r.email,
+    city: r.city ?? "", state: r.state ?? "",
+    propertyType: r.tipo_imovel ?? "—",
+    situation: r.situacao ?? "—",
+    urgency: (r.urgencia as Urgency) ?? "media",
+    status: (r.status as LeadStatus) ?? "novo",
+    professionalName: r.professional_name ?? null,
+    notes: r.notes ?? "",
+    createdAt: r.created_at,
+  };
 }
 
 /* ──────── Component */
 function LeadsPage() {
-  const [leads,        setLeads]        = useState<Lead[]>(() => storeGet(STORAGE_KEY, SEED_LEADS));
+  const [leads,        setLeads]        = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [filter,       setFilter]       = useState<LeadStatus | "all">("all");
   const [notes,        setNotes]        = useState("");
 
-  const update = (id: string, patch: Partial<Lead>) => {
-    setLeads((prev) => {
-      const next = prev.map((l) => (l.id === id ? { ...l, ...patch } : l));
-      storeSet(STORAGE_KEY, next);
-      return next;
-    });
+  useEffect(() => {
+    supabase.from("leads").select("*").order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setLeads(data.map((r) => rowToLead(r as LeadRow))); });
+  }, []);
+
+  const update = async (id: string, patch: Partial<Lead>) => {
+    const dbPatch: Record<string, unknown> = {};
+    if (patch.status) dbPatch.status = patch.status;
+    if (patch.professionalName !== undefined) dbPatch.professional_name = patch.professionalName;
+    if (patch.notes !== undefined) dbPatch.notes = patch.notes;
+    await supabase.from("leads").update(dbPatch).eq("id", id);
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
     setSelectedLead((prev) => (prev?.id === id ? { ...prev, ...patch } : prev));
   };
 
@@ -142,7 +110,6 @@ function LeadsPage() {
     if (idx < STATUS_FLOW.length - 1) {
       const nextStatus = STATUS_FLOW[idx + 1];
       const patch: Partial<Lead> = { status: nextStatus };
-      if (nextStatus === "atribuido") patch.professionalName = "Carla Rocha";
       update(lead.id, patch);
     }
   };
