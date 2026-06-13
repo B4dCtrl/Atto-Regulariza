@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, type DragEvent, type ChangeEvent, type For
 import {
   Home, FileText, MessageSquare, User, History, Bell, Search,
   Check, Clock, Upload, AlertCircle, ArrowUpRight,
-  Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut,
+  Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut, Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -17,6 +17,7 @@ import {
   SearchingProfessionalsModal,
 } from "@/components/onboarding/ProfessionalSearch";
 import { resolveLandingPath } from "@/lib/auth-routing";
+import { chatAssistant } from "@/lib/api/assistant.functions";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -85,6 +86,7 @@ function DashboardContent() {
   const [dragOver, setDragOver]           = useState(false);
   const [chatInput, setChatInput]         = useState("");
   const [sendingMsg, setSendingMsg]       = useState(false);
+  const [askingAI, setAskingAI]           = useState(false);
   const fileRef   = useRef<HTMLInputElement>(null);
   const chatRef   = useRef<HTMLDivElement>(null);
 
@@ -272,6 +274,18 @@ function DashboardContent() {
       is_client: true,
     });
     setSendingMsg(false);
+  };
+
+  /* ── Pergunta sob demanda à IA (resposta entra no chat via realtime) ── */
+  const askAI = async () => {
+    if (!propertyId || askingAI) return;
+    setAskingAI(true);
+    try {
+      await chatAssistant({ data: { propertyId } });
+    } catch (err) {
+      alert(`Assistente IA indisponível: ${(err as Error).message}`);
+    }
+    setAskingAI(false);
   };
 
   const progress     = property?.progress      ?? 0;
@@ -776,26 +790,57 @@ function DashboardContent() {
 
                   {/* Messages */}
                   <div ref={chatRef} className="flex-1 overflow-y-auto p-6 space-y-3">
-                    {msgs.map((m) => (
-                      <div key={m.id} className={`flex ${m.is_client ? "justify-end" : "justify-start"}`}>
-                        <div
-                          className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                            m.is_client
-                              ? "rounded-br-md bg-accent text-accent-foreground"
-                              : "rounded-bl-md bg-surface text-foreground"
-                          }`}
-                        >
-                          {!m.is_client && (
-                            <div className="mb-1 text-[11px] font-medium opacity-70">{m.sender_name}</div>
-                          )}
-                          {m.content}
+                    {msgs.map((m) => {
+                      const isAI = m.sender_name === "Assistente IA";
+                      if (isAI) {
+                        return (
+                          <div key={m.id} className="flex justify-start">
+                            <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm leading-relaxed ring-1 ring-accent/20">
+                              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-accent">
+                                <Sparkles className="h-3 w-3" /> Assistente IA
+                              </div>
+                              {m.content}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={m.id} className={`flex ${m.is_client ? "justify-end" : "justify-start"}`}>
+                          <div
+                            className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                              m.is_client
+                                ? "rounded-br-md bg-accent text-accent-foreground"
+                                : "rounded-bl-md bg-surface text-foreground"
+                            }`}
+                          >
+                            {!m.is_client && (
+                              <div className="mb-1 text-[11px] font-medium opacity-70">{m.sender_name}</div>
+                            )}
+                            {m.content}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {askingAI && (
+                      <div className="flex justify-start">
+                        <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm text-accent ring-1 ring-accent/20">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Assistente IA está digitando…
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
 
                   {/* Input */}
-                  <form onSubmit={sendMessage} className="flex items-center gap-3 border-t border-border p-4">
+                  <form onSubmit={sendMessage} className="flex items-center gap-2 border-t border-border p-4">
+                    <button
+                      type="button"
+                      onClick={askAI}
+                      disabled={askingAI}
+                      title="Perguntar à Assistente IA"
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20 hover:bg-accent/20 disabled:opacity-40 transition-colors"
+                    >
+                      {askingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    </button>
                     <input
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
@@ -806,7 +851,7 @@ function DashboardContent() {
                     <button
                       type="submit"
                       disabled={sendingMsg || !chatInput.trim()}
-                      className="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
                     >
                       {sendingMsg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>

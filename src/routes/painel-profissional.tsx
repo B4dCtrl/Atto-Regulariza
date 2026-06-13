@@ -5,10 +5,11 @@ import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
   ChevronRight, FileText, MapPin, MessageSquare, Plus,
   Send, Upload, User, BookOpen, StickyNote,
-  AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X,
+  AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X, Sparkles, Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tables } from "@/integrations/supabase/types";
+import { chatAssistant } from "@/lib/api/assistant.functions";
 
 type PropertyRow = Tables<"properties">;
 
@@ -186,6 +187,7 @@ function ProfissionalPage() {
   const [activeStage,  setActiveStage]  = useState(1);
   const [rightTab,     setRightTab]     = useState<RightTab>("chat");
   const [chatInput,    setChatInput]    = useState("");
+  const [askingAI,     setAskingAI]     = useState(false);
   const [pendencyInput,    setPendencyInput]    = useState("");
   const [showPendencyForm, setShowPendencyForm] = useState(false);
   const [showAvatarMenu,   setShowAvatarMenu]   = useState(false);
@@ -485,6 +487,18 @@ function ProfissionalPage() {
     });
     // realtime recarrega; rola para o fim
     setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 200);
+  };
+
+  const askAI = async () => {
+    if (!selectedId || askingAI) return;
+    setAskingAI(true);
+    try {
+      await chatAssistant({ data: { propertyId: selectedId } });
+      setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 200);
+    } catch (err) {
+      alert(`Assistente IA indisponível: ${(err as Error).message}`);
+    }
+    setAskingAI(false);
   };
 
   const uploadDocs = async (files: FileList | null) => {
@@ -1244,25 +1258,56 @@ function ProfissionalPage() {
                     {msgs.length === 0 ? (
                       <div className="py-8 text-center text-xs text-ink-soft">Sem mensagens ainda.</div>
                     ) : (
-                      msgs.map((m) => (
-                        <div key={m.id} className={`flex ${m.isClient ? "justify-start" : "justify-end"}`}>
-                          <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${
-                            m.isClient
-                              ? "rounded-bl-md bg-surface text-foreground"
-                              : "rounded-br-md bg-accent text-accent-foreground"
-                          }`}>
-                            {m.isClient && (
-                              <div className="mb-0.5 text-[10px] font-medium opacity-60">{m.sender}</div>
-                            )}
-                            {m.text}
+                      msgs.map((m) => {
+                        const isAI = m.sender === "Assistente IA";
+                        if (isAI) {
+                          return (
+                            <div key={m.id} className="flex justify-start">
+                              <div className="max-w-[88%] rounded-2xl rounded-bl-md bg-accent/10 px-3 py-2 text-xs leading-relaxed ring-1 ring-accent/20">
+                                <div className="mb-0.5 flex items-center gap-1 text-[10px] font-medium text-accent">
+                                  <Sparkles className="h-2.5 w-2.5" /> Assistente IA
+                                </div>
+                                {m.text}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={m.id} className={`flex ${m.isClient ? "justify-start" : "justify-end"}`}>
+                            <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${
+                              m.isClient
+                                ? "rounded-bl-md bg-surface text-foreground"
+                                : "rounded-br-md bg-accent text-accent-foreground"
+                            }`}>
+                              {m.isClient && (
+                                <div className="mb-0.5 text-[10px] font-medium opacity-60">{m.sender}</div>
+                              )}
+                              {m.text}
+                            </div>
                           </div>
+                        );
+                      })
+                    )}
+                    {askingAI && (
+                      <div className="flex justify-start">
+                        <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-accent/10 px-3 py-2 text-xs text-accent ring-1 ring-accent/20">
+                          <Loader2 className="h-3 w-3 animate-spin" /> Assistente IA está digitando…
                         </div>
-                      ))
+                      </div>
                     )}
                   </div>
                   {/* Barra inferior do chat */}
                   <div className="shrink-0 border-t border-border">
                     <form onSubmit={sendMsg} className="flex items-center gap-2 px-3 py-3">
+                      <button
+                        type="button"
+                        onClick={askAI}
+                        disabled={askingAI}
+                        title="Perguntar à Assistente IA"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20 hover:bg-accent/20 disabled:opacity-40 transition-colors"
+                      >
+                        {askingAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                      </button>
                       <input
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
@@ -1272,7 +1317,7 @@ function ProfissionalPage() {
                       <button
                         type="submit"
                         disabled={!chatInput.trim()}
-                        className="grid h-8 w-8 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
                       >
                         <Send className="h-3.5 w-3.5" />
                       </button>
