@@ -28,41 +28,59 @@ export type Database = {
           urgencia:    string | null
           notes:       string | null
           source:      string | null
-          converted:   boolean
-          created_at:  string
+          converted:         boolean
+          status:            string
+          professional_name: string | null
+          created_at:        string
         }
         Insert: {
-          id?:          string
-          name?:        string | null
-          email:        string
-          phone?:       string | null
-          city?:        string | null
-          state?:       string | null
-          tipo_imovel?: string | null
-          situacao?:    string | null
-          objetivo?:    string | null
-          urgencia?:    string | null
-          notes?:       string | null
-          source?:      string | null
-          converted?:   boolean
-          created_at?:  string
+          id?:               string
+          name?:             string | null
+          email:             string
+          phone?:            string | null
+          city?:             string | null
+          state?:            string | null
+          tipo_imovel?:      string | null
+          situacao?:         string | null
+          objetivo?:         string | null
+          urgencia?:         string | null
+          notes?:            string | null
+          source?:           string | null
+          converted?:        boolean
+          status?:           string
+          professional_name?: string | null
+          created_at?:       string
         }
         Update: {
-          id?:          string
-          name?:        string | null
-          email?:       string
-          phone?:       string | null
-          city?:        string | null
-          state?:       string | null
-          tipo_imovel?: string | null
-          situacao?:    string | null
-          objetivo?:    string | null
-          urgencia?:    string | null
-          notes?:       string | null
-          source?:      string | null
-          converted?:   boolean
-          created_at?:  string
+          id?:               string
+          name?:             string | null
+          email?:            string
+          phone?:            string | null
+          city?:             string | null
+          state?:            string | null
+          tipo_imovel?:      string | null
+          situacao?:         string | null
+          objetivo?:         string | null
+          urgencia?:         string | null
+          notes?:            string | null
+          source?:           string | null
+          converted?:        boolean
+          status?:           string
+          professional_name?: string | null
+          created_at?:       string
         }
+        Relationships: []
+      }
+      pricing_plans: {
+        Row: { id: string; name: string; price: string | null; period: string | null; descr: string | null; features: string[]; popular: boolean; tag: string | null; note: string | null; visible: boolean; sort: number; updated_at: string }
+        Insert: { id: string; name: string; price?: string | null; period?: string | null; descr?: string | null; features?: string[]; popular?: boolean; tag?: string | null; note?: string | null; visible?: boolean; sort?: number; updated_at?: string }
+        Update: { id?: string; name?: string; price?: string | null; period?: string | null; descr?: string | null; features?: string[]; popular?: boolean; tag?: string | null; note?: string | null; visible?: boolean; sort?: number; updated_at?: string }
+        Relationships: []
+      }
+      document_templates: {
+        Row: { id: string; name: string; category: string | null; description: string | null; size_text: string | null; file_path: string | null; created_at: string }
+        Insert: { id?: string; name: string; category?: string | null; description?: string | null; size_text?: string | null; file_path?: string | null; created_at?: string }
+        Update: { id?: string; name?: string; category?: string | null; description?: string | null; size_text?: string | null; file_path?: string | null; created_at?: string }
         Relationships: []
       }
       user_roles: {
@@ -300,6 +318,20 @@ export type Database = {
           initials: string | null
           role: string
           specialization: string | null
+          email: string | null
+          phone: string | null
+          cpf: string | null
+          city: string | null
+          state: string | null
+          bio: string | null
+          council: string | null
+          registro: string | null
+          specialties: string[]
+          regions: string[]
+          accepting: boolean
+          max_cases: number
+          active: boolean
+          settings: Json
           created_at: string
           updated_at: string
         }
@@ -309,6 +341,20 @@ export type Database = {
           initials?: string | null
           role?: string
           specialization?: string | null
+          email?: string | null
+          phone?: string | null
+          cpf?: string | null
+          city?: string | null
+          state?: string | null
+          bio?: string | null
+          council?: string | null
+          registro?: string | null
+          specialties?: string[]
+          regions?: string[]
+          accepting?: boolean
+          max_cases?: number
+          active?: boolean
+          settings?: Json
           created_at?: string
           updated_at?: string
         }
@@ -318,6 +364,20 @@ export type Database = {
           initials?: string | null
           role?: string
           specialization?: string | null
+          email?: string | null
+          phone?: string | null
+          cpf?: string | null
+          city?: string | null
+          state?: string | null
+          bio?: string | null
+          council?: string | null
+          registro?: string | null
+          specialties?: string[]
+          regions?: string[]
+          accepting?: boolean
+          max_cases?: number
+          active?: boolean
+          settings?: Json
           created_at?: string
           updated_at?: string
         }
