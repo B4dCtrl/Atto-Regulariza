@@ -16,7 +16,6 @@ import {
   SearchingProfessionalMini,
   SearchingProfessionalsModal,
 } from "@/components/onboarding/ProfessionalSearch";
-import { resolveLandingPath } from "@/lib/auth-routing";
 import { chatAssistant } from "@/lib/api/assistant.functions";
 
 export const Route = createFileRoute("/dashboard")({
@@ -29,9 +28,8 @@ export const Route = createFileRoute("/dashboard")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar" });
-    // Profissional/admin nunca devem cair no painel do cliente.
-    const dest = await resolveLandingPath(session.user.id);
-    if (dest !== "/dashboard") throw redirect({ to: dest });
+    // Admin/profissional podem abrir o painel do cliente (ex.: prévia pela StaffBar).
+    // Sem imóvel, cai no estado vazio — sem redirecionar para fora.
     return { userId: session.user.id };
   },
   component: DashboardPage,
