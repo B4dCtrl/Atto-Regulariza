@@ -101,9 +101,8 @@ function GestaoPage() {
       {/* Topbar */}
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-xl">
         <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-1.5">
-            <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-            <span className="font-arsenica text-xl leading-none text-accent hidden sm:inline">ato</span>
+          <Link to="/" className="flex items-center">
+            <img src="/ato-lockup.png" alt="Ato Regulariza" className="h-7 w-auto object-contain" />
           </Link>
           <div className="h-5 w-px bg-border hidden sm:block" />
           <div className="flex items-center gap-2 text-sm">

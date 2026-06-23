@@ -45,7 +45,7 @@ export function FirstTimeTutorial({ onDone }: { onDone: () => void }) {
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div>
             <div className="text-[10px] uppercase tracking-widest text-ink-soft">Bem-vindo ao</div>
-            <div className="font-arsenica text-xl text-accent">Ato Regulariza</div>
+            <img src="/ato-lockup.png" alt="Ato Regulariza" className="mt-1 h-9 w-auto object-contain" />
           </div>
           <button
             onClick={onDone}

@@ -68,13 +68,13 @@ export function AdminSidebar() {
         {/* Logo */}
         <Link to="/admin" className="flex items-center gap-2 px-1.5 py-3">
           <img
-            src="/logo-ato.png"
+            src="/ato-icon.png"
             alt="Ato Regulariza"
-            className="h-8 w-8 shrink-0 rounded-md object-contain"
+            className="h-8 w-8 shrink-0 object-contain group-hover:hidden"
           />
-          <div className="overflow-hidden opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <div className="whitespace-nowrap font-arsenica text-lg leading-none text-accent">ato</div>
-            <div className="mt-0.5 whitespace-nowrap text-[10px] uppercase tracking-widest text-ink-soft">
+          <div className="hidden overflow-hidden group-hover:block">
+            <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-5 w-auto object-contain" />
+            <div className="mt-1 whitespace-nowrap text-[10px] uppercase tracking-widest text-ink-soft">
               Gestão
             </div>
           </div>

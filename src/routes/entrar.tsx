@@ -152,9 +152,8 @@ function EntrarPage() {
           }}
         />
 
-        <Link to="/" className="relative flex items-center gap-1.5">
-          <img src="/logo-ato.png" alt="Ato Regulariza" className="h-8 w-8 rounded-md object-contain" />
-          <span className="font-arsenica text-2xl leading-none text-accent">ato</span>
+        <Link to="/" className="relative flex items-center">
+          <img src="/ato-lockup.png" alt="Ato Regulariza" className="h-9 w-auto object-contain" />
         </Link>
 
         <div className="relative">
@@ -192,9 +191,8 @@ function EntrarPage() {
           className="w-full max-w-md"
         >
           {/* Logo mobile */}
-          <Link to="/" className="mb-8 flex items-center gap-1.5 md:hidden">
-            <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-            <span className="font-arsenica text-xl leading-none text-accent">ato</span>
+          <Link to="/" className="mb-8 flex items-center md:hidden">
+            <img src="/ato-lockup.png" alt="Ato Regulariza" className="h-8 w-auto object-contain" />
           </Link>
 
           {/* Título animado por mode */}

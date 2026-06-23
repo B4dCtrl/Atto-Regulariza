@@ -132,12 +132,8 @@ export function Nav() {
             className="flex items-center px-4 py-2.5"
           >
             <Link to="/" className="flex items-center gap-2">
-              <img
-                src="/logo-ato.png"
-                alt="Ato Regulariza"
-                className="h-9 w-9 object-contain"
-              />
-              <span className="font-arsenica text-[2rem] leading-none text-accent">ato</span>
+              <img src="/ato-icon.png" alt="" className="h-9 w-9 object-contain" />
+              <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-7 w-auto object-contain" />
             </Link>
           </motion.div>
 

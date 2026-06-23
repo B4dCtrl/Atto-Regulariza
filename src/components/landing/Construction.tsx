@@ -52,7 +52,7 @@ export function Construction() {
         className="relative flex flex-col items-center"
       >
         {/* Logo */}
-        <img src="/logo-ato.png" alt="Ato Regulariza" className="h-12 w-12 rounded-xl object-contain" />
+        <img src="/ato-icon.png" alt="Ato Regulariza" className="h-14 w-14 object-contain" />
 
         {/* Badge */}
         <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs text-ink-soft">

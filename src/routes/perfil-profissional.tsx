@@ -299,9 +299,8 @@ function PerfilProfissionalPage() {
             Painel
           </Link>
           <div className="h-5 w-px bg-border" />
-          <Link to="/" className="flex items-center gap-1.5">
-            <img src="/logo-ato.png" alt="Ato Regulariza" className="h-7 w-7 rounded-md object-contain" />
-            <span className="hidden font-arsenica text-xl leading-none text-accent sm:inline">ato</span>
+          <Link to="/" className="flex items-center">
+            <img src="/ato-lockup.png" alt="Ato Regulariza" className="h-7 w-auto object-contain" />
           </Link>
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden text-sm text-ink-soft sm:block">Perfil profissional</span>

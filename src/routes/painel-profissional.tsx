@@ -598,9 +598,8 @@ function ProfissionalPage() {
       <aside className="group sticky top-0 hidden h-screen w-16 shrink-0 md:block">
         <div className="absolute inset-y-0 left-0 z-20 flex h-full w-16 flex-col overflow-hidden border-r border-border bg-background p-3 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]">
             {/* Logo */}
-            <Link to="/painel-profissional" className="mb-5 flex shrink-0 items-center gap-2.5 px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              <img src="/logo-ato.png" alt="Ato" className="h-5 w-5 shrink-0 rounded" />
-              <span className="whitespace-nowrap font-arsenica text-lg leading-none text-accent">ato</span>
+            <Link to="/painel-profissional" className="mb-5 flex shrink-0 items-center px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-6 w-auto object-contain" />
             </Link>
             <nav className="space-y-0.5">
               {([

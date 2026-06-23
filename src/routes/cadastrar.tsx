@@ -201,8 +201,8 @@ function CadastrarPage() {
     return (
       <div className="min-h-screen bg-surface/40 flex flex-col items-center justify-center px-4 py-12">
         <div className="mb-8 text-center">
-          <div className="font-arsenica text-2xl text-accent">ato</div>
-          <div className="text-xs uppercase tracking-widest text-ink-soft">Regulariza</div>
+          <img src="/ato-lockup.png" alt="Ato Regulariza" className="mx-auto h-12 w-auto object-contain" />
+          <div className="mt-2 text-xs uppercase tracking-widest text-ink-soft">Regulariza</div>
         </div>
         <div className="w-full max-w-[460px] rounded-3xl bg-background ring-1 ring-border p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-accent/10 text-accent">
@@ -227,8 +227,8 @@ function CadastrarPage() {
     <div className="min-h-screen bg-surface/40 flex flex-col items-center justify-center px-4 py-12">
       {/* Logo */}
       <div className="mb-8 text-center">
-        <div className="font-arsenica text-2xl text-accent">ato</div>
-        <div className="text-xs uppercase tracking-widest text-ink-soft">Regulariza</div>
+        <img src="/ato-lockup.png" alt="Ato Regulariza" className="mx-auto h-12 w-auto object-contain" />
+        <div className="mt-2 text-xs uppercase tracking-widest text-ink-soft">Regulariza</div>
       </div>
 
       {/* Progress bar */}
