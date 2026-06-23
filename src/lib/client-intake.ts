@@ -33,7 +33,7 @@ export async function createClientIntakeBrowser(uid: string, d: IntakeData): Pro
     city: d.cidade, state: d.estado,
   });
 
-  // Imóvel (progress 0 / stage 0: sem andamento até a equipe dar o diagnóstico)
+  // Imóvel — etapa 1 (Cadastro). current_stage precisa ser >= 1 (constraint do banco).
   const projectName = d.nome_projeto.trim() || `${d.nome} — ${d.situacao || "Regularização"}`;
   const { data: prop, error: propErr } = await supabase
     .from("properties")
@@ -42,7 +42,7 @@ export async function createClientIntakeBrowser(uid: string, d: IntakeData): Pro
       client_id: uid, client_name: d.nome, client_email: d.email,
       tipo_imovel: d.tipo_imovel, situacao: d.situacao,
       objetivo: d.objetivo, urgencia: d.urgencia,
-      status: "entrada", current_stage: 0, progress: 0,
+      status: "entrada", current_stage: 1, progress: 0,
     })
     .select("id").single();
 
@@ -54,7 +54,7 @@ export async function createClientIntakeBrowser(uid: string, d: IntakeData): Pro
   // Etapas
   const LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
   await supabase.from("process_stages").insert(
-    LABELS.map((label, i) => ({ property_id: prop.id, stage_number: i + 1, label, state: "pending" })),
+    LABELS.map((label, i) => ({ property_id: prop.id, stage_number: i + 1, label, state: i === 0 ? "active" : "pending" })),
   );
 
   // Marca o lead como convertido (best-effort)
