@@ -17,6 +17,7 @@ import {
   SearchingProfessionalsModal,
 } from "@/components/onboarding/ProfessionalSearch";
 import { chatAssistant } from "@/lib/api/assistant.functions";
+import { createClientIntakeBrowser, type IntakeData } from "@/lib/client-intake";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -94,12 +95,26 @@ function DashboardContent() {
 
     async function load() {
       // 1. Encontra o imóvel deste cliente
-      const { data: propData } = await supabase
+      let propData = (await supabase
         .from("properties")
         .select("*")
         .eq("client_id", userId)
         .limit(1)
-        .single();
+        .maybeSingle()).data;
+
+      // 1b. Self-heal: sem imóvel mas com intake nos metadados (cadastro com
+      // confirmação de e-mail) → monta o processo agora, no navegador.
+      if (!cancelled && !propData) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const intake = user?.user_metadata?.intake as IntakeData | undefined;
+        if (intake) {
+          try {
+            await createClientIntakeBrowser(userId, intake);
+            propData = (await supabase
+              .from("properties").select("*").eq("client_id", userId).limit(1).maybeSingle()).data;
+          } catch { /* cai no estado vazio se falhar */ }
+        }
+      }
 
       if (cancelled || !propData) { setLoading(false); return; }
 

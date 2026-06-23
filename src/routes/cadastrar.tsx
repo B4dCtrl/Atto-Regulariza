@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { createClientIntake } from "@/lib/api/intake.functions";
+import { createClientIntakeBrowser, type IntakeData } from "@/lib/client-intake";
 
 export const Route = createFileRoute("/cadastrar")({
   head: () => ({ meta: [{ title: "Regularize seu imóvel — Ato Regulariza" }] }),
@@ -145,11 +145,19 @@ function CadastrarPage() {
       source:      "wizard",
     });
 
+    // Intake guardado nos metadados → se a conta exigir confirmação de e-mail,
+    // o processo é montado no 1º login (self-heal no dashboard), sem service role.
+    const intake: IntakeData = {
+      nome: data.nome, email: data.email, cidade: data.cidade, estado: data.estado,
+      tipo_imovel: data.tipo_imovel, situacao: data.situacao,
+      objetivo: data.objetivo, urgencia: data.urgencia, nome_projeto: data.nome_projeto,
+    };
+
     // Criar conta
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email:    data.email,
       password: data.senha,
-      options:  { data: { name: data.nome, first_login: true } },
+      options:  { data: { name: data.nome, first_login: true, intake } },
     });
 
     if (authErr) {
@@ -169,38 +177,24 @@ function CadastrarPage() {
       return;
     }
 
-    // Cria perfil + imóvel + etapas no servidor (service role) — funciona com ou
-    // sem sessão (necessário porque properties_insert exige admin e a confirmação
-    // de e-mail deixa o cadastro sem sessão).
-    try {
-      await createClientIntake({ data: {
-        userId:       uid,
-        email:        data.email,
-        nome:         data.nome,
-        cidade:       data.cidade,
-        estado:       data.estado,
-        tipo_imovel:  data.tipo_imovel,
-        situacao:     data.situacao,
-        objetivo:     data.objetivo,
-        urgencia:     data.urgencia,
-        nome_projeto: data.nome_projeto,
-      }});
-    } catch (e) {
-      setError(`Conta criada, mas houve um erro ao montar seu processo: ${(e as Error).message}`);
+    // Sem confirmação de e-mail → já há sessão: cria o processo no navegador agora.
+    if (authData.session) {
+      try {
+        await createClientIntakeBrowser(uid, intake);
+      } catch (e) {
+        setError(`Conta criada, mas houve um erro ao montar seu processo: ${(e as Error).message}`);
+        setLoading(false);
+        return;
+      }
       setLoading(false);
+      // ?welcome=1 dispara tutorial + busca de profissional.
+      navigate({ to: "/dashboard", search: { welcome: "1" } as never });
       return;
     }
 
+    // Confirmação ligada → sem sessão. O processo é montado no 1º login (self-heal).
     setLoading(false);
-
-    // Confirmação de e-mail ligada → não há sessão. Mostra tela "confirme seu e-mail".
-    if (!authData.session) {
-      setConfirmSent(true);
-      return;
-    }
-
-    // Sem confirmação → já está logado: ?welcome=1 dispara tutorial + busca de profissional.
-    navigate({ to: "/dashboard", search: { welcome: "1" } as never });
+    setConfirmSent(true);
   }
 
   if (confirmSent) {
