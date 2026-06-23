@@ -136,12 +136,15 @@ export function AdminSidebar() {
 
         {/* Bottom */}
         <div className="mt-auto space-y-2">
-          <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-soft hover:bg-surface">
+          <Link
+            to="/perfil-profissional"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-soft hover:bg-surface"
+          >
             <Settings className="h-4 w-4 shrink-0" />
             <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               Configurações
             </span>
-          </button>
+          </Link>
           <button
             onClick={logout}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-soft hover:bg-surface"

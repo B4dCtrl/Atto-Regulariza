@@ -254,7 +254,7 @@ export function Nav() {
               Entrar
             </Link>
             <Link
-              to="/precos"
+              to="/cadastrar"
               className="group inline-flex items-center gap-1.5 rounded-full bg-foreground py-1.5 pl-4 pr-1.5 text-sm text-background transition-all hover:bg-foreground/90"
             >
               Começar agora

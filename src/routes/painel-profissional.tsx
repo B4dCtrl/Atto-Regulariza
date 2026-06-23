@@ -211,6 +211,15 @@ function ProfissionalPage() {
   const [profProfile, setProfProfile] = useState<{ name: string; initials: string }>({
     name: "Profissional", initials: "··",
   });
+  const [notifPrefs, setNotifPrefs] = useState<{ notifEmail: boolean; notifPrazo: boolean }>({
+    notifEmail: true, notifPrazo: true,
+  });
+
+  async function toggleNotif(key: "notifEmail" | "notifPrazo") {
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(next);
+    if (userId) await supabase.from("profiles").update({ settings: next }).eq("id", userId);
+  }
 
   /* ── Estado de trabalho do profissional (localStorage, por processo real) ── */
   const [doneStages, setDoneStages] = useState<Record<string, number[]>>(
@@ -248,13 +257,15 @@ function ProfissionalPage() {
   useEffect(() => {
     if (!userId) return;
 
-    supabase.from("profiles").select("name, initials").eq("id", userId).maybeSingle()
+    supabase.from("profiles").select("name, initials, settings").eq("id", userId).maybeSingle()
       .then(async ({ data }) => {
         if (data) {
           setProfProfile({
             name: data.name ?? "Profissional",
             initials: data.initials ?? (data.name ? data.name.split(/\s+/).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "··"),
           });
+          const s = (data.settings ?? {}) as Record<string, boolean>;
+          setNotifPrefs({ notifEmail: s.notifEmail ?? true, notifPrazo: s.notifPrazo ?? true });
           return;
         }
         // Sem linha em profiles (signup com confirmação de e-mail) → cria agora,
@@ -839,18 +850,29 @@ function ProfissionalPage() {
                   <h2 className="font-serif text-2xl tracking-tight">Configurações</h2>
                 </div>
                 <div className="space-y-3">
-                  {[
-                    { label: "Notificações por email", desc: "Alertas quando houver mensagens novas" },
-                    { label: "Avisos de atraso",       desc: "Alertas para etapas próximas do prazo" },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between rounded-2xl bg-background ring-1 ring-border p-5">
-                      <div>
-                        <div className="text-sm font-medium">{item.label}</div>
-                        <div className="text-xs text-ink-soft mt-0.5">{item.desc}</div>
+                  {([
+                    { key: "notifEmail" as const, label: "Notificações por email", desc: "Alertas quando houver mensagens novas" },
+                    { key: "notifPrazo" as const, label: "Avisos de atraso",       desc: "Alertas para etapas próximas do prazo" },
+                  ]).map((item) => {
+                    const on = notifPrefs[item.key];
+                    return (
+                      <div key={item.key} className="flex items-center justify-between rounded-2xl bg-background ring-1 ring-border p-5">
+                        <div>
+                          <div className="text-sm font-medium">{item.label}</div>
+                          <div className="text-xs text-ink-soft mt-0.5">{item.desc}</div>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          onClick={() => toggleNotif(item.key)}
+                          className={`relative h-6 w-11 shrink-0 rounded-full ring-1 ring-border transition-colors ${on ? "bg-accent" : "bg-foreground/20"}`}
+                        >
+                          <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+                        </button>
                       </div>
-                      <div className="h-6 w-11 rounded-full bg-foreground/20 ring-1 ring-border" />
-                    </div>
-                  ))}
+                    );
+                  })}
                   <Link to="/perfil-profissional" className="block w-full rounded-xl bg-foreground py-3 text-center text-sm text-background hover:bg-foreground/90 transition-colors">
                     Ver perfil completo
                   </Link>

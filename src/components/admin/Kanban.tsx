@@ -46,11 +46,15 @@ function rowToCard(p: PropertyRow): Card {
   };
 }
 
-export function Kanban() {
+export function Kanban({ filter = "" }: { filter?: string }) {
   const [cards,   setCards]   = useState<Card[]>([]);
   const [dragId,  setDragId]  = useState<string | null>(null);
   const [overCol, setOverCol] = useState<Status | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const q = filter.trim().toLowerCase();
+  const matches = (c: Card) =>
+    !q || [c.imovel, c.cliente, c.bairro].some((v) => v.toLowerCase().includes(q));
 
   /* ── Initial load ── */
   useEffect(() => {
@@ -137,7 +141,7 @@ export function Kanban() {
   return (
     <div className="grid gap-3 md:grid-cols-5">
       {columns.map((col) => {
-        const list    = cards.filter((c) => c.status === col.id);
+        const list    = cards.filter((c) => c.status === col.id && matches(c));
         const isHead  = col.id === "prefeitura";
         const isOver  = overCol === col.id;
         return (

@@ -203,7 +203,7 @@ function AdminHome() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
-          <Kanban />
+          <Kanban filter={searchQuery} />
           <ChatbotPanel />
         </div>
         <div className="space-y-6">
