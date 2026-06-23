@@ -86,6 +86,7 @@ function DashboardContent() {
   const [chatInput, setChatInput]         = useState("");
   const [sendingMsg, setSendingMsg]       = useState(false);
   const [askingAI, setAskingAI]           = useState(false);
+  const [healError, setHealError]         = useState<string | null>(null);
   const fileRef   = useRef<HTMLInputElement>(null);
   const chatRef   = useRef<HTMLDivElement>(null);
 
@@ -112,7 +113,9 @@ function DashboardContent() {
             await createClientIntakeBrowser(userId, intake);
             propData = (await supabase
               .from("properties").select("*").eq("client_id", userId).limit(1).maybeSingle()).data;
-          } catch { /* cai no estado vazio se falhar */ }
+          } catch (e) {
+            if (!cancelled) setHealError((e as Error).message);
+          }
         }
       }
 
@@ -324,6 +327,9 @@ function DashboardContent() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface/50 p-6 text-center">
         <p className="text-sm text-ink-soft">Nenhum imóvel vinculado a esta conta.</p>
+        {healError && (
+          <p className="max-w-md text-xs text-red-500">Erro ao montar seu processo: {healError}</p>
+        )}
         <Link to="/cadastrar" className="rounded-full bg-foreground px-5 py-2.5 text-sm text-background hover:opacity-80 transition-opacity">
           Cadastrar um imóvel
         </Link>

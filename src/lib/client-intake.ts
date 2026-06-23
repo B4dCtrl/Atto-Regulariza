@@ -35,7 +35,7 @@ export async function createClientIntakeBrowser(uid: string, d: IntakeData): Pro
 
   // Imóvel (progress 0 / stage 0: sem andamento até a equipe dar o diagnóstico)
   const projectName = d.nome_projeto.trim() || `${d.nome} — ${d.situacao || "Regularização"}`;
-  const { data: prop } = await supabase
+  const { data: prop, error: propErr } = await supabase
     .from("properties")
     .insert({
       name: projectName, city: d.cidade, state: d.estado,
@@ -46,13 +46,16 @@ export async function createClientIntakeBrowser(uid: string, d: IntakeData): Pro
     })
     .select("id").single();
 
-  // Etapas
-  if (prop?.id) {
-    const LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
-    await supabase.from("process_stages").insert(
-      LABELS.map((label, i) => ({ property_id: prop.id, stage_number: i + 1, label, state: "pending" })),
-    );
+  // NÃO falhar em silêncio: se o RLS (ou outra coisa) bloquear, propaga o erro.
+  if (propErr || !prop) {
+    throw new Error(propErr?.message ?? "Falha ao criar o imóvel (sem retorno do banco).");
   }
+
+  // Etapas
+  const LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
+  await supabase.from("process_stages").insert(
+    LABELS.map((label, i) => ({ property_id: prop.id, stage_number: i + 1, label, state: "pending" })),
+  );
 
   // Marca o lead como convertido (best-effort)
   await supabase.from("leads").update({ converted: true }).eq("email", d.email);
