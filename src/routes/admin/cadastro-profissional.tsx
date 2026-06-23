@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   UserPlus, ChevronRight, ChevronLeft, Check,
   Trash2, Plus, Upload, Briefcase, GraduationCap,
-  MapPin, ClipboardList, User, Star,
+  MapPin, ClipboardList, User, Star, X, Mail, FolderOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,14 @@ interface Formacao {
   curso: string;
   instituicao: string;
   ano: string;
+}
+
+interface Pro {
+  id: string;
+  name: string | null;
+  email: string | null;
+  specialization: string | null;
+  active: boolean;
 }
 
 const CATEGORIAS = [
@@ -56,10 +64,22 @@ const EMPTY_FORM = {
 function CadastroProfissionalPage() {
   const [step,   setStep]   = useState(1);
   const [form,   setForm]   = useState({ ...EMPTY_FORM });
-  const [pros,   setPros]   = useState<{ id: string; name: string | null; email: string | null; specialization: string | null; active: boolean }[]>([]);
+  const [pros,   setPros]   = useState<Pro[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved,  setSaved]  = useState(false);
   const [view,   setView]   = useState<"list" | "new">("list");
+  const [detail,      setDetail]      = useState<Pro | null>(null);
+  const [detailCases, setDetailCases] = useState<number | null>(null);
+
+  async function openDetail(p: Pro) {
+    setDetail(p);
+    setDetailCases(null);
+    const { count } = await supabase
+      .from("properties")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_professional_id", p.id);
+    setDetailCases(count ?? 0);
+  }
 
   async function loadPros() {
     const { data } = await supabase.from("profiles")
@@ -188,7 +208,8 @@ function CadastroProfissionalPage() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: i * 0.04 }}
-                className="rounded-3xl bg-background ring-1 ring-border p-5"
+                onClick={() => openDetail(p)}
+                className="cursor-pointer rounded-3xl bg-background ring-1 ring-border p-5 transition-shadow hover:shadow-md hover:ring-foreground/20"
               >
                 <div className="flex items-start justify-between gap-2 mb-4">
                   <div className="flex items-center gap-3">
@@ -201,7 +222,7 @@ function CadastroProfissionalPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => toggleActive(p.id, p.active)}
+                    onClick={(e) => { e.stopPropagation(); toggleActive(p.id, p.active); }}
                     className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors"
                     title={p.active ? "Desativar" : "Ativar"}
                   >
@@ -229,6 +250,72 @@ function CadastroProfissionalPage() {
             ))}
           </div>
         )}
+
+        {/* Detalhe do profissional */}
+        <AnimatePresence>
+          {detail && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setDetail(null)}
+            >
+              <motion.div
+                className="w-full max-w-md rounded-3xl bg-background ring-1 ring-border p-6"
+                initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-12 w-12 place-items-center rounded-full bg-foreground text-background text-sm font-medium">
+                      {(detail.name ?? "?").split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                    </div>
+                    <div>
+                      <div className="font-serif text-xl tracking-tight">{detail.name ?? "(sem nome)"}</div>
+                      <span className={`text-[11px] ${detail.active ? "text-green-600" : "text-ink-soft"}`}>
+                        {detail.active ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
+                  </div>
+                  <button onClick={() => setDetail(null)} className="text-ink-soft hover:text-foreground">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <dl className="mt-5 space-y-3 text-sm">
+                  <div className="flex items-center gap-2 text-ink-soft">
+                    <Mail className="h-4 w-4 shrink-0" /> {detail.email ?? "—"}
+                  </div>
+                  {detail.specialization && (
+                    <div className="flex items-center gap-2 text-ink-soft">
+                      <Star className="h-4 w-4 shrink-0 text-accent" /> {detail.specialization}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-ink-soft">
+                    <FolderOpen className="h-4 w-4 shrink-0" />
+                    {detailCases === null
+                      ? "Carregando processos…"
+                      : `${detailCases} processo${detailCases !== 1 ? "s" : ""} atribuído${detailCases !== 1 ? "s" : ""}`}
+                  </div>
+                </dl>
+
+                <div className="mt-6 flex gap-2">
+                  <button
+                    onClick={() => { toggleActive(detail.id, detail.active); setDetail(null); }}
+                    className="flex-1 rounded-xl border border-border py-2.5 text-sm text-ink-soft hover:bg-surface transition-colors"
+                  >
+                    {detail.active ? "Desativar" : "Ativar"}
+                  </button>
+                  <button
+                    onClick={() => setDetail(null)}
+                    className="flex-1 rounded-xl bg-foreground py-2.5 text-sm text-background hover:bg-foreground/90 transition-colors"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }

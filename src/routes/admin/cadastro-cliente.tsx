@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   UserPlus, ChevronRight, ChevronLeft, Check,
@@ -104,6 +104,7 @@ const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "E
 
 function CadastroClientePage() {
   const { userId } = Route.useRouteContext();
+  const navigate = useNavigate();
 
   const [step,         setStep]         = useState(1);
   const [form,         setForm]         = useState({ ...EMPTY_FORM });
@@ -275,7 +276,8 @@ function CadastroClientePage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.15, delay: i * 0.02 }}
-                  className="flex items-center gap-4 border-b border-border/50 px-6 py-4 last:border-0 hover:bg-surface/40 transition-colors"
+                  onClick={() => navigate({ to: "/admin/projeto/$id", params: { id: p.id } })}
+                  className="flex cursor-pointer items-center gap-4 border-b border-border/50 px-6 py-4 last:border-0 hover:bg-surface/40 transition-colors"
                 >
                   <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background text-xs font-medium">
                     {(p.client_name ?? p.name).split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()}
@@ -296,7 +298,7 @@ function CadastroClientePage() {
                     {new Date(p.created_at).toLocaleDateString("pt-BR")}
                   </div>
                   <button
-                    onClick={() => remove(p.id)}
+                    onClick={(e) => { e.stopPropagation(); remove(p.id); }}
                     disabled={removing === p.id}
                     className="grid h-8 w-8 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors disabled:opacity-40"
                   >

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   Plus, X, Building2, Clock, MapPin, Check,
-  ChevronRight, AlertTriangle,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,10 +89,13 @@ function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [filter,       setFilter]       = useState<LeadStatus | "all">("all");
   const [notes,        setNotes]        = useState("");
+  const [pros,         setPros]         = useState<{ id: string; name: string | null }[]>([]);
 
   useEffect(() => {
     supabase.from("leads").select("*").order("created_at", { ascending: false })
       .then(({ data }) => { if (data) setLeads(data.map((r) => rowToLead(r as LeadRow))); });
+    supabase.from("profiles").select("id, name").eq("role", "profissional").eq("active", true).order("name")
+      .then(({ data }) => setPros(data ?? []));
   }, []);
 
   const update = async (id: string, patch: Partial<Lead>) => {
@@ -116,6 +119,10 @@ function LeadsPage() {
 
   const refuse    = (id: string) => { update(id, { status: "recusado" }); if (selectedLead?.id === id) setSelectedLead(null); };
   const saveNotes = () => { if (selectedLead) update(selectedLead.id, { notes }); };
+  const assignPro = (name: string) => {
+    if (!selectedLead || !name) return;
+    update(selectedLead.id, { status: "atribuido", professionalName: name });
+  };
 
   const openDetail = (lead: Lead) => { setSelectedLead(lead); setNotes(lead.notes); };
 
@@ -238,7 +245,7 @@ function LeadsPage() {
                   {/* Quick action */}
                   {STATUS_FLOW.includes(lead.status) && lead.status !== "ativo" && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); advance(lead); }}
+                      onClick={(e) => { e.stopPropagation(); if (lead.status === "triagem") openDetail(lead); else advance(lead); }}
                       className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-ink-soft hover:bg-foreground hover:text-background hover:border-foreground transition-colors whitespace-nowrap"
                     >
                       {ADVANCE_LABEL[lead.status]}
@@ -349,13 +356,24 @@ function LeadsPage() {
                   </button>
                 )}
                 {selectedLead.status === "triagem" && (
-                  <button
-                    onClick={() => advance(selectedLead)}
-                    className="flex items-center justify-between w-full rounded-xl bg-foreground px-4 py-2.5 text-sm text-background hover:bg-foreground/90 transition-colors"
-                  >
-                    <span>Marcar como atribuído</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium">Atribuir profissional</div>
+                    <select
+                      defaultValue=""
+                      onChange={(e) => assignPro(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30"
+                    >
+                      <option value="" disabled>Selecione um profissional…</option>
+                      {pros.map((p) => (
+                        <option key={p.id} value={p.name ?? ""}>{p.name ?? "(sem nome)"}</option>
+                      ))}
+                    </select>
+                    {pros.length === 0 && (
+                      <p className="text-[11px] text-ink-soft">
+                        Nenhum profissional ativo. Cadastre em Cadastros · Profissional.
+                      </p>
+                    )}
+                  </div>
                 )}
                 {selectedLead.status === "atribuido" && (
                   <button
