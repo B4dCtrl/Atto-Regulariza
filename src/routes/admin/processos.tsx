@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   Building2, Check, Loader2, Search, Download,
@@ -43,6 +43,26 @@ function ProcessosPage() {
   const [search,     setSearch]     = useState("");
   const [filter,     setFilter]     = useState("all");
   const [sortBy,     setSortBy]     = useState<"created_at" | "progress" | "name">("created_at");
+  const navigate = useNavigate();
+
+  function exportCsv() {
+    const headers = ["Imóvel", "Cidade", "Estado", "Status", "Progresso", "Etapa", "Criado em"];
+    const rows = filtered.map((p) => [
+      p.name, p.city ?? "", p.state ?? "",
+      STATUS_LABEL[p.status] ?? p.status, `${p.progress}%`, `${p.current_stage}/5`,
+      new Date(p.created_at).toLocaleDateString("pt-BR"),
+    ]);
+    const csv = [headers, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `processos-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   useEffect(() => {
     supabase
@@ -129,7 +149,7 @@ function ProcessosPage() {
 
         <div className="ml-auto flex items-center gap-2 text-xs text-ink-soft">
           <span>{filtered.length} resultado{filtered.length !== 1 ? "s" : ""}</span>
-          <button className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 hover:border-foreground/30 transition-colors">
+          <button onClick={exportCsv} disabled={filtered.length === 0} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 hover:border-foreground/30 disabled:opacity-40 transition-colors">
             <Download className="h-3 w-3" /> Exportar CSV
           </button>
         </div>
@@ -162,7 +182,8 @@ function ProcessosPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.18, delay: Math.min(i * 0.02, 0.3) }}
-                className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_120px_160px_120px_80px] gap-4 items-center border-b border-border/50 px-6 py-4 last:border-0 hover:bg-surface/40 transition-colors"
+                onClick={() => navigate({ to: "/admin/projeto/$id", params: { id: p.id } })}
+                className="grid cursor-pointer grid-cols-1 sm:grid-cols-[2fr_1fr_120px_160px_120px_80px] gap-4 items-center border-b border-border/50 px-6 py-4 last:border-0 hover:bg-surface/40 transition-colors"
               >
                 {/* Imóvel */}
                 <div className="flex items-center gap-3 min-w-0">
@@ -211,9 +232,11 @@ function ProcessosPage() {
                 {/* Ação */}
                 <div>
                   <Link
-                    to="/painel-profissional"
+                    to="/admin/projeto/$id"
+                    params={{ id: p.id }}
+                    onClick={(e) => e.stopPropagation()}
                     className="grid h-8 w-8 place-items-center rounded-full bg-foreground text-background hover:bg-foreground/80 transition-colors"
-                    title="Abrir no painel profissional"
+                    title="Abrir processo"
                   >
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   </Link>

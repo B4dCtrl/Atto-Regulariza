@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   UserPlus, ChevronRight, ChevronLeft, Check,
-  Trash2, Plus, Upload, Briefcase, GraduationCap,
+  Trash2, Plus, Briefcase, GraduationCap,
   MapPin, ClipboardList, User, Star, X, Mail, FolderOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -505,14 +505,6 @@ function CadastroProfissionalPage() {
                   className={input()}
                 />
               </Field>
-
-              <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center">
-                <Upload className="mx-auto h-6 w-6 text-ink-soft" />
-                <div className="mt-2 text-sm text-ink-soft">Arraste o PDF do currículo aqui ou</div>
-                <button className="mt-2 rounded-full border border-border bg-background px-4 py-1.5 text-sm text-ink-soft hover:border-foreground/30 transition-colors">
-                  Selecionar arquivo
-                </button>
-              </div>
 
               {saved && (
                 <motion.div

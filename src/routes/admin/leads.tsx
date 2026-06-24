@@ -90,6 +90,9 @@ function LeadsPage() {
   const [filter,       setFilter]       = useState<LeadStatus | "all">("all");
   const [notes,        setNotes]        = useState("");
   const [pros,         setPros]         = useState<{ id: string; name: string | null }[]>([]);
+  const [showNew,      setShowNew]      = useState(false);
+  const [nl,           setNl]           = useState({ name: "", email: "", phone: "", city: "", state: "", situation: "" });
+  const nlInp = "w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30";
 
   useEffect(() => {
     supabase.from("leads").select("*").order("created_at", { ascending: false })
@@ -123,6 +126,18 @@ function LeadsPage() {
     if (!selectedLead || !name) return;
     update(selectedLead.id, { status: "atribuido", professionalName: name });
   };
+  async function createManualLead() {
+    if (!nl.name.trim() || !nl.email.trim()) return;
+    const { data, error } = await supabase.from("leads").insert({
+      name: nl.name, email: nl.email, phone: nl.phone || null,
+      city: nl.city || null, state: nl.state || null,
+      situacao: nl.situation || null, status: "novo", source: "manual",
+    }).select("*").single();
+    if (error) { alert(`Erro ao criar lead: ${error.message}`); return; }
+    if (data) setLeads((prev) => [rowToLead(data as LeadRow), ...prev]);
+    setNl({ name: "", email: "", phone: "", city: "", state: "", situation: "" });
+    setShowNew(false);
+  }
 
   const openDetail = (lead: Lead) => { setSelectedLead(lead); setNotes(lead.notes); };
 
@@ -146,7 +161,7 @@ function LeadsPage() {
             )}
           </p>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm text-background hover:bg-foreground/90 transition-colors">
+        <button onClick={() => setShowNew(true)} className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm text-background hover:bg-foreground/90 transition-colors">
           <Plus className="h-4 w-4" />
           Novo lead manual
         </button>
@@ -397,6 +412,42 @@ function LeadsPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Modal — novo lead manual */}
+      <AnimatePresence>
+        {showNew && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowNew(false)}
+          >
+            <motion.div
+              className="w-full max-w-md rounded-3xl bg-background ring-1 ring-border p-6"
+              initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-serif text-xl tracking-tight">Novo lead manual</h3>
+                <button onClick={() => setShowNew(false)} className="text-ink-soft hover:text-foreground"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="space-y-3">
+                <input value={nl.name} onChange={(e) => setNl({ ...nl, name: e.target.value })} placeholder="Nome *" className={nlInp} />
+                <input value={nl.email} onChange={(e) => setNl({ ...nl, email: e.target.value })} placeholder="E-mail *" className={nlInp} />
+                <input value={nl.phone} onChange={(e) => setNl({ ...nl, phone: e.target.value })} placeholder="Telefone" className={nlInp} />
+                <div className="flex gap-3">
+                  <input value={nl.city} onChange={(e) => setNl({ ...nl, city: e.target.value })} placeholder="Cidade" className={nlInp} />
+                  <input value={nl.state} onChange={(e) => setNl({ ...nl, state: e.target.value })} placeholder="UF" className={`${nlInp} w-20`} />
+                </div>
+                <textarea value={nl.situation} onChange={(e) => setNl({ ...nl, situation: e.target.value })} placeholder="Situação do imóvel" rows={2} className={`${nlInp} resize-none`} />
+              </div>
+              <div className="mt-5 flex gap-2">
+                <button onClick={() => setShowNew(false)} className="flex-1 rounded-xl border border-border py-2.5 text-sm text-ink-soft hover:bg-surface transition-colors">Cancelar</button>
+                <button onClick={createManualLead} disabled={!nl.name.trim() || !nl.email.trim()} className="flex-1 rounded-xl bg-foreground py-2.5 text-sm text-background hover:bg-foreground/90 disabled:opacity-50 transition-colors">Criar lead</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

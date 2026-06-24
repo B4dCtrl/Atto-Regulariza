@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import {
-  Upload, FileText, Download, Trash2, Search, FolderOpen,
+  Upload, FileText, Trash2, Search, FolderOpen,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -220,12 +220,6 @@ function DocumentosPadraoPage() {
               <div className="flex items-center justify-between text-xs text-ink-soft">
                 <span>{d.size} · {d.uploadedAt}</span>
                 <div className="flex items-center gap-1">
-                  <button
-                    title="Baixar"
-                    className="grid h-7 w-7 place-items-center rounded-lg text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                  </button>
                   <button
                     title="Remover"
                     onClick={() => remove(d.id)}
