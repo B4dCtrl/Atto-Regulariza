@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   Plus, X, Building2, Clock, MapPin, Check,
@@ -93,6 +93,7 @@ function LeadsPage() {
   const [showNew,      setShowNew]      = useState(false);
   const [nl,           setNl]           = useState({ name: "", email: "", phone: "", city: "", state: "", situation: "" });
   const nlInp = "w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30";
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.from("leads").select("*").order("created_at", { ascending: false })
@@ -122,10 +123,49 @@ function LeadsPage() {
 
   const refuse    = (id: string) => { update(id, { status: "recusado" }); if (selectedLead?.id === id) setSelectedLead(null); };
   const saveNotes = () => { if (selectedLead) update(selectedLead.id, { notes }); };
-  const assignPro = (name: string) => {
-    if (!selectedLead || !name) return;
-    update(selectedLead.id, { status: "atribuido", professionalName: name });
-  };
+  // Atribuir profissional = converter o lead em PROCESSO (imóvel) designado a ele
+  // e abrir o ambiente de tratamento. O profissional passa a ver no painel dele.
+  async function assignPro(proId: string) {
+    if (!selectedLead || !proId) return;
+    const pro = pros.find((p) => p.id === proId);
+
+    // Idempotência: já há processo para este e-mail?
+    const { data: existing } = await supabase
+      .from("properties").select("id").eq("client_email", selectedLead.email).limit(1).maybeSingle();
+
+    let propId = existing?.id as string | undefined;
+    if (!propId) {
+      const tipo = selectedLead.propertyType !== "—" ? selectedLead.propertyType : "";
+      const propName = `${tipo ? tipo.charAt(0).toUpperCase() + tipo.slice(1) : "Imóvel"}${selectedLead.city ? ` — ${selectedLead.city}` : ""}`;
+      const { data: prop, error } = await supabase.from("properties").insert({
+        name: propName,
+        city: selectedLead.city || null,
+        state: selectedLead.state || null,
+        status: "analise",
+        current_stage: 1,
+        progress: 10,
+        assigned_professional_id: proId,
+        client_name: selectedLead.name,
+        client_email: selectedLead.email,
+        client_phone: selectedLead.phone || null,
+        tipo_imovel: tipo || null,
+        situacao: selectedLead.situation !== "—" ? selectedLead.situation : null,
+        urgencia: selectedLead.urgency || null,
+        notes: selectedLead.notes || null,
+      }).select("id").single();
+      if (error || !prop) { alert(`Erro ao criar processo: ${error?.message ?? "desconhecido"}`); return; }
+      propId = prop.id;
+      const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
+      await supabase.from("process_stages").insert(
+        STAGE_LABELS.map((label, i) => ({ property_id: propId, stage_number: i + 1, label, state: i === 0 ? "active" : "pending" })),
+      );
+    } else {
+      await supabase.from("properties").update({ assigned_professional_id: proId }).eq("id", propId);
+    }
+
+    await update(selectedLead.id, { status: "atribuido", professionalName: pro?.name ?? null });
+    navigate({ to: "/admin/projeto/$id", params: { id: propId } });
+  }
   async function createManualLead() {
     if (!nl.name.trim() || !nl.email.trim()) return;
     const { data, error } = await supabase.from("leads").insert({
@@ -380,7 +420,7 @@ function LeadsPage() {
                     >
                       <option value="" disabled>Selecione um profissional…</option>
                       {pros.map((p) => (
-                        <option key={p.id} value={p.name ?? ""}>{p.name ?? "(sem nome)"}</option>
+                        <option key={p.id} value={p.id}>{p.name ?? "(sem nome)"}</option>
                       ))}
                     </select>
                     {pros.length === 0 && (
