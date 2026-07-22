@@ -48,12 +48,14 @@ export function Hero() {
           initial="hidden"
           animate="show"
           variants={fade}
-          className="font-serif text-[clamp(1.85rem,5.5vw,4.8rem)] leading-[1.02] tracking-tight text-foreground"
+          className="font-serif text-[clamp(1.85rem,5.5vw,4.8rem)] leading-[1.15] tracking-tight"
+          style={{ color: "#59777d" }}
         >
-          Regularize seu imóvel
-          <br />
-          em semanas,{" "}
-          <em className="italic text-foreground/50">
+          <span className="whitespace-nowrap">Regularize seu imóvel</span>{" "}
+          em{" "}
+          <WordScrambleText words={["semanas"]} startDelay={200} scrambleTime={180} />
+          ,{" "}
+          <em className="italic">
             não em{" "}
             <WordScrambleText
               words={["meses", "anos"]}
@@ -110,23 +112,6 @@ export function Hero() {
               Ver planos
             </Link>
           </MagneticButton>
-        </motion.div>
-
-        {/* Social proof */}
-        <motion.div
-          custom={3}
-          initial="hidden"
-          animate="show"
-          variants={fade}
-          className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2"
-        >
-          {["Menos burocracia", "3x mais rápido", "Satisfação garantida"].map(
-            (item) => (
-              <div key={item} className="text-xs text-foreground/60">
-                ✓ {item}
-              </div>
-            )
-          )}
         </motion.div>
       </div>
     </section>
