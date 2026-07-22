@@ -125,7 +125,7 @@ export function HowItWorks() {
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="whitespace-nowrap font-serif text-[clamp(1.6rem,3.8vw,3.5rem)] leading-[1.05] tracking-tight">
+          <h2 className="font-serif text-[clamp(1.6rem,3.8vw,3.5rem)] leading-[1.1] tracking-tight text-balance">
             Cinco passos. Você no controle.
           </h2>
         </motion.div>

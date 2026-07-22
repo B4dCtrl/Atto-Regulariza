@@ -4,7 +4,7 @@ import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { WHATSAPP } from "@/lib/brand";
 import { WordScrambleText } from "@/components/ui/word-scramble-text";
 import { MagneticButton } from "@/components/ui/magnetic-button";
-import { ParticleSphere } from "@/components/landing/ParticleSphere";
+import { JardimBotanicoScene } from "@/components/landing/JardimBotanicoScene";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -34,9 +34,9 @@ export function Hero() {
       aria-label="Apresentação principal"
     >
 
-      {/* ── Esfera de partículas (fundo principal) ── */}
-      <div className="absolute inset-0 z-0">
-        <ParticleSphere />
+      {/* ── Cena animada Curitiba (só desktop; mobile fica só a home) ── */}
+      <div className="absolute inset-0 z-0 hidden lg:block">
+        <JardimBotanicoScene />
       </div>
 
       {/* ── Conteúdo — centralizado verticalmente, alinhado ao topo do menu ── */}
