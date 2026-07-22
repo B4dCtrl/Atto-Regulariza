@@ -11,10 +11,14 @@ import { gsap } from "gsap";
  * invadirem o texto da esquerda. A única exceção é a linha laranja de
  * abertura, que por design nasce na logo "ato" (mapeada via getScreenCTM).
  *
- * Narrativa: linha do ato → cidade SURGE → anéis → tipos de regularização
- * (surgem e somem um a um) → docs (esqueletos) → análise 0–100% → pendências
- * (vermelho ❗) → Rebbeca surge, linha suave conecta ao card → pendências
- * resolvidas ✓ uma a uma → portfólio de cidades → casa ATO + "Regulariza.".
+ * Narrativa: cidade em LINHAS surge → anéis → tipos de regularização (surgem
+ * e somem um a um) → problemas encontrados (cards vermelhos) → docs
+ * (esqueletos) → análise 0–100% → pendências (vermelho ❗) → profissional
+ * surge, UMA linha fluida conecta o card dela às 3 pendências → pendências
+ * resolvidas ✓ em sequência, acompanhando a bolinha → mapa do Brasil com
+ * mini-casas ATO pelos estados → casa ATO + "Um ato. Regulariza!".
+ *
+ * Tudo em SVG (sem canvas/partículas) — leve e responsivo.
  */
 
 const TEAL = "#153A40";
@@ -22,7 +26,6 @@ const ORANGE = "#E86030";
 const RED = "#D00909";
 const GREEN = "#2F8F57";
 const CARD = "#FBF6EE";
-const INK = "#2C2A22";
 
 /* Tudo vive à direita, longe do texto. A cidade surge centrada no MESMO
  * ponto onde a casinha ATO aparece no final (x=985) — continuidade visual. */
@@ -36,6 +39,14 @@ const TYPES = [
   { label: "Subdivisão", cx: 1300, cy: 372 },
   { label: "Abrir matrícula", cx: 1200, cy: 592 },
   { label: "Reurb", cx: 800, cy: 643 },
+];
+
+/* Problemas encontrados — segundo jogo de cards, logo após os tipos. */
+const PROBLEMS = [
+  { label: "Pendência no registro", cx: 850, cy: 195 },
+  { label: "Débito de IPTU", cx: 1095, cy: 165 },
+  { label: "Documentação incompleta", cx: 1255, cy: 330 },
+  { label: "Divergência de área", cx: 890, cy: 490 },
 ];
 
 const TASKS = ["Diligência detectada", "Avisar profissional", "Preparar documentos"];
@@ -55,118 +66,63 @@ const SKELS = [
   { x: 772, y: 104, w: 100, h: 16 },
 ];
 
-const PORT = [
-  { city: "curitiba", label: "Curitiba", cx: 1025, cy: 166, r: 82 },
-  { city: "saopaulo", label: "São Paulo", cx: 805, cy: 296, r: 82 },
-  { city: "rio", label: "Rio de Janeiro", cx: 1230, cy: 296, r: 82 },
-  { city: "brasilia", label: "Brasília", cx: 910, cy: 522, r: 82 },
-  { city: "salvador", label: "Salvador", cx: 1165, cy: 500, r: 82 },
+/* Casinha ATO em miniatura — usada como marcador no mapa do Brasil. */
+function MiniHouse({ x, y }: { x: number; y: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <circle r="9" fill={CARD} stroke={ORANGE} strokeOpacity="0.35" strokeWidth="1" />
+      <path
+        d="M-4.5,1 L0,-4.6 L4.5,1"
+        fill="none"
+        stroke={ORANGE}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect x="-2.6" y="1" width="5.2" height="3.6" rx="0.8" fill={ORANGE} />
+    </g>
+  );
+}
+
+/* Marcadores pelo mapa (posições aproximadas dos estados, no espaço local
+ * do <path> do Brasil abaixo — viewBox local 0 0 520 560). */
+const BR_MARKERS = [
+  { x: 150, y: 210 }, // Amazonas
+  { x: 330, y: 130 }, // Ceará
+  { x: 330, y: 285 }, // Distrito Federal
+  { x: 445, y: 250 }, // Bahia
+  { x: 405, y: 375 }, // Rio de Janeiro
+  { x: 385, y: 420 }, // São Paulo
+  { x: 330, y: 465 }, // Paraná
+  { x: 235, y: 520 }, // Rio Grande do Sul
 ];
+
+// Silhueta simplificada do Brasil — espaço local 520×560
+const BRAZIL_PATH =
+  "M150,10 L230,0 L310,30 L400,60 L480,90 L500,150 L490,230 L460,310 " +
+  "L430,360 L390,410 L350,460 L300,510 L250,555 L180,540 L120,500 " +
+  "L80,460 L50,400 L30,340 L10,270 L5,200 L20,140 L60,80 Z";
 
 function pillWidth(label: string) {
   return Math.max(label.length * 12 + 52, 130);
 }
 
-/* Mini line-art dos pontos turísticos de cada cidade (para o portfólio). */
-function CityMini({ name, cx, cy }: { name: string; cx: number; cy: number }) {
-  const s = {
-    fill: "none",
-    stroke: TEAL,
-    strokeWidth: 1.6,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
-  const g = cy + 28; // chão
-
-  if (name === "saopaulo") {
-    // Ponte Estaiada Octávio Frias
-    return (
-      <g {...s}>
-        <line x1={cx - 50} y1={g} x2={cx + 50} y2={g} />
-        <line x1={cx - 44} y1={cy + 12} x2={cx + 44} y2={cy + 12} />
-        <line x1={cx + 5} y1={cy + 12} x2={cx + 5} y2={cy - 26} />
-        <path d={`M${cx - 3} ${cy - 30} L${cx + 5} ${cy - 24} L${cx + 13} ${cy - 30}`} />
-        <line x1={cx + 5} y1={cy - 20} x2={cx - 30} y2={cy + 12} />
-        <line x1={cx + 5} y1={cy - 20} x2={cx - 12} y2={cy + 12} />
-        <line x1={cx + 5} y1={cy - 20} x2={cx + 22} y2={cy + 12} />
-        <line x1={cx + 5} y1={cy - 20} x2={cx + 36} y2={cy + 12} />
-        <path d={`M${cx - 46} ${g} L${cx - 46} ${cy + 4} L${cx - 38} ${cy + 4} L${cx - 38} ${g}`} />
-        <path d={`M${cx + 38} ${g} L${cx + 38} ${cy} L${cx + 46} ${cy} L${cx + 46} ${g}`} />
-      </g>
-    );
-  }
-  if (name === "rio") {
-    // Cristo Redentor + Pão de Açúcar
-    return (
-      <g {...s}>
-        <line x1={cx - 50} y1={g} x2={cx + 50} y2={g} />
-        <path d={`M${cx + 8} ${g} C${cx + 10} ${cy + 2} ${cx + 22} ${cy + 2} ${cx + 24} ${g}`} />
-        <path d={`M${cx + 24} ${g} C${cx + 27} ${cy - 14} ${cx + 45} ${cy - 14} ${cx + 48} ${g}`} />
-        <line x1={cx + 16} y1={cy} x2={cx + 38} y2={cy - 8} />
-        <path d={`M${cx - 48} ${g} L${cx - 30} ${cy - 12} L${cx - 12} ${g}`} />
-        <line x1={cx - 30} y1={cy - 12} x2={cx - 30} y2={cy - 24} />
-        <line x1={cx - 38} y1={cy - 20} x2={cx - 22} y2={cy - 20} />
-        <circle cx={cx - 30} cy={cy - 27} r="2.6" />
-      </g>
-    );
-  }
-  if (name === "brasilia") {
-    // Congresso Nacional (cúpula + cuia + torres)
-    return (
-      <g {...s}>
-        <line x1={cx - 50} y1={g} x2={cx + 50} y2={g} />
-        <line x1={cx - 4} y1={g} x2={cx - 4} y2={cy - 26} />
-        <line x1={cx + 4} y1={g} x2={cx + 4} y2={cy - 26} />
-        <path d={`M${cx - 44} ${g} Q${cx - 29} ${cy - 18} ${cx - 14} ${g}`} />
-        <path d={`M${cx + 14} ${cy - 2} Q${cx + 29} ${cy + 18} ${cx + 44} ${cy - 2}`} />
-      </g>
-    );
-  }
-  if (name === "salvador") {
-    // Farol da Barra
-    return (
-      <g {...s}>
-        <line x1={cx - 50} y1={g} x2={cx + 50} y2={g} />
-        <path d={`M${cx - 22} ${g} L${cx - 22} ${cy + 8} L${cx + 22} ${cy + 8} L${cx + 22} ${g}`} />
-        <path d={`M${cx - 9} ${cy + 8} L${cx - 6} ${cy - 16} L${cx + 6} ${cy - 16} L${cx + 9} ${cy + 8}`} />
-        <path d={`M${cx - 7} ${cy - 16} L${cx - 7} ${cy - 24} L${cx + 7} ${cy - 24} L${cx + 7} ${cy - 16}`} />
-        <path d={`M${cx - 9} ${cy - 24} L${cx} ${cy - 30} L${cx + 9} ${cy - 24}`} />
-        <line x1={cx - 7} y1={cy - 6} x2={cx + 7} y2={cy - 6} />
-        <line x1={cx - 8} y1={cy + 1} x2={cx + 8} y2={cy + 1} />
-      </g>
-    );
-  }
-  // curitiba — Jardim Botânico (estufa) + torre
-  return (
-    <g {...s}>
-      <line x1={cx - 50} y1={g} x2={cx + 50} y2={g} />
-      <path d={`M${cx - 24} ${g} L${cx - 24} ${cy + 4} C${cx - 24} ${cy - 14} ${cx + 24} ${cy - 14} ${cx + 24} ${cy + 4} L${cx + 24} ${g}`} />
-      <path d={`M${cx - 46} ${g} L${cx - 46} ${cy + 2} L${cx - 32} ${cy + 2} L${cx - 32} ${g}`} />
-      <path d={`M${cx + 30} ${g} L${cx + 30} ${cy + 2} L${cx + 44} ${cy + 2} L${cx + 44} ${g}`} />
-      <line x1={cx - 39} y1={cy + 2} x2={cx - 39} y2={cy - 10} />
-      <circle cx={cx - 39} cy={cy - 12} r="2.4" />
-      <line x1={cx - 8} y1={cy - 8} x2={cx - 8} y2={g} />
-      <line x1={cx + 8} y1={cy - 8} x2={cx + 8} y2={g} />
-    </g>
-  );
-}
-
 export function JardimBotanicoScene() {
   const svgRef = useRef<SVGSVGElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const svg = svgRef.current;
-    const canvas = canvasRef.current;
-    if (!svg || !canvas) return;
+    if (!svg) return;
 
     const q = <T extends Element>(sel: string) => Array.from(svg.querySelectorAll<T>(sel));
     const q1 = <T extends Element>(sel: string) => svg.querySelector<T>(sel)!;
 
+    const city = q1<SVGGElement>(".jb-city");
     const rings = q1<SVGGElement>(".jb-rings");
     const radials = q<SVGLineElement>(".jb-radial");
     const dots = q<SVGCircleElement>(".jb-dot");
     const types = q<SVGGElement>(".jb-type");
+    const problems = q<SVGGElement>(".jb-problem");
     const skels = q1<SVGGElement>(".jb-skels");
     const tasks = q<SVGGElement>(".jb-task"); // grupos internos (translate fica no pai)
     const load = q1<SVGGElement>(".jb-load");
@@ -174,114 +130,23 @@ export function JardimBotanicoScene() {
     const loadSub = q1<SVGTextElement>(".jb-load-sub");
     const pct = q1<SVGTextElement>(".jb-pct");
     const pro = q1<SVGGElement>(".jb-pro");
-    const ports = q<SVGGElement>(".jb-port");
+    const brazilMap = q1<SVGGElement>(".jb-brazil");
+    const bMarkers = q<SVGGElement>(".jb-bmarker");
     const portTitle = q1<SVGTextElement>(".jb-port-title");
     const finalG = q1<SVGGElement>(".jb-final");
     const conn = q1<SVGPathElement>(".jb-conn");
     const connDot = q1<SVGCircleElement>(".jb-conn-dot");
-
-    // ── CIDADE EM PARTÍCULAS (estética do site atual, grão menor) ──
-    // Amostra o desenho do Jardim Botânico e vira cada pixel numa partícula.
-    // A timeline controla assemble (0→1 monta a cidade) e disperse (dissolve).
-    const ctx2d = canvas.getContext("2d")!;
-    const pState = { assemble: 0, disperse: 0 };
-    type Particle = {
-      tx: number; ty: number; sx: number; sy: number;
-      d: number; ph: number; amp: number; r: number; a: number;
-    };
-    let parts: Particle[] = [];
-
-    const img = new Image();
-    img.src = "/cwb.png?v=3";
-    img.onload = () => {
-      const ow = img.naturalWidth;
-      const oh = img.naturalHeight;
-      const oc = document.createElement("canvas");
-      oc.width = ow;
-      oc.height = oh;
-      const octx = oc.getContext("2d")!;
-      octx.drawImage(img, 0, 0);
-      const data = octx.getImageData(0, 0, ow, oh).data;
-      const step = 4; // amostragem mais leve (perf — antes 2)
-      const out: Particle[] = [];
-      for (let y = 0; y < oh; y += step) {
-        for (let x = 0; x < ow; x += step) {
-          const alpha = data[(y * ow + x) * 4 + 3];
-          if (alpha > 90 && Math.random() < 0.38) {
-            const ix = CITY.x + (x / ow) * CITY.w;
-            const iy = CITY.y + (y / oh) * CITY.h;
-            // aplica o transform do grupo da cena (translate + scale 0.9)
-            const tx = 98.5 + 0.9 * ix;
-            const ty = 75.5 + 0.9 * iy;
-            const ang = Math.random() * Math.PI * 2;
-            const dist = 60 + Math.random() * 170;
-            out.push({
-              tx, ty,
-              sx: tx + Math.cos(ang) * dist,
-              sy: ty + Math.sin(ang) * dist + 90,
-              d: Math.random() * 0.45,
-              ph: Math.random() * Math.PI * 2,
-              amp: 0.5 + Math.random() * 1.1,
-              r: 0.8 + Math.random() * 0.9, // partícula pequena
-              a: 0.45 + Math.random() * 0.5,
-            });
-          }
-        }
-      }
-      parts = out;
-    };
-
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-    const render = () => {
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      if (!w || !h) return;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const bw = Math.round(w * dpr);
-      const bh = Math.round(h * dpr);
-      if (canvas.width !== bw || canvas.height !== bh) {
-        canvas.width = bw;
-        canvas.height = bh;
-      }
-      ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx2d.clearRect(0, 0, w, h);
-      if (!parts.length || pState.assemble <= 0 || pState.disperse >= 1) return;
-      // mapeamento viewBox 1440×810 → canvas (preserveAspectRatio slice)
-      const s = Math.max(w / 1440, h / 810);
-      const ox = (w - 1440 * s) / 2;
-      const oy = (h - 810 * s) / 2;
-      const t = performance.now() / 1000;
-      const gy = -6 - 6 * Math.sin((t / 3) * Math.PI * 2); // flutuação global
-      ctx2d.fillStyle = TEAL;
-      const dsp = pState.disperse;
-      for (const p of parts) {
-        const lp = Math.min(1, Math.max(0, (pState.assemble - p.d) / (1 - p.d)));
-        if (lp <= 0) continue;
-        const e = easeOutCubic(lp);
-        let x = p.sx + (p.tx - p.sx) * e;
-        let y = p.sy + (p.ty - p.sy) * e + gy * e;
-        x += Math.sin(t * 1.3 + p.ph) * p.amp;
-        y += Math.cos(t * 1.1 + p.ph) * p.amp;
-        if (dsp > 0) {
-          x += (p.sx - p.tx) * 0.4 * dsp;
-          y += (p.sy - p.ty) * 0.4 * dsp - 24 * dsp;
-        }
-        const al = p.a * e * (1 - dsp);
-        if (al <= 0.01) continue;
-        ctx2d.globalAlpha = al;
-        const r = Math.max(p.r * s, 0.8);
-        ctx2d.fillRect(ox + x * s - r / 2, oy + y * s - r / 2, r, r);
-      }
-      ctx2d.globalAlpha = 1;
-    };
-    gsap.ticker.add(render);
 
     const ctx = gsap.context(() => {
       const arcLen = 2 * Math.PI * 55;
       loadArc.style.strokeDasharray = `${arcLen}`;
 
       // estados iniciais
-      gsap.set([rings, skels, load, pro, portTitle, finalG, ...types, ...tasks, ...ports], { opacity: 0 });
+      gsap.set(
+        [rings, skels, load, pro, portTitle, finalG, brazilMap, ...types, ...problems, ...tasks, ...bMarkers],
+        { opacity: 0 }
+      );
+      gsap.set(city, { opacity: 0, y: 16 });
       gsap.set([...radials, ...dots], { opacity: 0 });
       gsap.set(loadArc, { strokeDashoffset: arcLen });
       gsap.set(loadSub, { opacity: 0 });
@@ -304,11 +169,13 @@ export function JardimBotanicoScene() {
         });
       };
       breathe(types, 5, 2.4);
+      breathe(problems, 4, 2.3);
       breathe(tasks, 4, 2.2);
       breathe(Array.from(skels.children), 6, 3.0);
-      breathe(ports, 5, 2.8);
+      breathe(bMarkers, 3, 2.6);
       breathe([pro], 4, 2.6);
       breathe([finalG], 5, 3.4);
+      breathe([city], 6, 3.6);
       // anéis pulsando: crescem e diminuem, um levemente atrás do outro
       gsap.fromTo(
         Array.from(rings.children),
@@ -336,7 +203,7 @@ export function JardimBotanicoScene() {
 
       // ── resets de loop: devolve tudo ao estado inicial a cada volta ──
       tl.set([conn, connDot], { opacity: 0 }, 0);
-      tl.set(pState, { assemble: 0, disperse: 0 }, 0);
+      tl.set(city, { opacity: 0, y: 16 }, 0);
       tl.set(portTitle, { scale: 1 }, 0);
       tl.set(".jb-task-txt", { fill: RED }, 0);
       tl.set(".jb-bang", { opacity: 1 }, 0);
@@ -346,8 +213,8 @@ export function JardimBotanicoScene() {
       tl.call(() => { pct.textContent = "0%"; }, undefined, 0);
       tl.to(finalG, { opacity: 0, duration: 0.7 }, 0);
 
-      // ── Cena 1: a cidade SURGE — milhares de partículas convergem ──
-      tl.to(pState, { assemble: 1, duration: 1.7, ease: "power2.out" }, 0.4);
+      // ── Cena 1: a cidade SURGE — traçado em linhas, leve ──
+      tl.to(city, { opacity: 1, y: 0, duration: 1.1, ease: "power2.out" }, 0.4);
 
       // ── Cena 2: os anéis nascem em volta — protagonistas por um instante ──
       tl.fromTo(rings, { opacity: 0, scale: 0.86, svgOrigin: "985 415" }, { opacity: 1, scale: 1, duration: 0.9 }, 1.35);
@@ -377,34 +244,50 @@ export function JardimBotanicoScene() {
       tl.to(types, { opacity: 0, scale: 0.9, duration: 0.45, stagger: 0.08, ease: "power2.in" }, 6.2);
       tl.to([...radials, ...dots], { opacity: 0, duration: 0.5 }, 6.25);
 
+      // ── Cena 3b: PROBLEMAS ENCONTRADOS — segundo jogo de cards, vermelhos ──
+      tl.fromTo(
+        problems,
+        { opacity: 0, scale: 0.85, y: 10 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.5, stagger: 0.12, ease: "back.out(1.6)" },
+        6.6
+      );
+      tl.to(problems, { opacity: 0, scale: 0.92, y: -8, duration: 0.4, stagger: 0.08, ease: "power2.in" }, 7.35);
+
       // ── Cena 4: docs (esqueletos) entram sobrepostos ──
-      tl.fromTo(skels, { opacity: 0 }, { opacity: 1, duration: 0.8 }, 6.4);
+      tl.fromTo(skels, { opacity: 0 }, { opacity: 1, duration: 0.8 }, 7.7);
 
       // ── Cena 5: análise 0→100% entre os anéis ──
-      tl.fromTo(load, { opacity: 0, scale: 0.8, svgOrigin: "985 222" }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.7)" }, 6.9);
-      tl.to(loadArc, { strokeDashoffset: 0, duration: 2.0, ease: "power1.inOut" }, 7.25);
+      tl.fromTo(load, { opacity: 0, scale: 0.8, svgOrigin: "985 222" }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.7)" }, 8.2);
+      tl.to(loadArc, { strokeDashoffset: 0, duration: 2.0, ease: "power1.inOut" }, 8.55);
       tl.fromTo(
         counter,
         { v: 0 },
         { v: 100, duration: 2.0, ease: "power1.inOut", onUpdate: () => { pct.textContent = `${Math.round(counter.v)}%`; } },
-        7.25
+        8.55
       );
-      tl.to(loadSub, { opacity: 1, duration: 0.35 }, 9.15);
-      tl.to(load, { opacity: 0, scale: 0.9, duration: 0.5 }, 9.9);
+      tl.to(loadSub, { opacity: 1, duration: 0.35 }, 10.45);
+      tl.to(load, { opacity: 0, scale: 0.9, duration: 0.5 }, 11.2);
 
       // ── Cena 6: pendências aparecem DEPOIS do 100% (vermelho ❗) ──
-      tl.fromTo(tasks, { opacity: 0, x: 36 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.14 }, 10.0);
+      tl.fromTo(tasks, { opacity: 0, x: 36 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.14 }, 11.3);
 
-      // ── Cena 7: Rebbeca surge; conexão curva à direita + bolinha laranja ──
-      tl.fromTo(pro, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7 }, 10.9);
-      tl.to(conn, { opacity: 1, duration: 0.4 }, 11.6);
+      // ── Cena 7: profissional surge (entrada suave, sem "pular") ──
+      tl.fromTo(
+        pro,
+        { opacity: 0, y: 14, scale: 0.94, transformOrigin: "center center" },
+        { opacity: 1, y: 0, scale: 1, duration: 0.85, ease: "power3.out" },
+        12.2
+      );
+      // UMA linha fluida — nasce no card da profissional e desce tocando
+      // as 3 pendências em sequência, com a bolinha percorrendo tudo
+      tl.to(conn, { opacity: 1, duration: 0.4 }, 12.9);
       const cdraw = { p: 0 };
-      tl.set(connDot, { opacity: 1 }, 11.7);
+      tl.set(connDot, { opacity: 1 }, 13.0);
       tl.to(
         cdraw,
         {
           p: 1,
-          duration: 0.75,
+          duration: 1.5,
           ease: "power1.inOut",
           onUpdate: () => {
             const L = conn.getTotalLength();
@@ -413,52 +296,50 @@ export function JardimBotanicoScene() {
             connDot.setAttribute("cy", `${pt.y}`);
           },
         },
-        11.7
+        13.0
       );
-      tl.to(connDot, { opacity: 0, duration: 0.2 }, 12.4);
+      tl.to(connDot, { opacity: 0, duration: 0.2 }, 14.55);
 
-      // ── Cena 8: com a conexão feita, as pendências são resolvidas uma a uma ──
+      // ── Cena 8: pendências resolvidas em sequência, junto com a bolinha ──
       tasks.forEach((tk, i) => {
-        const at = 12.7 + i * 0.42;
+        const at = 14.0 + i * 0.5;
         tl.to(tk.querySelector(".jb-task-txt"), { fill: GREEN, duration: 0.3 }, at);
         tl.to(tk.querySelector(".jb-bang"), { opacity: 0, duration: 0.25 }, at);
         tl.to(tk.querySelector(".jb-check"), { opacity: 1, duration: 0.35, ease: "back.out(2)" }, at + 0.05);
       });
 
-      // ── Cena 9: portfólio — a cidade cede o palco ──
-      tl.to([pro, skels, ...tasks], { opacity: 0, duration: 0.6 }, 14.5);
-      tl.to(rings, { opacity: 0, scale: 0.94, svgOrigin: "985 415", duration: 0.8 }, 14.65);
-      tl.to(pState, { disperse: 1, duration: 0.9, ease: "power2.in" }, 14.65);
-      tl.fromTo(portTitle, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7 }, 15.0);
+      // ── Cena 9: mapa do Brasil — a cidade cede o palco ──
+      tl.to([pro, skels, ...tasks], { opacity: 0, duration: 0.6 }, 15.8);
+      tl.to(rings, { opacity: 0, scale: 0.94, svgOrigin: "985 415", duration: 0.8 }, 15.95);
+      tl.to(city, { opacity: 0, y: -14, duration: 0.9, ease: "power2.in" }, 15.95);
+      tl.fromTo(portTitle, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7 }, 16.3);
       tl.fromTo(
-        ports,
-        { opacity: 0, scale: 0.8, transformOrigin: "center center" },
-        { opacity: 1, scale: 1, duration: 0.6, stagger: 0.14, ease: "back.out(1.5)" },
-        15.2
+        brazilMap,
+        { opacity: 0, scale: 0.9, svgOrigin: "1015 350" },
+        { opacity: 1, scale: 1, duration: 0.7 },
+        16.5
       );
-      tl.to([...ports, portTitle], { opacity: 0, scale: 0.92, duration: 0.5, stagger: 0.07, ease: "power2.in" }, 17.6);
+      tl.fromTo(
+        bMarkers,
+        { opacity: 0, scale: 0, transformOrigin: "center center" },
+        { opacity: 1, scale: 1, duration: 0.4, stagger: 0.07, ease: "back.out(2)" },
+        16.8
+      );
+      tl.to([brazilMap, ...bMarkers, portTitle], { opacity: 0, scale: 0.94, duration: 0.5, stagger: 0.02, ease: "power2.in" }, 18.9);
 
       // ── Cena 10: final — casa ATO + "Um ato. Regulariza!" (sem linha) ──
-      tl.fromTo(finalG, { opacity: 0, scale: 0.6, svgOrigin: "985 380" }, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.6)" }, 18.2);
+      tl.fromTo(finalG, { opacity: 0, scale: 0.6, svgOrigin: "985 380" }, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.6)" }, 19.5);
 
       // cadência geral: mais lenta e respirada
       tl.timeScale(0.78);
     }, svg);
 
     return () => {
-      gsap.ticker.remove(render);
       ctx.revert();
     };
   }, []);
 
   return (
-    <>
-    {/* cidade em partículas — mesma linguagem do site atual */}
-    <canvas
-      ref={canvasRef}
-      className="pointer-events-none absolute inset-0 h-full w-full"
-      aria-hidden="true"
-    />
     <svg
       ref={svgRef}
       viewBox="0 0 1440 810"
@@ -475,6 +356,40 @@ export function JardimBotanicoScene() {
 
       {/* cena inteira: 90% do tamanho e um pouco mais baixa */}
       <g transform="translate(98.5 75.5) scale(0.9)">
+
+      {/* cidade — skyline em linhas (leve, sem canvas/partículas) */}
+      <g className="jb-city" opacity="0" stroke={TEAL} strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <line x1={CITY.x - 15} y1={CITY.y + CITY.h} x2={CITY.x + CITY.w + 15} y2={CITY.y + CITY.h} />
+        {[
+          { ox: 6, w: 34, h: 92 },
+          { ox: 46, w: 46, h: 132 },
+          { ox: 100, w: 30, h: 68 },
+          { ox: 138, w: 52, h: 158 },
+          { ox: 198, w: 36, h: 100 },
+          { ox: 240, w: 44, h: 140 },
+          { ox: 292, w: 28, h: 76 },
+        ].map((b, i) => {
+          const bx = CITY.x + b.ox;
+          const by = CITY.y + CITY.h - b.h;
+          const rows = Math.max(1, Math.floor(b.h / 26) - 1);
+          return (
+            <g key={i}>
+              <rect x={bx} y={by} width={b.w} height={b.h} />
+              {Array.from({ length: rows }).map((_, r) => (
+                <line
+                  key={r}
+                  x1={bx + b.w * 0.26}
+                  y1={by + 16 + r * 24}
+                  x2={bx + b.w * 0.74}
+                  y2={by + 16 + r * 24}
+                  strokeWidth="1"
+                  strokeOpacity="0.5"
+                />
+              ))}
+            </g>
+          );
+        })}
+      </g>
 
       {/* anéis concêntricos (aura) */}
       <g className="jb-rings" opacity="0">
@@ -522,6 +437,22 @@ export function JardimBotanicoScene() {
         );
       })}
 
+      {/* problemas encontrados — segundo jogo de cards, vermelhos */}
+      {PROBLEMS.map((p) => {
+        const w = pillWidth(p.label) + 22;
+        const left = p.cx - w / 2;
+        return (
+          <g key={p.label} className="jb-problem" opacity="0">
+            <rect x={left} y={p.cy - 23} width={w} height={46} rx={23} fill={CARD} stroke={RED} strokeOpacity="0.4" filter="url(#jbShadow)" />
+            <rect x={left + 12} y={p.cy - 11} width={22} height={22} rx={6} fill={RED} />
+            <text x={left + 23} y={p.cy + 6} textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff" fontFamily="system-ui, sans-serif">!</text>
+            <text x={left + 46} y={p.cy + 6} fontSize="16" fontWeight="500" fill={RED} fontFamily="system-ui, sans-serif">
+              {p.label}
+            </text>
+          </g>
+        );
+      })}
+
       {/* esqueletos de documentos */}
       <g className="jb-skels" opacity="0">
         {SKELS.map((s, i) => (
@@ -559,18 +490,18 @@ export function JardimBotanicoScene() {
         <text className="jb-load-sub" x="985" y="252" textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,.7)" fontFamily="system-ui, sans-serif" opacity="0">análise concluída</text>
       </g>
 
-      {/* Profissional + conexão curva à DIREITA com bolinha laranja */}
+      {/* Profissional + UMA conexão fluida tocando as 3 pendências */}
       <g className="jb-pro" opacity="0">
         <rect x="1095" y="150" width="272" height="58" rx="16" fill={TEAL} filter="url(#jbShadow)" />
         <circle cx="1126" cy="179" r="18" fill={ORANGE} />
         <text x="1126" y="185" textAnchor="middle" fontSize="15" fontWeight="700" fill="#fff" fontFamily="system-ui, sans-serif">MS</text>
         <text x="1156" y="175" fontSize="17" fontWeight="600" fill="#fff" fontFamily="system-ui, sans-serif">Mariana Silva</text>
         <text x="1156" y="196" fontSize="12" fill="rgba(255,255,255,.6)" fontFamily="system-ui, sans-serif">Arquiteta e Urbanista</text>
-        {/* nasce no centro-base do card da profissional e TOCA o topo da
-            1ª pendência — mesma lógica da 1ª conexão (curva + bolinha) */}
+        {/* nasce no centro-base do card da profissional e desce tocando as
+            3 pendências em sequência — uma curva contínua, sem cortes */}
         <path
           className="jb-conn jb-march"
-          d="M 1231 208 C 1281 215, 1281 231, 1231 238"
+          d="M 1231 208 C 1300 214, 1349 232, 1349 258 C 1349 280, 1349 292, 1349 314 C 1349 336, 1349 348, 1349 370"
           fill="none"
           stroke="#6f6a5e"
           strokeOpacity="0.4"
@@ -582,20 +513,19 @@ export function JardimBotanicoScene() {
         <circle className="jb-conn-dot" r="4.5" fill={ORANGE} opacity="0" />
       </g>
 
-      {/* portfólio — título central + cidades (pontos turísticos) */}
+      {/* mapa do Brasil — título central + mini-casas ATO pelos estados */}
       <text className="jb-port-title" x="1017" y="322" textAnchor="middle" fill={TEAL} fontFamily="'Instrument Serif', Georgia, serif" opacity="0">
         <tspan x="1017" fontSize="30">Presente em</tspan>
         <tspan x="1017" dy="42" fontSize="40" fill={ORANGE}>todo o Brasil.</tspan>
       </text>
-      {PORT.map((p) => (
-        <g key={p.city} className="jb-port" opacity="0">
-          <circle cx={p.cx} cy={p.cy} r={p.r} fill="none" stroke="#6f7d6e" strokeOpacity="0.45" strokeWidth="1.5" />
-          <CityMini name={p.city} cx={p.cx} cy={p.cy - 8} />
-          <text x={p.cx} y={p.cy + 56} textAnchor="middle" fontSize="15" fontWeight="500" fill={TEAL} fontFamily="system-ui, sans-serif">
-            {p.label}
-          </text>
-        </g>
-      ))}
+      <g className="jb-brazil" opacity="0" transform="translate(775 100) scale(0.62)">
+        <path d={BRAZIL_PATH} fill={CARD} stroke={TEAL} strokeWidth="2.4" strokeOpacity="0.55" strokeLinejoin="round" />
+        {BR_MARKERS.map((m, i) => (
+          <g key={i} className="jb-bmarker" opacity="0">
+            <MiniHouse x={m.x} y={m.y} />
+          </g>
+        ))}
+      </g>
 
       {/* final: casa ATO + "Um [logo ato]. Regulariza!" */}
       <g className="jb-final" opacity="0">
@@ -625,6 +555,5 @@ export function JardimBotanicoScene() {
 
       </g>
     </svg>
-    </>
   );
 }
