@@ -49,7 +49,7 @@ function Index() {
   return (
     <div className="min-h-screen" style={{ background: BG_GRADIENT }}>
       {/* pt maior: espaço para a logo ficar sozinha no topo antes de virar menu */}
-      <div className="mx-auto max-w-[1700px] px-3 pb-3 pt-28 sm:px-6 sm:pb-6 sm:pt-36">
+      <div className="mx-auto max-w-[1700px] px-1 pb-1 pt-28 sm:px-2 sm:pb-2 sm:pt-36">
         {/* Painel do site "flutuando" sobre o fundo, com sombra */}
         <div className="overflow-hidden rounded-[1.5rem] bg-background text-foreground shadow-[0_50px_140px_-30px_rgba(6,26,28,0.75)] sm:rounded-[2.5rem]">
           <Nav />

@@ -4,7 +4,7 @@ import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { WHATSAPP } from "@/lib/brand";
 import { WordScrambleText } from "@/components/ui/word-scramble-text";
 import { MagneticButton } from "@/components/ui/magnetic-button";
-import { LiveProcessCard } from "@/components/landing/LiveProcessCard";
+import { ParticleSphere } from "@/components/landing/ParticleSphere";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -34,11 +34,9 @@ export function Hero() {
       aria-label="Apresentação principal"
     >
 
-      {/* ── Visual à direita: card do processo "vivo" (no lugar da esfera de partículas) ── */}
-      <div className="absolute inset-0 z-0 hidden items-center justify-end pr-8 lg:flex xl:pr-16">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.3 }}>
-          <LiveProcessCard />
-        </motion.div>
+      {/* ── Esfera de partículas (fundo principal) ── */}
+      <div className="absolute inset-0 z-0">
+        <ParticleSphere />
       </div>
 
       {/* ── Conteúdo — bottom-left, como Tailark ── */}
