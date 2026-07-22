@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, useScroll, LayoutGroup, AnimatePresence } from "framer-motion";
+import { motion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, ChevronDown, Home, Building2, Briefcase } from "lucide-react";
 
@@ -55,16 +55,25 @@ const PARA_QUEM = [
 
 export function Nav() {
   const [split, setSplit] = useState(false);
+  const [revealed, setRevealed] = useState(false); // menu só aparece após o 1º scroll
   const [open,  setOpen]  = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll();
 
-  /* Detecta threshold da hero (~90dvh) */
+  /* Antes do scroll: só a logo centralizada. Após rolar: menu (+ split na hero). */
   useEffect(() => {
-    const threshold = window.innerHeight * 0.90;
-    setSplit(scrollY.get() > threshold);
-    return scrollY.on("change", (y) => setSplit(y > threshold));
-  }, [scrollY]);
+    const apply = () => {
+      const y = document.documentElement.scrollTop || window.scrollY || 0;
+      setSplit(y > window.innerHeight * 0.90);
+      setRevealed(y > 8);
+    };
+    apply();
+    window.addEventListener("scroll", apply, { passive: true });
+    window.addEventListener("resize", apply);
+    return () => {
+      window.removeEventListener("scroll", apply);
+      window.removeEventListener("resize", apply);
+    };
+  }, []);
 
   /* Fecha dropdown ao clicar fora */
   useEffect(() => {
@@ -84,12 +93,25 @@ export function Nav() {
       className="fixed left-0 right-0 top-0 z-50 px-5 py-4"
     >
       <LayoutGroup id="nav">
+        {/* ── Intro: só a logo centralizada, antes do 1º scroll ── */}
+        {!revealed && (
+          <div className="flex justify-center pt-6">
+            <Link to="/" aria-label="Ato Regulariza">
+              <motion.div layoutId="ato-brand" transition={SPRING} className="flex items-center gap-3">
+                <img src="/ato-icon.png" alt="" className="h-20 w-20 object-contain" />
+                <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-14 w-auto object-contain" />
+              </motion.div>
+            </Link>
+          </div>
+        )}
+
         {/*
          * O wrapper é apenas um container de layout — SEM glass.
          * O glass do estado merged vive como filho absoluto (AnimatePresence)
          * e só aparece com delay de 160ms, depois que os islands já convergiram.
          * Assim nunca aparece um pill largo com conteúdo espalhado.
          */}
+        {revealed && (
         <motion.div
           layout
           transition={SPRING}
@@ -131,9 +153,11 @@ export function Nav() {
             }
             className="flex items-center px-4 py-2.5"
           >
-            <Link to="/" className="flex items-center gap-2">
-              <img src="/ato-icon.png" alt="" className="h-9 w-9 object-contain" />
-              <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-7 w-auto object-contain" />
+            <Link to="/" className="flex items-center">
+              <motion.div layoutId="ato-brand" transition={SPRING} className="flex items-center gap-2">
+                <img src="/ato-icon.png" alt="" className="h-9 w-9 object-contain" />
+                <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-7 w-auto object-contain" />
+              </motion.div>
             </Link>
           </motion.div>
 
@@ -261,6 +285,7 @@ export function Nav() {
           </motion.div>
 
         </motion.div>
+        )}
       </LayoutGroup>
     </motion.header>
   );

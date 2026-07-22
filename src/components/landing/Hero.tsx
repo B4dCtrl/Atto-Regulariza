@@ -4,7 +4,7 @@ import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { WHATSAPP } from "@/lib/brand";
 import { WordScrambleText } from "@/components/ui/word-scramble-text";
 import { MagneticButton } from "@/components/ui/magnetic-button";
-import { ParticleSphere } from "@/components/landing/ParticleSphere";
+import { LiveProcessCard } from "@/components/landing/LiveProcessCard";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -20,57 +20,29 @@ const fade = {
 export function Hero() {
   return (
     /*
-     * Card escuro com cantos inferiores arredondados — estilo Tailark.
-     * Fundo: marrom-escuro quente da paleta do site.
-     * Margem lateral para flutuar sobre o creme da página.
+     * Cantos inferiores arredondados — estilo Tailark.
+     * Fundo claro (mesmo tom do --background do site) — sem cor própria
+     * destacada, funde com o painel flutuante por trás.
      * Conteúdo alinhado à esquerda embaixo, como no Tailark.
      */
     <section
       className="relative mx-3 sm:mx-5 overflow-hidden rounded-t-[1rem] rounded-b-[2.5rem] sm:rounded-t-[1.5rem] sm:rounded-b-[3.5rem]"
       style={{
         minHeight: "max(94dvh, 680px)",
-        /* Areia quente — cor das partículas virou o fundo */
-        backgroundColor: "oklch(0.76 0.04 68)",
+        backgroundColor: "oklch(0.985 0.005 80)",
       }}
       aria-label="Apresentação principal"
     >
 
-      {/* ── Esfera de partículas (fundo principal) ── */}
-      <div className="absolute inset-0 z-0">
-        <ParticleSphere />
+      {/* ── Visual à direita: card do processo "vivo" (no lugar da esfera de partículas) ── */}
+      <div className="absolute inset-0 z-0 hidden items-center justify-end pr-8 lg:flex xl:pr-16">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.3 }}>
+          <LiveProcessCard />
+        </motion.div>
       </div>
 
-      {/* Gradiente esquerda → transparente: garante leitura do texto */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-[1]"
-        style={{
-          background:
-            "linear-gradient(100deg, oklch(0.76 0.04 68 / 0.96) 0%, oklch(0.76 0.04 68 / 0.72) 38%, oklch(0.76 0.04 68 / 0.10) 65%, transparent 100%)",
-        }}
-      />
-      {/* Gradiente baixo → cima: ancora o texto ao fundo */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1]"
-        style={{
-          height: "65%",
-          background:
-            "linear-gradient(to top, oklch(0.76 0.04 68 / 0.85) 0%, transparent 100%)",
-        }}
-      />
-      {/* Glow escuro sutil no centro */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-[1]"
-        style={{
-          backgroundImage:
-            "radial-gradient(50% 40% at 30% 55%, oklch(0.13 0.03 55 / 0.05), transparent 70%)",
-        }}
-      />
-
-      {/* ── Conteúdo — centro vertical, esquerda ── */}
-      <div className="relative z-10 flex min-h-[max(94dvh,680px)] max-w-2xl flex-col justify-center px-8 pt-20 pb-8 sm:px-14">
+      {/* ── Conteúdo — bottom-left, como Tailark ── */}
+      <div className="relative z-10 flex min-h-[max(94dvh,680px)] max-w-2xl flex-col justify-end px-8 pb-16 pt-36 sm:px-14 sm:pb-20">
 
         {/* Headline */}
         <motion.h1
@@ -78,9 +50,11 @@ export function Hero() {
           initial="hidden"
           animate="show"
           variants={fade}
-          className="font-serif text-[clamp(2rem,5.5vw,5rem)] leading-[1.02] tracking-tight text-foreground"
+          className="font-serif text-[clamp(1.85rem,5.5vw,4.8rem)] leading-[1.02] tracking-tight text-foreground"
         >
-          <span className="whitespace-nowrap">Regularize seu imóvel</span>{" "}em semanas,{" "}
+          Regularize seu imóvel
+          <br />
+          em semanas,{" "}
           <em className="italic text-foreground/50">
             não em{" "}
             <WordScrambleText

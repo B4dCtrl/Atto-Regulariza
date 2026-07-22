@@ -41,23 +41,33 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+// Fundo "seção por trás" — #0D495E com degradê radial sobre a hero
+const BG_GRADIENT =
+  "radial-gradient(120% 90% at 50% 0%, #175f78 0%, #0D495E 45%, #082e3c 100%)";
+
 function Index() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Nav />
-      <main className="w-full overflow-x-hidden">
-        <Hero />
-        <LogoBar />
-        <HowItWorks />
-        <BlurHeadline />
-        <BentoFeatures />
+    <div className="min-h-screen" style={{ background: BG_GRADIENT }}>
+      {/* pt maior: espaço para a logo ficar sozinha no topo antes de virar menu */}
+      <div className="mx-auto max-w-[1700px] px-3 pb-3 pt-28 sm:px-6 sm:pb-6 sm:pt-36">
+        {/* Painel do site "flutuando" sobre o fundo, com sombra */}
+        <div className="overflow-hidden rounded-[1.5rem] bg-background text-foreground shadow-[0_50px_140px_-30px_rgba(6,26,28,0.75)] sm:rounded-[2.5rem]">
+          <Nav />
+          <main className="w-full overflow-x-hidden">
+            <Hero />
+            <LogoBar />
+            <HowItWorks />
+            <BlurHeadline />
+            <BentoFeatures />
 
-        <Environments />
-        <Audiences />
-        <Testimonial />
-        <FinalCTA />
-      </main>
-      <Footer />
+            <Environments />
+            <Audiences />
+            <Testimonial />
+            <FinalCTA />
+          </main>
+          <Footer />
+        </div>
+      </div>
     </div>
   );
 }
