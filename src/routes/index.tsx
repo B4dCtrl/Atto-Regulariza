@@ -41,9 +41,11 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// Fundo "seção por trás" — teal escuro, ancorado no topo (onde fica a logo)
+// Fundo "seção por trás" — radial ancorado no topo/centro (atrás da logo):
+// claro atrás da logo → escurece forte para os cantos/extremos.
+// Raio horizontal curto (65%) para a transição acontecer DENTRO da faixa do topo.
 const BG_GRADIENT =
-  "radial-gradient(120% 90% at 50% 0%, #175f78 0%, #0D495E 45%, #082e3c 100%)";
+  "radial-gradient(65% 400% at 50% 0%, #35788d 0%, #185f77 38%, #0d4a5e 66%, #082832 100%)";
 
 function Index() {
   return (
