@@ -41,9 +41,10 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// Fundo "seção por trás" — #59777d, degradê radial mais claro embaixo
+// Fundo "seção por trás" — base #59777d, com um degradê sutil (tom mais
+// suave, baixo contraste) irradiando perto da logo, no topo do cabeçalho
 const BG_GRADIENT =
-  "radial-gradient(140% 100% at 50% 100%, #9badb1 0%, #59777d 55%, #3d5257 100%)";
+  "radial-gradient(85% 55% at 50% 0%, #6d8b90 0%, #59777d 65%, #4c656a 100%)";
 
 function Index() {
   return (

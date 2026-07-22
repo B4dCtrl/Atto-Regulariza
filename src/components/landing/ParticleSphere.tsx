@@ -55,7 +55,7 @@ function buildSphere(n: number): Float32Array {
   return out;
 }
 
-/** Casa — todas as 6000 partículas nos traçados = linhas densas e contrastadas */
+/** Casa elaborada — telhado, chaminé, paredes, porta e duas janelas com grade */
 function buildHouse(n: number): Float32Array {
   return sampleLines([
     [-1.6,  0.05,   0.0,  1.78],   // telhado esq
@@ -69,6 +69,54 @@ function buildHouse(n: number): Float32Array {
     [-0.44,-1.85,  -0.44,-0.82],   // porta esq
     [-0.44,-0.82,   0.44,-0.82],   // porta topo
     [ 0.44,-0.82,   0.44,-1.85],   // porta dir
+    // janela esquerda (com cruzeta)
+    [-1.05,-0.15,  -0.55,-0.15],
+    [-0.55,-0.15,  -0.55, 0.35],
+    [-0.55, 0.35,  -1.05, 0.35],
+    [-1.05, 0.35,  -1.05,-0.15],
+    [-0.80,-0.15,  -0.80, 0.35],
+    [-1.05, 0.10,  -0.55, 0.10],
+    // janela direita (com cruzeta)
+    [ 0.55,-0.15,   1.05,-0.15],
+    [ 1.05,-0.15,   1.05, 0.35],
+    [ 1.05, 0.35,   0.55, 0.35],
+    [ 0.55, 0.35,   0.55,-0.15],
+    [ 0.80,-0.15,   0.80, 0.35],
+    [ 0.55, 0.10,   1.05, 0.10],
+  ], n, 0.04);
+}
+
+/** Loteamento — perímetro, área verde no topo, rua central e lotes divididos */
+function buildLoteamento(n: number): Float32Array {
+  return sampleLines([
+    // perímetro externo
+    [-1.6, -2.0,  -1.6,  1.85],
+    [-1.6,  1.85,  1.6,  1.85],
+    [ 1.6,  1.85,  1.6, -2.0],
+    [-1.6, -2.0,   1.6, -2.0],
+    // área verde (faixa no topo)
+    [-1.6,  1.85, -1.6,  2.2],
+    [-1.6,  2.2,   1.6,  2.2],
+    [ 1.6,  2.2,   1.6,  1.85],
+    // rua central (formato de pista)
+    [-0.32, 1.35,  0.0,  1.6],
+    [ 0.0,  1.6,   0.32, 1.35],
+    [ 0.32, 1.35,  0.32,-1.35],
+    [ 0.32,-1.35,  0.0, -1.6],
+    [ 0.0, -1.6,  -0.32,-1.35],
+    [-0.32,-1.35, -0.32, 1.35],
+    // divisões de lotes — esquerda
+    [-1.6,  1.35, -0.32, 1.35],
+    [-1.6,  0.65, -0.32, 0.65],
+    [-1.6, -0.05, -0.32,-0.05],
+    [-1.6, -0.75, -0.32,-0.75],
+    [-1.6, -1.45, -0.32,-1.45],
+    // divisões de lotes — direita
+    [ 0.32,  1.35,  1.6,  1.35],
+    [ 0.32,  0.65,  1.6,  0.65],
+    [ 0.32, -0.05,  1.6, -0.05],
+    [ 0.32, -0.75,  1.6, -0.75],
+    [ 0.32, -1.45,  1.6, -1.45],
   ], n, 0.04);
 }
 
@@ -91,94 +139,39 @@ function buildDocument(n: number): Float32Array {
   ], n, 0.04);
 }
 
-/** Checkmark — todas as 6000 partículas no círculo + ✓ */
-function buildCheck(n: number): Float32Array {
-  const nCircle = Math.round(n * 0.60);
-  const nMark   = n - nCircle;
-  const out     = new Float32Array(n * 3);
-  const R       = 1.72;
+/** Amostra um texto renderizado em canvas — pixels opacos viram partículas */
+function sampleText(text: string, n: number): Float32Array {
+  const W = 1000, H = 200;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#fff";
+  ctx.font = "bold 90px Georgia, 'Times New Roman', serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, W / 2, H / 2);
 
-  for (let i = 0; i < nCircle; i++) {
-    const a = Math.random() * Math.PI * 2;
-    out[i * 3]     = Math.cos(a) * R + (Math.random() - 0.5) * 0.025;
-    out[i * 3 + 1] = Math.sin(a) * R + (Math.random() - 0.5) * 0.025;
+  const img = ctx.getImageData(0, 0, W, H).data;
+  const candidates: [number, number][] = [];
+  for (let y = 0; y < H; y += 2) {
+    for (let x = 0; x < W; x += 2) {
+      if (img[(y * W + x) * 4 + 3] > 128) candidates.push([x, y]);
+    }
+  }
+
+  const out = new Float32Array(n * 3);
+  const scale = 4.6 / W;
+  for (let i = 0; i < n; i++) {
+    const [cx, cy] = candidates.length
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : [W / 2, H / 2];
+    out[i * 3]     = (cx - W / 2) * scale + (Math.random() - 0.5) * 0.02;
+    out[i * 3 + 1] = -(cy - H / 2) * scale + (Math.random() - 0.5) * 0.02;
     out[i * 3 + 2] = (Math.random() - 0.5) * 0.04;
   }
-
-  const mark = sampleLines([
-    [-0.88, -0.12,  -0.14, -0.88],
-    [-0.14, -0.88,   0.88,  0.68],
-  ], nMark, 0.05);
-  out.set(mark, nCircle * 3);
   return out;
-}
-
-/** Chave — argola (bow) + haste + dentes */
-function buildKey(n: number): Float32Array {
-  const nBow  = Math.round(n * 0.32);
-  const nRest = n - nBow;
-  const out   = new Float32Array(n * 3);
-  const R     = 0.62;
-  const cx = 0, cy = 1.25;
-
-  for (let i = 0; i < nBow; i++) {
-    const a = Math.random() * Math.PI * 2;
-    out[i * 3]     = cx + Math.cos(a) * R + (Math.random() - 0.5) * 0.025;
-    out[i * 3 + 1] = cy + Math.sin(a) * R + (Math.random() - 0.5) * 0.025;
-    out[i * 3 + 2] = (Math.random() - 0.5) * 0.04;
-  }
-
-  const rest = sampleLines([
-    [0,  0.63,  0, -1.55],   // haste
-    [0, -0.85,  0.42, -0.85], // dente 1
-    [0, -1.25,  0.38, -1.25], // dente 2
-  ], nRest, 0.04);
-  out.set(rest, nBow * 3);
-  return out;
-}
-
-/** Selo de aprovação — anel duplo + fitas */
-function buildStamp(n: number): Float32Array {
-  const nOuter = Math.round(n * 0.38);
-  const nInner = Math.round(n * 0.30);
-  const nRest  = n - nOuter - nInner;
-  const out    = new Float32Array(n * 3);
-  const cy     = 0.35;
-
-  for (let i = 0; i < nOuter; i++) {
-    const a = Math.random() * Math.PI * 2;
-    out[i * 3]     = Math.cos(a) * 1.55 + (Math.random() - 0.5) * 0.025;
-    out[i * 3 + 1] = cy + Math.sin(a) * 1.55 + (Math.random() - 0.5) * 0.025;
-    out[i * 3 + 2] = (Math.random() - 0.5) * 0.04;
-  }
-  for (let i = 0; i < nInner; i++) {
-    const a   = Math.random() * Math.PI * 2;
-    const idx = nOuter + i;
-    out[idx * 3]     = Math.cos(a) * 1.05 + (Math.random() - 0.5) * 0.025;
-    out[idx * 3 + 1] = cy + Math.sin(a) * 1.05 + (Math.random() - 0.5) * 0.025;
-    out[idx * 3 + 2] = (Math.random() - 0.5) * 0.04;
-  }
-
-  const ribbons = sampleLines([
-    [-0.55, -1.05,  -0.95, -2.15],
-    [ 0.55, -1.05,   0.95, -2.15],
-  ], nRest, 0.04);
-  out.set(ribbons, (nOuter + nInner) * 3);
-  return out;
-}
-
-/** Prédio — bloco com divisórias de andares */
-function buildBuilding(n: number): Float32Array {
-  return sampleLines([
-    [-1.05, -1.85,  -1.05,  1.85],   // lateral esq
-    [-1.05,  1.85,   1.05,  1.85],   // topo
-    [ 1.05,  1.85,   1.05, -1.85],   // lateral dir
-    [-1.05, -1.85,   1.05, -1.85],   // base
-    [-1.05,  0.85,   1.05,  0.85],   // andar 1
-    [-1.05, -0.15,   1.05, -0.15],   // andar 2
-    [-1.05, -1.15,   1.05, -1.15],   // andar 3
-    [ 0,     1.85,   0,   -1.85],    // divisória central
-  ], n, 0.04);
 }
 
 /* ─── Componente ─────────────────────────────────────────────────────────── */
@@ -191,12 +184,10 @@ export function ParticleSphere() {
 
     const phases = [
       buildSphere(N),
+      buildLoteamento(N),
       buildHouse(N),
       buildDocument(N),
-      buildKey(N),
-      buildStamp(N),
-      buildBuilding(N),
-      buildCheck(N),
+      sampleText("Um ato regulariza.", N),
     ] as const;
     const CYCLE_MS = (HOLD_MS + MORPH_MS) * phases.length;
 
@@ -297,9 +288,9 @@ export function ParticleSphere() {
 
       /* ── Rotação ──────────────────────────────────────────────────────────
        * APENAS a esfera (fase 0) gira.
-       * Durante morph esfera→casa: a rotação suaviza para 0 (× 1 - morphT²).
-       * Fases 1,2,3 (ícones planos): rotation.y = 0, acumulador zerado.
-       * Retorno check→esfera: acelera com ease-in quadrático.              */
+       * Durante morph esfera→loteamento: a rotação suaviza para 0 (× 1 - morphT²).
+       * Demais fases (ícones planos): rotation.y = 0, acumulador zerado.
+       * Retorno texto→esfera: acelera com ease-in quadrático.              */
       if (phaseIdx === 0) {
         // Esfera: acumula rotação, desacelera durante morph de saída
         rotY += dt * 0.05 * (1 - morphT * 0.95);
@@ -307,12 +298,12 @@ export function ParticleSphere() {
         points.rotation.y = rotY * (1 - morphT * morphT);
         points.rotation.x = Math.sin(totalT * 0.035) * 0.07 * (1 - morphT);
       } else if (phaseIdx === phases.length - 1 && morphT > 0) {
-        // Check → Esfera: começa a acumular de novo com ease-in
+        // Última fase (texto) → Esfera: começa a acumular de novo com ease-in
         rotY += dt * morphT * morphT * 0.05;
         points.rotation.y = rotY;
         points.rotation.x = 0;
       } else {
-        // Casa / Documento / Check durante hold: completamente parados
+        // Ícones 2D durante hold: completamente parados
         rotY = 0;
         points.rotation.y = 0;
         points.rotation.x = 0;
