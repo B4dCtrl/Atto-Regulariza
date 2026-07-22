@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
 /* ─── Constantes ─────────────────────────────────────────────────────────── */
-const N        = 6000;
+const N        = 28000; // densidade alta = formas nítidas (era 6000)
 const HOLD_MS  = 2500;  // ms estático em cada shape
 const MORPH_MS = 900;   // ~1 s de transição
 
@@ -12,7 +12,7 @@ function easeInOutCubic(t: number): number {
 }
 
 /* ─── Distribui N pontos uniformemente ao longo de segmentos de reta ────── */
-function sampleLines(segs: number[][], n: number, zJitter = 0.04): Float32Array {
+function sampleLines(segs: number[][], n: number, zJitter = 0.012): Float32Array {
   const lens   = segs.map(([x1, y1, x2, y2]) => Math.hypot(x2 - x1, y2 - y1));
   const cumLen = [0];
   for (const l of lens) cumLen.push(cumLen[cumLen.length - 1] + l);
@@ -29,8 +29,8 @@ function sampleLines(segs: number[][], n: number, zJitter = 0.04): Float32Array 
     }
     const [x1, y1, x2, y2] = segs[lo];
     const t = lens[lo] > 1e-6 ? Math.min((r - cumLen[lo]) / lens[lo], 1) : 0;
-    out[i * 3]     = x1 + t * (x2 - x1) + (Math.random() - 0.5) * 0.025;
-    out[i * 3 + 1] = y1 + t * (y2 - y1) + (Math.random() - 0.5) * 0.025;
+    out[i * 3]     = x1 + t * (x2 - x1) + (Math.random() - 0.5) * 0.006;
+    out[i * 3 + 1] = y1 + t * (y2 - y1) + (Math.random() - 0.5) * 0.006;
     out[i * 3 + 2] = (Math.random() - 0.5) * zJitter;
   }
   return out;
@@ -46,7 +46,7 @@ function buildSphere(n: number): Float32Array {
     const theta = Math.random() * Math.PI * 2;
     const phi   = Math.acos(2 * Math.random() - 1);
     const r     = i < SURF
-      ? 2.0 + (Math.random() - 0.5) * 0.18
+      ? 2.0 + (Math.random() - 0.5) * 0.08
       : 2.1 + Math.random() * 2.2;
     out[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
     out[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
@@ -83,7 +83,7 @@ function buildHouse(n: number): Float32Array {
     [ 0.55, 0.35,   0.55,-0.15],
     [ 0.80,-0.15,   0.80, 0.35],
     [ 0.55, 0.10,   1.05, 0.10],
-  ], n, 0.04);
+  ], n, 0.012);
 }
 
 /** Loteamento — perímetro, área verde no topo, rua central e lotes divididos */
@@ -117,7 +117,7 @@ function buildLoteamento(n: number): Float32Array {
     [ 0.32, -0.05,  1.6, -0.05],
     [ 0.32, -0.75,  1.6, -0.75],
     [ 0.32, -1.45,  1.6, -1.45],
-  ], n, 0.04);
+  ], n, 0.012);
 }
 
 /** Documento — todas as 6000 partículas nos traçados */
@@ -136,40 +136,40 @@ function buildDocument(n: number): Float32Array {
     [-0.75,-0.38,   0.75,-0.38],   // texto 4
     [-0.75,-0.78,   0.75,-0.78],   // texto 5
     [-0.75,-1.18,   0.42,-1.18],   // texto 6
-  ], n, 0.04);
+  ], n, 0.012);
 }
 
 /** Amostra um texto renderizado em canvas — pixels opacos viram partículas */
 function sampleText(text: string, n: number): Float32Array {
-  const W = 1000, H = 200;
+  const W = 1600, H = 320;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = "#fff";
-  ctx.font = "bold 90px Georgia, 'Times New Roman', serif";
+  ctx.font = "bold 150px Georgia, 'Times New Roman', serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, W / 2, H / 2);
 
   const img = ctx.getImageData(0, 0, W, H).data;
   const candidates: [number, number][] = [];
-  for (let y = 0; y < H; y += 2) {
-    for (let x = 0; x < W; x += 2) {
+  for (let y = 0; y < H; y += 1) {
+    for (let x = 0; x < W; x += 1) {
       if (img[(y * W + x) * 4 + 3] > 128) candidates.push([x, y]);
     }
   }
 
   const out = new Float32Array(n * 3);
-  const scale = 4.6 / W;
+  const scale = 5.0 / W;
   for (let i = 0; i < n; i++) {
     const [cx, cy] = candidates.length
       ? candidates[Math.floor(Math.random() * candidates.length)]
       : [W / 2, H / 2];
-    out[i * 3]     = (cx - W / 2) * scale + (Math.random() - 0.5) * 0.02;
-    out[i * 3 + 1] = -(cy - H / 2) * scale + (Math.random() - 0.5) * 0.02;
-    out[i * 3 + 2] = (Math.random() - 0.5) * 0.04;
+    out[i * 3]     = (cx - W / 2) * scale + (Math.random() - 0.5) * 0.006;
+    out[i * 3 + 1] = -(cy - H / 2) * scale + (Math.random() - 0.5) * 0.006;
+    out[i * 3 + 2] = (Math.random() - 0.5) * 0.012;
   }
   return out;
 }
@@ -194,8 +194,8 @@ export function ParticleSphere() {
     const workBuf = phases[0].slice();
 
     /* Renderer */
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
     renderer.domElement.style.cssText =
       "position:absolute;inset:0;width:100%;height:100%;";
@@ -221,8 +221,8 @@ export function ParticleSphere() {
           // Ícones 2D: dist ≤ 2 → vFade ≈ 1 → totalmente opacos
           vFade = 1.0 - smoothstep(2.0, 4.8, dist);
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          float sz = 260.0 / -mv.z;
-          gl_PointSize = clamp(sz * mix(0.4, 1.0, vFade), 0.3, 3.2);
+          float sz = 340.0 / -mv.z;
+          gl_PointSize = clamp(sz * mix(0.5, 1.0, vFade), 0.6, 3.4);
           gl_Position = projectionMatrix * mv;
         }
       `,
