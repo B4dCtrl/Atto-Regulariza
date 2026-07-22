@@ -202,12 +202,12 @@ export function JardimBotanicoScene() {
       const octx = oc.getContext("2d")!;
       octx.drawImage(img, 0, 0);
       const data = octx.getImageData(0, 0, ow, oh).data;
-      const step = 2; // amostragem densa = definição alta
+      const step = 4; // amostragem mais leve (perf — antes 2)
       const out: Particle[] = [];
       for (let y = 0; y < oh; y += step) {
         for (let x = 0; x < ow; x += step) {
           const alpha = data[(y * ow + x) * 4 + 3];
-          if (alpha > 90 && Math.random() < 0.8) {
+          if (alpha > 90 && Math.random() < 0.38) {
             const ix = CITY.x + (x / ow) * CITY.w;
             const iy = CITY.y + (y / oh) * CITY.h;
             // aplica o transform do grupo da cena (translate + scale 0.9)
