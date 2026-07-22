@@ -5,7 +5,6 @@ import * as THREE from "three";
 const N        = 6000;
 const HOLD_MS  = 2500;  // ms estático em cada shape
 const MORPH_MS = 900;   // ~1 s de transição
-const CYCLE_MS = (HOLD_MS + MORPH_MS) * 4;
 
 /* ─── Easing ─────────────────────────────────────────────────────────────── */
 function easeInOutCubic(t: number): number {
@@ -114,6 +113,74 @@ function buildCheck(n: number): Float32Array {
   return out;
 }
 
+/** Chave — argola (bow) + haste + dentes */
+function buildKey(n: number): Float32Array {
+  const nBow  = Math.round(n * 0.32);
+  const nRest = n - nBow;
+  const out   = new Float32Array(n * 3);
+  const R     = 0.62;
+  const cx = 0, cy = 1.25;
+
+  for (let i = 0; i < nBow; i++) {
+    const a = Math.random() * Math.PI * 2;
+    out[i * 3]     = cx + Math.cos(a) * R + (Math.random() - 0.5) * 0.025;
+    out[i * 3 + 1] = cy + Math.sin(a) * R + (Math.random() - 0.5) * 0.025;
+    out[i * 3 + 2] = (Math.random() - 0.5) * 0.04;
+  }
+
+  const rest = sampleLines([
+    [0,  0.63,  0, -1.55],   // haste
+    [0, -0.85,  0.42, -0.85], // dente 1
+    [0, -1.25,  0.38, -1.25], // dente 2
+  ], nRest, 0.04);
+  out.set(rest, nBow * 3);
+  return out;
+}
+
+/** Selo de aprovação — anel duplo + fitas */
+function buildStamp(n: number): Float32Array {
+  const nOuter = Math.round(n * 0.38);
+  const nInner = Math.round(n * 0.30);
+  const nRest  = n - nOuter - nInner;
+  const out    = new Float32Array(n * 3);
+  const cy     = 0.35;
+
+  for (let i = 0; i < nOuter; i++) {
+    const a = Math.random() * Math.PI * 2;
+    out[i * 3]     = Math.cos(a) * 1.55 + (Math.random() - 0.5) * 0.025;
+    out[i * 3 + 1] = cy + Math.sin(a) * 1.55 + (Math.random() - 0.5) * 0.025;
+    out[i * 3 + 2] = (Math.random() - 0.5) * 0.04;
+  }
+  for (let i = 0; i < nInner; i++) {
+    const a   = Math.random() * Math.PI * 2;
+    const idx = nOuter + i;
+    out[idx * 3]     = Math.cos(a) * 1.05 + (Math.random() - 0.5) * 0.025;
+    out[idx * 3 + 1] = cy + Math.sin(a) * 1.05 + (Math.random() - 0.5) * 0.025;
+    out[idx * 3 + 2] = (Math.random() - 0.5) * 0.04;
+  }
+
+  const ribbons = sampleLines([
+    [-0.55, -1.05,  -0.95, -2.15],
+    [ 0.55, -1.05,   0.95, -2.15],
+  ], nRest, 0.04);
+  out.set(ribbons, (nOuter + nInner) * 3);
+  return out;
+}
+
+/** Prédio — bloco com divisórias de andares */
+function buildBuilding(n: number): Float32Array {
+  return sampleLines([
+    [-1.05, -1.85,  -1.05,  1.85],   // lateral esq
+    [-1.05,  1.85,   1.05,  1.85],   // topo
+    [ 1.05,  1.85,   1.05, -1.85],   // lateral dir
+    [-1.05, -1.85,   1.05, -1.85],   // base
+    [-1.05,  0.85,   1.05,  0.85],   // andar 1
+    [-1.05, -0.15,   1.05, -0.15],   // andar 2
+    [-1.05, -1.15,   1.05, -1.15],   // andar 3
+    [ 0,     1.85,   0,   -1.85],    // divisória central
+  ], n, 0.04);
+}
+
 /* ─── Componente ─────────────────────────────────────────────────────────── */
 export function ParticleSphere() {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -126,8 +193,12 @@ export function ParticleSphere() {
       buildSphere(N),
       buildHouse(N),
       buildDocument(N),
+      buildKey(N),
+      buildStamp(N),
+      buildBuilding(N),
       buildCheck(N),
     ] as const;
+    const CYCLE_MS = (HOLD_MS + MORPH_MS) * phases.length;
 
     const workBuf = phases[0].slice();
 

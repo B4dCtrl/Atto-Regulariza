@@ -39,8 +39,8 @@ export function Hero() {
         <ParticleSphere />
       </div>
 
-      {/* ── Conteúdo — bottom-left, como Tailark ── */}
-      <div className="relative z-10 flex min-h-[max(94dvh,680px)] max-w-2xl flex-col justify-end px-8 pb-16 pt-36 sm:px-14 sm:pb-20">
+      {/* ── Conteúdo — centralizado verticalmente, alinhado ao topo do menu ── */}
+      <div className="relative z-10 flex min-h-[max(94dvh,680px)] max-w-2xl flex-col justify-center px-8 pt-24 sm:px-14">
 
         {/* Headline */}
         <motion.h1
@@ -77,7 +77,7 @@ export function Hero() {
           className="mt-5 max-w-lg text-base leading-relaxed text-foreground/80 sm:text-lg"
         >
           Imóvel irregular trava venda, herança e financiamento. A gente
-          cuida de tudo — docs, cartório e prefeitura — enquanto você
+          cuida de tudo, docs, cartório e prefeitura, enquanto você
           acompanha cada etapa em tempo real.
         </motion.p>
 
@@ -94,11 +94,11 @@ export function Hero() {
               href={WHATSAPP.avaliacaoGratuita}
               target="_blank"
               rel="noreferrer"
-              className="group inline-flex items-center gap-2 rounded-full bg-foreground py-3 pl-6 pr-2 text-sm font-medium text-background shadow-[0_12px_32px_-10px_oklch(0.13_0.03_55_/_0.4)] transition-all hover:scale-[1.02]"
+              className="group inline-flex items-center gap-3 rounded-full bg-foreground py-4 pl-8 pr-3 text-base font-medium text-background shadow-[0_12px_32px_-10px_oklch(0.13_0.03_55_/_0.4)] transition-all hover:scale-[1.02]"
             >
               Quero regularizar meu imóvel
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-accent transition-transform group-hover:rotate-12">
-                <ArrowUpRight className="h-4 w-4 text-background" />
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-accent transition-transform group-hover:rotate-12">
+                <ArrowUpRight className="h-5 w-5 text-background" />
               </span>
             </a>
           </MagneticButton>
@@ -106,10 +106,10 @@ export function Hero() {
           <MagneticButton strength={0.2}>
             <Link
               to="/precos"
-              className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/5 px-6 py-3 text-sm font-medium text-foreground/80 transition-all hover:border-foreground/30 hover:bg-foreground/10"
+              className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/5 px-8 py-4 text-base font-medium text-foreground/80 transition-all hover:border-foreground/30 hover:bg-foreground/10"
             >
-              <MessageCircle className="h-4 w-4" />
-              Ver planos
+              <MessageCircle className="h-5 w-5" />
+              Falar com Especialista
             </Link>
           </MagneticButton>
         </motion.div>
