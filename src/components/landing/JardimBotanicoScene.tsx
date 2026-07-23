@@ -87,17 +87,17 @@ function MiniHouse({ x, y }: { x: number; y: number }) {
 /* Mapa do Brasil = arquivo enviado pelo usuário (public/brasil-mapa.png),
  * NÃO mais um path desenhado à mão. Marcadores calibrados sobre uma
  * imagem em viewBox local 0 0 360 385 (proporção da referência enviada). */
-const BR_MAP_W = 360;
-const BR_MAP_H = 385;
+const BR_MAP_W = 348;
+const BR_MAP_H = 348;
 const BR_MARKERS = [
-  { x: 95,  y: 90  }, // Manaus (AM)
-  { x: 260, y: 95  }, // Fortaleza/Recife (NE)
-  { x: 275, y: 165 }, // Salvador (BA)
-  { x: 175, y: 195 }, // Brasília (DF)
-  { x: 245, y: 235 }, // Rio de Janeiro (RJ)
-  { x: 215, y: 255 }, // São Paulo (SP)
-  { x: 195, y: 300 }, // Curitiba (PR)
-  { x: 190, y: 345 }, // Porto Alegre (RS)
+  { x: 80,  y: 75  }, // Manaus (AM)
+  { x: 295, y: 78  }, // Fortaleza (CE)
+  { x: 305, y: 105 }, // Recife (PE)
+  { x: 270, y: 160 }, // Salvador (BA)
+  { x: 190, y: 195 }, // Brasília (DF)
+  { x: 235, y: 230 }, // Rio de Janeiro (RJ)
+  { x: 205, y: 250 }, // São Paulo (SP)
+  { x: 185, y: 330 }, // Porto Alegre (RS)
 ];
 
 function pillWidth(label: string) {
