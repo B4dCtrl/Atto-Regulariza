@@ -84,24 +84,29 @@ function MiniHouse({ x, y }: { x: number; y: number }) {
   );
 }
 
-/* Marcadores pelo mapa (posições aproximadas dos estados, no espaço local
- * do <path> do Brasil abaixo — viewBox local 0 0 520 560). */
+/* Marcadores pelo mapa (posições aproximadas das capitais, no espaço local
+ * do <path> do Brasil abaixo — viewBox local 0 0 500 560). */
 const BR_MARKERS = [
-  { x: 150, y: 210 }, // Amazonas
-  { x: 330, y: 130 }, // Ceará
-  { x: 330, y: 285 }, // Distrito Federal
-  { x: 445, y: 250 }, // Bahia
-  { x: 405, y: 375 }, // Rio de Janeiro
-  { x: 385, y: 420 }, // São Paulo
-  { x: 330, y: 465 }, // Paraná
-  { x: 235, y: 520 }, // Rio Grande do Sul
+  { x: 80,  y: 145 }, // Manaus (AM)
+  { x: 360, y: 60  }, // Fortaleza (CE)
+  { x: 445, y: 150 }, // Recife (PE)
+  { x: 410, y: 250 }, // Salvador (BA)
+  { x: 265, y: 265 }, // Brasília (DF)
+  { x: 375, y: 345 }, // Rio de Janeiro (RJ)
+  { x: 335, y: 378 }, // São Paulo (SP)
+  { x: 245, y: 485 }, // Porto Alegre (RS)
 ];
 
-// Silhueta simplificada do Brasil — espaço local 520×560
+// Silhueta do Brasil — espaço local 500×560. Pontos-chave que a fazem
+// reconhecível: o "bico" a nordeste (Rio Grande do Norte, ponto mais a
+// leste), o afunilamento no sul (Rio Grande do Sul) e a saliência do
+// Acre a oeste.
 const BRAZIL_PATH =
-  "M150,10 L230,0 L310,30 L400,60 L480,90 L500,150 L490,230 L460,310 " +
-  "L430,360 L390,410 L350,460 L300,510 L250,555 L180,540 L120,500 " +
-  "L80,460 L50,400 L30,340 L10,270 L5,200 L20,140 L60,80 Z";
+  "M195,15 L260,8 L330,25 L365,45 L400,70 L430,95 L478,118 " +
+  "L455,155 L445,210 L435,260 L415,320 L390,355 L355,380 " +
+  "L330,410 L300,445 L275,490 L255,535 L200,520 L165,495 " +
+  "L140,460 L120,420 L100,370 L85,320 L65,270 L55,220 " +
+  "L35,195 L50,155 L40,110 L65,70 L110,35 Z";
 
 function pillWidth(label: string) {
   return Math.max(label.length * 12 + 52, 130);
@@ -513,12 +518,12 @@ export function JardimBotanicoScene() {
         <circle className="jb-conn-dot" r="4.5" fill={ORANGE} opacity="0" />
       </g>
 
-      {/* mapa do Brasil — título central + mini-casas ATO pelos estados */}
-      <text className="jb-port-title" x="1017" y="322" textAnchor="middle" fill={TEAL} fontFamily="'Instrument Serif', Georgia, serif" opacity="0">
+      {/* mapa do Brasil — título ACIMA, mapa ABAIXO (sem sobrepor) */}
+      <text className="jb-port-title" x="1017" y="150" textAnchor="middle" fill={TEAL} fontFamily="'Instrument Serif', Georgia, serif" opacity="0">
         <tspan x="1017" fontSize="30">Presente em</tspan>
         <tspan x="1017" dy="42" fontSize="40" fill={ORANGE}>todo o Brasil.</tspan>
       </text>
-      <g className="jb-brazil" opacity="0" transform="translate(775 100) scale(0.62)">
+      <g className="jb-brazil" opacity="0" transform="translate(795 225) scale(0.6)">
         <path d={BRAZIL_PATH} fill={CARD} stroke={TEAL} strokeWidth="2.4" strokeOpacity="0.55" strokeLinejoin="round" />
         {BR_MARKERS.map((m, i) => (
           <g key={i} className="jb-bmarker" opacity="0">
