@@ -87,26 +87,37 @@ function MiniHouse({ x, y }: { x: number; y: number }) {
 /* Marcadores pelo mapa (posições aproximadas das capitais, no espaço local
  * do <path> do Brasil abaixo — viewBox local 0 0 500 560). */
 const BR_MARKERS = [
-  { x: 80,  y: 145 }, // Manaus (AM)
-  { x: 360, y: 60  }, // Fortaleza (CE)
-  { x: 445, y: 150 }, // Recife (PE)
-  { x: 410, y: 250 }, // Salvador (BA)
-  { x: 265, y: 265 }, // Brasília (DF)
-  { x: 375, y: 345 }, // Rio de Janeiro (RJ)
-  { x: 335, y: 378 }, // São Paulo (SP)
-  { x: 245, y: 485 }, // Porto Alegre (RS)
+  { x: 70,  y: 140 }, // Manaus (AM)
+  { x: 370, y: 50  }, // Fortaleza (CE)
+  { x: 430, y: 140 }, // Recife (PE)
+  { x: 400, y: 220 }, // Salvador (BA)
+  { x: 250, y: 260 }, // Brasília (DF)
+  { x: 370, y: 330 }, // Rio de Janeiro (RJ)
+  { x: 330, y: 365 }, // São Paulo (SP)
+  { x: 230, y: 480 }, // Porto Alegre (RS)
 ];
 
-// Silhueta do Brasil — espaço local 500×560. Pontos-chave que a fazem
-// reconhecível: o "bico" a nordeste (Rio Grande do Norte, ponto mais a
-// leste), o afunilamento no sul (Rio Grande do Sul) e a saliência do
-// Acre a oeste.
+// Silhueta do Brasil — verificada renderizando os pontos antes de aplicar
+// (espaço local ~540×620). Bico a nordeste, litoral suave, afunilamento
+// no sul, saliência arredondada do Acre a oeste.
 const BRAZIL_PATH =
-  "M195,15 L260,8 L330,25 L365,45 L400,70 L430,95 L478,118 " +
-  "L455,155 L445,210 L435,260 L415,320 L390,355 L355,380 " +
-  "L330,410 L300,445 L275,490 L255,535 L200,520 L165,495 " +
-  "L140,460 L120,420 L100,370 L85,320 L65,270 L55,220 " +
-  "L35,195 L50,155 L40,110 L65,70 L110,35 Z";
+  "M160,20 L220,12 L280,18 L330,28 " +
+  "L365,42 L390,60 L410,80 " +
+  "L470,95 " +
+  "L425,125 " +
+  "L410,160 L425,200 L415,245 " +
+  "L395,285 L400,320 L375,355 " +
+  "L345,385 L315,410 " +
+  "L325,435 " +
+  "L290,470 L260,505 L230,535 " +
+  "L205,545 L180,538 " +
+  "L160,510 L145,480 " +
+  "L120,445 L100,405 L85,365 " +
+  "L72,320 L65,275 " +
+  "L60,240 " +
+  "L30,205 L35,160 " +
+  "L55,125 L50,90 " +
+  "L75,55 L105,30 L135,20 Z";
 
 function pillWidth(label: string) {
   return Math.max(label.length * 12 + 52, 130);
@@ -178,7 +189,8 @@ export function JardimBotanicoScene() {
       breathe(tasks, 4, 2.2);
       breathe(Array.from(skels.children), 6, 3.0);
       breathe(bMarkers, 3, 2.6);
-      breathe([pro], 4, 2.6);
+      // OBS: [pro] (card da Mariana) NÃO respira — a animação contínua
+      // brigava com a entrada dela (fromTo de y), causando o "pulo" brusco.
       breathe([finalG], 5, 3.4);
       breathe([city], 6, 3.6);
       // anéis pulsando: crescem e diminuem, um levemente atrás do outro
@@ -256,38 +268,39 @@ export function JardimBotanicoScene() {
         { opacity: 1, scale: 1, y: 0, duration: 0.5, stagger: 0.12, ease: "back.out(1.6)" },
         6.6
       );
-      tl.to(problems, { opacity: 0, scale: 0.92, y: -8, duration: 0.4, stagger: 0.08, ease: "power2.in" }, 7.35);
+      // hold generoso: ~2s com os 4 cards já visíveis antes de sumirem
+      tl.to(problems, { opacity: 0, scale: 0.92, y: -8, duration: 0.4, stagger: 0.08, ease: "power2.in" }, 9.4);
 
       // ── Cena 4: docs (esqueletos) entram sobrepostos ──
-      tl.fromTo(skels, { opacity: 0 }, { opacity: 1, duration: 0.8 }, 7.7);
+      tl.fromTo(skels, { opacity: 0 }, { opacity: 1, duration: 0.8 }, 10.3);
 
       // ── Cena 5: análise 0→100% entre os anéis ──
-      tl.fromTo(load, { opacity: 0, scale: 0.8, svgOrigin: "985 222" }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.7)" }, 8.2);
-      tl.to(loadArc, { strokeDashoffset: 0, duration: 2.0, ease: "power1.inOut" }, 8.55);
+      tl.fromTo(load, { opacity: 0, scale: 0.8, svgOrigin: "985 222" }, { opacity: 1, scale: 1, duration: 0.55, ease: "back.out(1.7)" }, 10.8);
+      tl.to(loadArc, { strokeDashoffset: 0, duration: 2.0, ease: "power1.inOut" }, 11.15);
       tl.fromTo(
         counter,
         { v: 0 },
         { v: 100, duration: 2.0, ease: "power1.inOut", onUpdate: () => { pct.textContent = `${Math.round(counter.v)}%`; } },
-        8.55
+        11.15
       );
-      tl.to(loadSub, { opacity: 1, duration: 0.35 }, 10.45);
-      tl.to(load, { opacity: 0, scale: 0.9, duration: 0.5 }, 11.2);
+      tl.to(loadSub, { opacity: 1, duration: 0.35 }, 13.05);
+      tl.to(load, { opacity: 0, scale: 0.9, duration: 0.5 }, 13.8);
 
       // ── Cena 6: pendências aparecem DEPOIS do 100% (vermelho ❗) ──
-      tl.fromTo(tasks, { opacity: 0, x: 36 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.14 }, 11.3);
+      tl.fromTo(tasks, { opacity: 0, x: 36 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.14 }, 13.9);
 
       // ── Cena 7: profissional surge (entrada suave, sem "pular") ──
       tl.fromTo(
         pro,
         { opacity: 0, y: 14, scale: 0.94, transformOrigin: "center center" },
         { opacity: 1, y: 0, scale: 1, duration: 0.85, ease: "power3.out" },
-        12.2
+        14.8
       );
       // UMA linha fluida — nasce no card da profissional e desce tocando
       // as 3 pendências em sequência, com a bolinha percorrendo tudo
-      tl.to(conn, { opacity: 1, duration: 0.4 }, 12.9);
+      tl.to(conn, { opacity: 1, duration: 0.4 }, 15.5);
       const cdraw = { p: 0 };
-      tl.set(connDot, { opacity: 1 }, 13.0);
+      tl.set(connDot, { opacity: 1 }, 15.6);
       tl.to(
         cdraw,
         {
@@ -301,39 +314,39 @@ export function JardimBotanicoScene() {
             connDot.setAttribute("cy", `${pt.y}`);
           },
         },
-        13.0
+        15.6
       );
-      tl.to(connDot, { opacity: 0, duration: 0.2 }, 14.55);
+      tl.to(connDot, { opacity: 0, duration: 0.2 }, 17.15);
 
       // ── Cena 8: pendências resolvidas em sequência, junto com a bolinha ──
       tasks.forEach((tk, i) => {
-        const at = 14.0 + i * 0.5;
+        const at = 16.6 + i * 0.5;
         tl.to(tk.querySelector(".jb-task-txt"), { fill: GREEN, duration: 0.3 }, at);
         tl.to(tk.querySelector(".jb-bang"), { opacity: 0, duration: 0.25 }, at);
         tl.to(tk.querySelector(".jb-check"), { opacity: 1, duration: 0.35, ease: "back.out(2)" }, at + 0.05);
       });
 
       // ── Cena 9: mapa do Brasil — a cidade cede o palco ──
-      tl.to([pro, skels, ...tasks], { opacity: 0, duration: 0.6 }, 15.8);
-      tl.to(rings, { opacity: 0, scale: 0.94, svgOrigin: "985 415", duration: 0.8 }, 15.95);
-      tl.to(city, { opacity: 0, y: -14, duration: 0.9, ease: "power2.in" }, 15.95);
-      tl.fromTo(portTitle, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7 }, 16.3);
+      tl.to([pro, skels, ...tasks], { opacity: 0, duration: 0.6 }, 18.4);
+      tl.to(rings, { opacity: 0, scale: 0.94, svgOrigin: "985 415", duration: 0.8 }, 18.55);
+      tl.to(city, { opacity: 0, y: -14, duration: 0.9, ease: "power2.in" }, 18.55);
+      tl.fromTo(portTitle, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7 }, 18.9);
       tl.fromTo(
         brazilMap,
         { opacity: 0, scale: 0.9, svgOrigin: "1015 350" },
         { opacity: 1, scale: 1, duration: 0.7 },
-        16.5
+        19.1
       );
       tl.fromTo(
         bMarkers,
         { opacity: 0, scale: 0, transformOrigin: "center center" },
         { opacity: 1, scale: 1, duration: 0.4, stagger: 0.07, ease: "back.out(2)" },
-        16.8
+        19.4
       );
-      tl.to([brazilMap, ...bMarkers, portTitle], { opacity: 0, scale: 0.94, duration: 0.5, stagger: 0.02, ease: "power2.in" }, 18.9);
+      tl.to([brazilMap, ...bMarkers, portTitle], { opacity: 0, scale: 0.94, duration: 0.5, stagger: 0.02, ease: "power2.in" }, 21.5);
 
       // ── Cena 10: final — casa ATO + "Um ato. Regulariza!" (sem linha) ──
-      tl.fromTo(finalG, { opacity: 0, scale: 0.6, svgOrigin: "985 380" }, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.6)" }, 19.5);
+      tl.fromTo(finalG, { opacity: 0, scale: 0.6, svgOrigin: "985 380" }, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.6)" }, 22.1);
 
       // cadência geral: mais lenta e respirada
       tl.timeScale(0.78);
@@ -362,38 +375,16 @@ export function JardimBotanicoScene() {
       {/* cena inteira: 90% do tamanho e um pouco mais baixa */}
       <g transform="translate(98.5 75.5) scale(0.9)">
 
-      {/* cidade — skyline em linhas (leve, sem canvas/partículas) */}
-      <g className="jb-city" opacity="0" stroke={TEAL} strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
-        <line x1={CITY.x - 15} y1={CITY.y + CITY.h} x2={CITY.x + CITY.w + 15} y2={CITY.y + CITY.h} />
-        {[
-          { ox: 6, w: 34, h: 92 },
-          { ox: 46, w: 46, h: 132 },
-          { ox: 100, w: 30, h: 68 },
-          { ox: 138, w: 52, h: 158 },
-          { ox: 198, w: 36, h: 100 },
-          { ox: 240, w: 44, h: 140 },
-          { ox: 292, w: 28, h: 76 },
-        ].map((b, i) => {
-          const bx = CITY.x + b.ox;
-          const by = CITY.y + CITY.h - b.h;
-          const rows = Math.max(1, Math.floor(b.h / 26) - 1);
-          return (
-            <g key={i}>
-              <rect x={bx} y={by} width={b.w} height={b.h} />
-              {Array.from({ length: rows }).map((_, r) => (
-                <line
-                  key={r}
-                  x1={bx + b.w * 0.26}
-                  y1={by + 16 + r * 24}
-                  x2={bx + b.w * 0.74}
-                  y2={by + 16 + r * 24}
-                  strokeWidth="1"
-                  strokeOpacity="0.5"
-                />
-              ))}
-            </g>
-          );
-        })}
+      {/* cidade — o PNG do Jardim Botânico (leve: só uma imagem, sem canvas/JS por frame) */}
+      <g className="jb-city" opacity="0">
+        <image
+          href="/cwb.png"
+          x={CITY.x - 30}
+          y={CITY.y - 10}
+          width={CITY.w + 60}
+          height={CITY.h + 40}
+          preserveAspectRatio="xMidYMax meet"
+        />
       </g>
 
       {/* anéis concêntricos (aura) */}
@@ -502,11 +493,12 @@ export function JardimBotanicoScene() {
         <text x="1126" y="185" textAnchor="middle" fontSize="15" fontWeight="700" fill="#fff" fontFamily="system-ui, sans-serif">MS</text>
         <text x="1156" y="175" fontSize="17" fontWeight="600" fill="#fff" fontFamily="system-ui, sans-serif">Mariana Silva</text>
         <text x="1156" y="196" fontSize="12" fill="rgba(255,255,255,.6)" fontFamily="system-ui, sans-serif">Arquiteta e Urbanista</text>
-        {/* nasce no centro-base do card da profissional e desce tocando as
-            3 pendências em sequência — uma curva contínua, sem cortes */}
+        {/* nasce no card da profissional, curva suave até a 1ª pendência e
+            desce reto (tangente vertical contínua) tocando as outras duas
+            — sem quinas/emendas visíveis */}
         <path
           className="jb-conn jb-march"
-          d="M 1231 208 C 1300 214, 1349 232, 1349 258 C 1349 280, 1349 292, 1349 314 C 1349 336, 1349 348, 1349 370"
+          d="M 1231 208 C 1300 210, 1349 240, 1349 258 L 1349 314 L 1349 370"
           fill="none"
           stroke="#6f6a5e"
           strokeOpacity="0.4"
