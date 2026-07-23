@@ -84,40 +84,21 @@ function MiniHouse({ x, y }: { x: number; y: number }) {
   );
 }
 
-/* Marcadores pelo mapa (posições aproximadas das capitais, no espaço local
- * do <path> do Brasil abaixo — viewBox local 0 0 500 560). */
+/* Mapa do Brasil = arquivo enviado pelo usuário (public/brasil-mapa.png),
+ * NÃO mais um path desenhado à mão. Marcadores calibrados sobre uma
+ * imagem em viewBox local 0 0 360 385 (proporção da referência enviada). */
+const BR_MAP_W = 360;
+const BR_MAP_H = 385;
 const BR_MARKERS = [
-  { x: 70,  y: 140 }, // Manaus (AM)
-  { x: 370, y: 50  }, // Fortaleza (CE)
-  { x: 430, y: 140 }, // Recife (PE)
-  { x: 400, y: 220 }, // Salvador (BA)
-  { x: 250, y: 260 }, // Brasília (DF)
-  { x: 370, y: 330 }, // Rio de Janeiro (RJ)
-  { x: 330, y: 365 }, // São Paulo (SP)
-  { x: 230, y: 480 }, // Porto Alegre (RS)
+  { x: 95,  y: 90  }, // Manaus (AM)
+  { x: 260, y: 95  }, // Fortaleza/Recife (NE)
+  { x: 275, y: 165 }, // Salvador (BA)
+  { x: 175, y: 195 }, // Brasília (DF)
+  { x: 245, y: 235 }, // Rio de Janeiro (RJ)
+  { x: 215, y: 255 }, // São Paulo (SP)
+  { x: 195, y: 300 }, // Curitiba (PR)
+  { x: 190, y: 345 }, // Porto Alegre (RS)
 ];
-
-// Silhueta do Brasil — verificada renderizando os pontos antes de aplicar
-// (espaço local ~540×620). Bico a nordeste, litoral suave, afunilamento
-// no sul, saliência arredondada do Acre a oeste.
-const BRAZIL_PATH =
-  "M160,20 L220,12 L280,18 L330,28 " +
-  "L365,42 L390,60 L410,80 " +
-  "L470,95 " +
-  "L425,125 " +
-  "L410,160 L425,200 L415,245 " +
-  "L395,285 L400,320 L375,355 " +
-  "L345,385 L315,410 " +
-  "L325,435 " +
-  "L290,470 L260,505 L230,535 " +
-  "L205,545 L180,538 " +
-  "L160,510 L145,480 " +
-  "L120,445 L100,405 L85,365 " +
-  "L72,320 L65,275 " +
-  "L60,240 " +
-  "L30,205 L35,160 " +
-  "L55,125 L50,90 " +
-  "L75,55 L105,30 L135,20 Z";
 
 function pillWidth(label: string) {
   return Math.max(label.length * 12 + 52, 130);
@@ -515,8 +496,8 @@ export function JardimBotanicoScene() {
         <tspan x="1017" fontSize="30">Presente em</tspan>
         <tspan x="1017" dy="42" fontSize="40" fill={ORANGE}>todo o Brasil.</tspan>
       </text>
-      <g className="jb-brazil" opacity="0" transform="translate(795 225) scale(0.6)">
-        <path d={BRAZIL_PATH} fill={CARD} stroke={TEAL} strokeWidth="2.4" strokeOpacity="0.55" strokeLinejoin="round" />
+      <g className="jb-brazil" opacity="0" transform="translate(810 225) scale(0.85)">
+        <image href="/brasil-mapa.png" x="0" y="0" width={BR_MAP_W} height={BR_MAP_H} preserveAspectRatio="xMidYMid meet" />
         {BR_MARKERS.map((m, i) => (
           <g key={i} className="jb-bmarker" opacity="0">
             <MiniHouse x={m.x} y={m.y} />
