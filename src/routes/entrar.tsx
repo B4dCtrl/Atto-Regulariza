@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, X, Building2, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLandingPath } from "@/lib/auth-routing";
@@ -37,6 +37,20 @@ function EntrarPage() {
   const [error, setError]         = useState<string | null>(null);
   const [success, setSuccess]     = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
+
+  // Carrossel do mini-status (mock ilustrativo) — troca sozinho a cada 2.6s
+  const STATUS_STEPS = [
+    { label: "Em prefeitura",      pct: 55, done: "3 de 6 etapas · ~7 dias" },
+    { label: "Com profissional",   pct: 75, done: "4 de 6 etapas · ~4 dias" },
+    { label: "Matrícula averbada", pct: 100, done: "6 de 6 etapas · concluído" },
+  ];
+  const [statusStep, setStatusStep] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStatusStep((s) => (s + 1) % STATUS_STEPS.length);
+    }, 2600);
+    return () => clearInterval(id);
+  }, []);
 
   function clearMessages() {
     setError(null);
@@ -171,14 +185,44 @@ function EntrarPage() {
           </div>
         </div>
 
-        {/* Mini status mock */}
+        {/* Mini status mock — carrossel automático, mesmo tamanho sempre */}
         <div className="relative rounded-2xl bg-background/10 p-4 ring-1 ring-background/20 backdrop-blur-sm">
           <div className="text-xs text-background/60">Status atual</div>
-          <div className="mt-1 font-serif text-2xl">Em prefeitura</div>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-background/15">
-            <div className="h-full w-[55%] rounded-full bg-accent" />
+          <div className="relative mt-1 h-8 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={statusStep}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute inset-0 font-serif text-2xl"
+              >
+                {STATUS_STEPS[statusStep].label}
+              </motion.div>
+            </AnimatePresence>
           </div>
-          <div className="mt-2 text-xs text-background/60">3 de 6 etapas · ~7 dias</div>
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-background/15">
+            <motion.div
+              className="h-full rounded-full bg-accent"
+              animate={{ width: `${STATUS_STEPS[statusStep].pct}%` }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            />
+          </div>
+          <div className="relative mt-2 h-4 overflow-hidden text-xs text-background/60">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={statusStep}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35 }}
+                className="absolute inset-0"
+              >
+                {STATUS_STEPS[statusStep].done}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
