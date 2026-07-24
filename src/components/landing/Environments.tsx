@@ -1,5 +1,5 @@
 import { BlurReveal } from "./BlurReveal";
-import { User } from "lucide-react";
+import { User, Briefcase } from "lucide-react";
 
 /**
  * Environments — Exibe apenas a Área do Cliente.
@@ -63,12 +63,12 @@ export function Environments() {
               <div className="rounded-2xl bg-surface-elevated p-4 ring-1 ring-border">
                 <div className="text-xs text-ink-soft">Responsável agora</div>
                 <div className="mt-2 flex items-center gap-3">
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-sm">
-                    CR
+                  <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background">
+                    <Briefcase className="h-4 w-4" />
                   </div>
                   <div>
-                    <div className="text-sm font-medium">Carla Rocha</div>
-                    <div className="text-xs text-ink-soft">Arquiteta · CAU 12345</div>
+                    <div className="text-sm font-medium">Especialista designado</div>
+                    <div className="text-xs text-ink-soft">Arquitetura e Urbanismo</div>
                   </div>
                 </div>
               </div>

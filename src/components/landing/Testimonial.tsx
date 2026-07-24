@@ -11,18 +11,9 @@ export function Testimonial() {
         className="mx-auto max-w-4xl text-center"
       >
         <p className="font-serif text-[clamp(1.75rem,3.5vw,3rem)] leading-[1.15] tracking-tight text-balance">
-          “Pela primeira vez eu entendi <em className="text-ink-soft">cada etapa</em> da
-          regularização do meu imóvel. Parece simples — mas nunca tinha sido.”
+          Entenda <em className="text-ink-soft">cada etapa</em> da regularização do seu
+          imóvel. Parece simples — porque é.
         </p>
-        <div className="mt-8 flex items-center justify-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background text-sm">
-            MS
-          </div>
-          <div className="text-left">
-            <div className="text-sm font-medium">Marina Silveira</div>
-            <div className="text-xs text-ink-soft">Proprietária · São Paulo</div>
-          </div>
-        </div>
       </motion.div>
     </section>
   );

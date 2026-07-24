@@ -172,17 +172,8 @@ function EntrarPage() {
 
         <div className="relative">
           <p className="font-serif text-4xl leading-tight tracking-tight text-balance">
-            "Pela primeira vez eu entendi cada etapa da regularização do meu imóvel."
+            Entenda cada etapa da regularização do seu imóvel, do começo ao fim.
           </p>
-          <div className="mt-6 flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-accent text-accent-foreground text-sm font-medium">
-              MS
-            </div>
-            <div>
-              <div className="text-sm font-medium">Marina Silveira</div>
-              <div className="text-xs text-background/60">Proprietária · São Paulo</div>
-            </div>
-          </div>
         </div>
 
         {/* Mini status mock — carrossel automático, mesmo tamanho sempre */}
