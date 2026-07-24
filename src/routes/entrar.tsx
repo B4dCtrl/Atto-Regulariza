@@ -40,8 +40,8 @@ function EntrarPage() {
 
   // Carrossel do mini-status (mock ilustrativo) — troca sozinho a cada 2.6s
   const STATUS_STEPS = [
-    { label: "Em prefeitura",      pct: 55, done: "3 de 6 etapas · ~7 dias" },
-    { label: "Com profissional",   pct: 75, done: "4 de 6 etapas · ~4 dias" },
+    { label: "Com profissional",   pct: 35,  done: "2 de 6 etapas · ~10 dias" },
+    { label: "Em prefeitura",      pct: 70,  done: "4 de 6 etapas · ~5 dias" },
     { label: "Matrícula averbada", pct: 100, done: "6 de 6 etapas · concluído" },
   ];
   const [statusStep, setStatusStep] = useState(0);
