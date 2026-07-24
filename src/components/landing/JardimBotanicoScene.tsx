@@ -87,17 +87,20 @@ function MiniHouse({ x, y }: { x: number; y: number }) {
 /* Mapa do Brasil = arquivo enviado pelo usuário (public/brasil-mapa.png),
  * NÃO mais um path desenhado à mão. Marcadores calibrados sobre uma
  * imagem em viewBox local 0 0 360 385 (proporção da referência enviada). */
-const BR_MAP_W = 2000;
-const BR_MAP_H = 2000;
+// Tamanho de EXIBIÇÃO fixo (não a resolução do arquivo!) — o <image> escala
+// o PNG pra caber nessa caixa sozinho, então trocar o arquivo de novo não
+// quebra a escala. Marcadores calibrados nesse mesmo espaço 300×300.
+const BR_MAP_W = 300;
+const BR_MAP_H = 300;
 const BR_MARKERS = [
-  { x: 420,  y: 480  }, // Manaus (AM)
-  { x: 1550, y: 380  }, // Fortaleza (CE)
-  { x: 1720, y: 650  }, // Recife (PE)
-  { x: 1480, y: 920  }, // Salvador (BA)
-  { x: 1290, y: 1030 }, // Brasília (DF)
-  { x: 1620, y: 1340 }, // Rio de Janeiro (RJ)
-  { x: 1370, y: 1410 }, // São Paulo (SP)
-  { x: 1010, y: 1870 }, // Porto Alegre (RS)
+  { x: 63,  y: 72  }, // Manaus (AM)
+  { x: 232, y: 57  }, // Fortaleza (CE)
+  { x: 258, y: 97  }, // Recife (PE)
+  { x: 222, y: 138 }, // Salvador (BA)
+  { x: 193, y: 154 }, // Brasília (DF)
+  { x: 243, y: 201 }, // Rio de Janeiro (RJ)
+  { x: 205, y: 211 }, // São Paulo (SP)
+  { x: 151, y: 280 }, // Porto Alegre (RS)
 ];
 
 function pillWidth(label: string) {
@@ -496,11 +499,11 @@ export function JardimBotanicoScene() {
         <tspan x="1017" fontSize="30">Presente em</tspan>
         <tspan x="1017" dy="42" fontSize="40" fill={ORANGE}>todo o Brasil.</tspan>
       </text>
-      <g className="jb-brazil" opacity="0" transform="translate(810 225) scale(0.15)">
+      <g className="jb-brazil" opacity="0" transform="translate(810 225)">
         <image href="/brasil-mapa.png" x="0" y="0" width={BR_MAP_W} height={BR_MAP_H} preserveAspectRatio="xMidYMid meet" />
         {BR_MARKERS.map((m, i) => (
-          <g key={i} className="jb-bmarker" opacity="0" transform={`translate(${m.x} ${m.y}) scale(6)`}>
-            <MiniHouse x={0} y={0} />
+          <g key={i} className="jb-bmarker" opacity="0">
+            <MiniHouse x={m.x} y={m.y} />
           </g>
         ))}
       </g>
