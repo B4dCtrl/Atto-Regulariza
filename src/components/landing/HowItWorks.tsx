@@ -119,13 +119,13 @@ export function HowItWorks() {
       <div className="mx-auto max-w-6xl">
         {/* Título */}
         <motion.div
-          className="mb-14"
+          className="mb-14 text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="font-serif text-[clamp(1.6rem,3.8vw,3.5rem)] leading-[1.1] tracking-tight text-balance">
+          <h2 className="mx-auto font-serif text-[clamp(1.6rem,3.8vw,3.5rem)] leading-[1.1] tracking-tight text-balance">
             Cinco passos. Você no controle.
           </h2>
         </motion.div>

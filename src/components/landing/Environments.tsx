@@ -1,11 +1,28 @@
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { BlurReveal } from "./BlurReveal";
 import { User, Briefcase } from "lucide-react";
+
+// Mesma lógica do carrossel da tela de login — troca sozinho a cada 2.6s
+const STATUS_STEPS = [
+  { label: "Com profissional",   pct: 35,  done: "2 de 6 etapas · ~10 dias" },
+  { label: "Em prefeitura",      pct: 70,  done: "4 de 6 etapas · ~5 dias" },
+  { label: "Matrícula averbada", pct: 100, done: "6 de 6 etapas · concluído" },
+];
 
 /**
  * Environments — Exibe apenas a Área do Cliente.
  * Área do Profissional e Central da Empresa foram movidas para /profissionais.
  */
 export function Environments() {
+  const [statusStep, setStatusStep] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStatusStep((s) => (s + 1) % STATUS_STEPS.length);
+    }, 2600);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <section className="px-6 pb-32">
       <div className="mx-auto max-w-6xl">
@@ -52,12 +69,40 @@ export function Environments() {
             <div className="space-y-3">
               <div className="rounded-2xl bg-surface-elevated p-4 ring-1 ring-border">
                 <div className="text-xs text-ink-soft">Status atual</div>
-                <div className="mt-1 font-serif text-2xl">Em prefeitura</div>
-                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface">
-                  <div className="h-full w-[55%] rounded-full bg-accent" />
+                <div className="relative mt-1 h-8 overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={statusStep}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      className="absolute inset-0 font-serif text-2xl"
+                    >
+                      {STATUS_STEPS[statusStep].label}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
-                <div className="mt-2 text-xs text-ink-soft">
-                  3 de 6 etapas · próxima em ~7 dias
+                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface">
+                  <motion.div
+                    className="h-full rounded-full bg-accent"
+                    animate={{ width: `${STATUS_STEPS[statusStep].pct}%` }}
+                    transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </div>
+                <div className="relative mt-2 h-4 overflow-hidden text-xs text-ink-soft">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={statusStep}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.35 }}
+                      className="absolute inset-0"
+                    >
+                      {STATUS_STEPS[statusStep].done}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </div>
               <div className="rounded-2xl bg-surface-elevated p-4 ring-1 ring-border">
