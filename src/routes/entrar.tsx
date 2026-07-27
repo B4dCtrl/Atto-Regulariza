@@ -4,6 +4,17 @@ import { useState, useEffect, type FormEvent } from "react";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, X, Building2, Briefcase } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLandingPath } from "@/lib/auth-routing";
+import { getRequestHost } from "@/lib/request-host.server";
+
+/**
+ * No subdomínio curso.atoregulariza.com.br, o pós-login SEMPRE vai pra
+ * /cursos — não importa o papel do usuário (admin/cliente/profissional).
+ * Sem isso, um admin sem curso liberado cairia em /admin *dentro* do
+ * subdomínio de curso, parecendo "voltar pro site principal".
+ */
+function isCursoHost(host: string) {
+  return host.startsWith("curso.");
+}
 
 export const Route = createFileRoute("/entrar")({
   head: () => ({
@@ -20,6 +31,8 @@ export const Route = createFileRoute("/entrar")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
+    const host = await getRequestHost();
+    if (isCursoHost(host)) throw redirect({ to: "/cursos" });
     throw redirect({ to: await resolveLandingPath(session.user.id) });
   },
   component: EntrarPage,
@@ -70,6 +83,9 @@ function EntrarPage() {
 
     if (authError || !data.user) {
       setError(translateError(authError?.message ?? ""));
+    } else if (isCursoHost(window.location.hostname)) {
+      // No subdomínio de curso, sempre vai pra /cursos — ignora o papel
+      await navigate({ to: "/cursos" });
     } else {
       // Admin → back-office, profissional → painel-profissional, cliente → dashboard
       await navigate({ to: await resolveLandingPath(data.user.id) });
