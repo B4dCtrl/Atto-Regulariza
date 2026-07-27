@@ -2,7 +2,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, Briefcase, Users, FolderOpen,
   Settings, LogOut, DollarSign,
-  UserPlus, UserCheck, ChevronDown, Inbox, Library,
+  UserPlus, UserCheck, ChevronDown, Inbox, Library, GraduationCap,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -22,6 +22,7 @@ const cadastroItems = [
 
 const bibliotecaItems = [
   { to: "/admin/documentos-padrao", label: "Docs Padrão", icon: Library },
+  { to: "/admin/cursos",            label: "Cursos",      icon: GraduationCap },
 ] as const;
 
 const financeiroItems = [

@@ -35,6 +35,7 @@ import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin/financeiro'
 import { Route as AdminDocumentosPadraoRouteImport } from './routes/admin/documentos-padrao'
 import { Route as AdminDocumentosRouteImport } from './routes/admin/documentos'
+import { Route as AdminCursosRouteImport } from './routes/admin/cursos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
 import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/cadastro-profissional'
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
@@ -170,6 +171,11 @@ const AdminDocumentosRoute = AdminDocumentosRouteImport.update({
   path: '/documentos',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCursosRoute = AdminCursosRouteImport.update({
+  id: '/cursos',
+  path: '/cursos',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminClientesRoute = AdminClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
+  '/admin/cursos': typeof AdminCursosRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
+  '/admin/cursos': typeof AdminCursosRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
+  '/admin/cursos': typeof AdminCursosRoute
   '/admin/documentos': typeof AdminDocumentosRoute
   '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
+    | '/admin/cursos'
     | '/admin/documentos'
     | '/admin/documentos-padrao'
     | '/admin/financeiro'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
+    | '/admin/cursos'
     | '/admin/documentos'
     | '/admin/documentos-padrao'
     | '/admin/financeiro'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
+    | '/admin/cursos'
     | '/admin/documentos'
     | '/admin/documentos-padrao'
     | '/admin/financeiro'
@@ -592,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDocumentosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/cursos': {
+      id: '/admin/cursos'
+      path: '/cursos'
+      fullPath: '/admin/cursos'
+      preLoaderRoute: typeof AdminCursosRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/clientes': {
       id: '/admin/clientes'
       path: '/clientes'
@@ -627,6 +646,7 @@ interface AdminRouteChildren {
   AdminCadastroClienteRoute: typeof AdminCadastroClienteRoute
   AdminCadastroProfissionalRoute: typeof AdminCadastroProfissionalRoute
   AdminClientesRoute: typeof AdminClientesRoute
+  AdminCursosRoute: typeof AdminCursosRoute
   AdminDocumentosRoute: typeof AdminDocumentosRoute
   AdminDocumentosPadraoRoute: typeof AdminDocumentosPadraoRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
@@ -640,6 +660,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCadastroClienteRoute: AdminCadastroClienteRoute,
   AdminCadastroProfissionalRoute: AdminCadastroProfissionalRoute,
   AdminClientesRoute: AdminClientesRoute,
+  AdminCursosRoute: AdminCursosRoute,
   AdminDocumentosRoute: AdminDocumentosRoute,
   AdminDocumentosPadraoRoute: AdminDocumentosPadraoRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
