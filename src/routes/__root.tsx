@@ -6,7 +6,9 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  redirect,
 } from "@tanstack/react-router";
+import { getRequestHost } from "@/lib/request-host.server";
 import { CustomCursor } from "@/components/ui/custom-cursor";
 import { ConstructionGate } from "@/components/ConstructionGate";
 import { StaffBar } from "@/components/StaffBar";
@@ -108,6 +110,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
   }),
+  // Subdomínio curso.atoregulariza.com.br: a raiz do domínio abre "Meus
+  // cursos" em vez do site institucional. Só roda no servidor (SSR).
+  beforeLoad: async ({ location }) => {
+    if (location.pathname !== "/") return;
+    const host = await getRequestHost();
+    if (host.startsWith("curso.")) throw redirect({ to: "/cursos" });
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

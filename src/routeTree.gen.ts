@@ -26,8 +26,10 @@ import { Route as CadastrarRouteImport } from './routes/cadastrar'
 import { Route as AvisoDePrivacidadeRouteImport } from './routes/aviso-de-privacidade'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CursosIndexRouteImport } from './routes/cursos/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as PrecosInstitucionalRouteImport } from './routes/precos/institucional'
+import { Route as CursosSlugRouteImport } from './routes/cursos/$slug'
 import { Route as AdminProcessosRouteImport } from './routes/admin/processos'
 import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin/financeiro'
@@ -123,6 +125,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CursosIndexRoute = CursosIndexRouteImport.update({
+  id: '/cursos/',
+  path: '/cursos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -132,6 +139,11 @@ const PrecosInstitucionalRoute = PrecosInstitucionalRouteImport.update({
   id: '/institucional',
   path: '/institucional',
   getParentRoute: () => PrecosRoute,
+} as any)
+const CursosSlugRoute = CursosSlugRouteImport.update({
+  id: '/cursos/$slug',
+  path: '/cursos/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminProcessosRoute = AdminProcessosRouteImport.update({
   id: '/processos',
@@ -206,8 +218,10 @@ export interface FileRoutesByFullPath {
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/processos': typeof AdminProcessosRoute
+  '/cursos/$slug': typeof CursosSlugRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
+  '/cursos/': typeof CursosIndexRoute
   '/admin/projeto/$id': typeof AdminProjetoIdRoute
 }
 export interface FileRoutesByTo {
@@ -235,8 +249,10 @@ export interface FileRoutesByTo {
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/processos': typeof AdminProcessosRoute
+  '/cursos/$slug': typeof CursosSlugRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin': typeof AdminIndexRoute
+  '/cursos': typeof CursosIndexRoute
   '/admin/projeto/$id': typeof AdminProjetoIdRoute
 }
 export interface FileRoutesById {
@@ -266,8 +282,10 @@ export interface FileRoutesById {
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/leads': typeof AdminLeadsRoute
   '/admin/processos': typeof AdminProcessosRoute
+  '/cursos/$slug': typeof CursosSlugRoute
   '/precos/institucional': typeof PrecosInstitucionalRoute
   '/admin/': typeof AdminIndexRoute
+  '/cursos/': typeof CursosIndexRoute
   '/admin/projeto/$id': typeof AdminProjetoIdRoute
 }
 export interface FileRouteTypes {
@@ -298,8 +316,10 @@ export interface FileRouteTypes {
     | '/admin/financeiro'
     | '/admin/leads'
     | '/admin/processos'
+    | '/cursos/$slug'
     | '/precos/institucional'
     | '/admin/'
+    | '/cursos/'
     | '/admin/projeto/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -327,8 +347,10 @@ export interface FileRouteTypes {
     | '/admin/financeiro'
     | '/admin/leads'
     | '/admin/processos'
+    | '/cursos/$slug'
     | '/precos/institucional'
     | '/admin'
+    | '/cursos'
     | '/admin/projeto/$id'
   id:
     | '__root__'
@@ -357,8 +379,10 @@ export interface FileRouteTypes {
     | '/admin/financeiro'
     | '/admin/leads'
     | '/admin/processos'
+    | '/cursos/$slug'
     | '/precos/institucional'
     | '/admin/'
+    | '/cursos/'
     | '/admin/projeto/$id'
   fileRoutesById: FileRoutesById
 }
@@ -380,6 +404,8 @@ export interface RootRouteChildren {
   PrecosRoute: typeof PrecosRouteWithChildren
   ProfissionaisRoute: typeof ProfissionaisRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
+  CursosSlugRoute: typeof CursosSlugRoute
+  CursosIndexRoute: typeof CursosIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -503,6 +529,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cursos/': {
+      id: '/cursos/'
+      path: '/cursos'
+      fullPath: '/cursos/'
+      preLoaderRoute: typeof CursosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/': {
       id: '/admin/'
       path: '/'
@@ -516,6 +549,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/precos/institucional'
       preLoaderRoute: typeof PrecosInstitucionalRouteImport
       parentRoute: typeof PrecosRoute
+    }
+    '/cursos/$slug': {
+      id: '/cursos/$slug'
+      path: '/cursos/$slug'
+      fullPath: '/cursos/$slug'
+      preLoaderRoute: typeof CursosSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/processos': {
       id: '/admin/processos'
@@ -640,6 +680,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrecosRoute: PrecosRouteWithChildren,
   ProfissionaisRoute: ProfissionaisRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
+  CursosSlugRoute: CursosSlugRoute,
+  CursosIndexRoute: CursosIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

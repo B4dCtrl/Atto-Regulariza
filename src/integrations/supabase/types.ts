@@ -83,6 +83,36 @@ export type Database = {
         Update: { id?: string; name?: string; category?: string | null; description?: string | null; size_text?: string | null; file_path?: string | null; created_at?: string }
         Relationships: []
       }
+      courses: {
+        Row: { id: string; slug: string; title: string; description: string | null; cover_url: string | null; published: boolean; created_at: string }
+        Insert: { id?: string; slug: string; title: string; description?: string | null; cover_url?: string | null; published?: boolean; created_at?: string }
+        Update: { id?: string; slug?: string; title?: string; description?: string | null; cover_url?: string | null; published?: boolean; created_at?: string }
+        Relationships: []
+      }
+      course_modules: {
+        Row: { id: string; course_id: string; title: string; sort: number; created_at: string }
+        Insert: { id?: string; course_id: string; title: string; sort?: number; created_at?: string }
+        Update: { id?: string; course_id?: string; title?: string; sort?: number; created_at?: string }
+        Relationships: []
+      }
+      course_lessons: {
+        Row: { id: string; module_id: string; title: string; description: string | null; youtube_id: string | null; sort: number; created_at: string }
+        Insert: { id?: string; module_id: string; title: string; description?: string | null; youtube_id?: string | null; sort?: number; created_at?: string }
+        Update: { id?: string; module_id?: string; title?: string; description?: string | null; youtube_id?: string | null; sort?: number; created_at?: string }
+        Relationships: []
+      }
+      course_access: {
+        Row: { user_id: string; course_id: string; source: string; granted_at: string }
+        Insert: { user_id: string; course_id: string; source?: string; granted_at?: string }
+        Update: { user_id?: string; course_id?: string; source?: string; granted_at?: string }
+        Relationships: []
+      }
+      lesson_progress: {
+        Row: { user_id: string; lesson_id: string; completed_at: string }
+        Insert: { user_id: string; lesson_id: string; completed_at?: string }
+        Update: { user_id?: string; lesson_id?: string; completed_at?: string }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
