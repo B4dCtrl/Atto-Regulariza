@@ -861,7 +861,11 @@ ROLLBACK;
 
 Copiar o conteúdo do arquivo e colar em Supabase › SQL Editor › Run.
 
-Esperado: 9 linhas, **todas** com `resultado = OK`. Qualquer `FALHOU` significa brecha de autorização — pare e corrija antes de seguir.
+Esperado: **14 linhas, todas com `resultado = OK`**. Qualquer `FALHOU` significa brecha de autorização — pare e corrija antes de seguir.
+
+Os casos 5, 9, 12 e 14 testam as *policies*, não só as funções de decisão: uma policy com `USING` errado continuaria vazando dado mesmo com a função correta.
+
+O arquivo acumula os resultados numa tabela temporária e imprime tudo num `SELECT` só, porque o SQL Editor do Supabase exibe apenas o resultado da última instrução — vários `SELECT` soltos esconderiam quase todos os casos.
 
 - [ ] **Passo 5: Commit**
 
