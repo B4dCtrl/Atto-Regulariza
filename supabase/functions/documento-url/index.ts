@@ -38,15 +38,25 @@ Deno.serve(async (req) => {
     }
     if (!corpo.version_id) return json({ error: "Versão não informada" }, 400, cors);
 
-    // Lê a versão com a sessão do usuário: a RLS de document_versions já aplica
-    // can_read_document. Se a pessoa não tem direito, não vem linha nenhuma.
+    // 1ª barreira — lê a versão com a SESSÃO DO USUÁRIO: a RLS de
+    // document_versions aplica can_read_document. Sem direito, não vem linha.
     const { data: versao } = await supabase
       .from("document_versions")
-      .select("storage_path, mime_type")
+      .select("storage_path, document_id")
       .eq("id", corpo.version_id)
       .maybeSingle();
 
+    // Mesma resposta para "não existe" e "não pode ler": não revela existência.
     if (!versao) return json({ error: "Acesso negado" }, 403, cors);
+
+    // 2ª barreira — checagem explícita antes de usar service_role, que ignora
+    // RLS por completo. Redundante hoje, de propósito: sem ela, afrouxar a
+    // policy de document_versions numa migração futura abriria o download de
+    // qualquer documento sem nada mais barrando.
+    const { data: podeLer } = await supabase.rpc("can_read_document", {
+      _document_id: versao.document_id,
+    });
+    if (podeLer !== true) return json({ error: "Acesso negado" }, 403, cors);
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
