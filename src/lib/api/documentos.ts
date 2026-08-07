@@ -29,6 +29,12 @@ export interface DocumentoComVersao {
   origem: string;
   status: string;
   created_at: string;
+  /**
+   * Preenchido quando o documento foi removido da lista. Só a equipe recebe
+   * documento nessa condição — para o cliente a RLS já o esconde. Serve para a
+   * interface marcá-lo, senão o profissional não distingue ativo de removido.
+   */
+  deleted_at: string | null;
   versao: VersaoResumo | null;
 }
 
@@ -79,7 +85,7 @@ export async function listarDocumentos(propertyId: string): Promise<DocumentoCom
     .from("documents")
     .select(
       `
-      id, property_id, name, kind, origem, status, created_at, current_version_id,
+      id, property_id, name, kind, origem, status, created_at, deleted_at, current_version_id,
       versoes:document_versions!document_versions_document_id_fkey (
         id, version_number, original_name, mime_type, size_bytes, created_at, uploaded_by
       )
@@ -110,6 +116,7 @@ export async function listarDocumentos(propertyId: string): Promise<DocumentoCom
       origem: d.origem,
       status: d.status,
       created_at: d.created_at,
+      deleted_at: d.deleted_at,
       versao: vigente,
     };
   });

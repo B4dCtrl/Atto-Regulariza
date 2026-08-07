@@ -1915,6 +1915,15 @@ export function DocumentList({
                 </div>
               </button>
 
+              {/* Documento removido só chega à equipe (a RLS o esconde do
+                  cliente). Sem esta marca o profissional não distingue um
+                  documento ativo de um que ele mesmo removeu. */}
+              {d.deleted_at && (
+                <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-[10px] uppercase tracking-widest text-ink-soft">
+                  removido
+                </span>
+              )}
+
               {mostrarHistorico && d.versao && d.versao.version_number > 1 && (
                 <button
                   onClick={() => abrirHistorico(d.id)}
