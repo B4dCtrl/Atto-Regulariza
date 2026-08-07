@@ -8,6 +8,16 @@ import {
   type VersaoResumo,
 } from "@/lib/api/documentos";
 import { rotuloDoKind } from "@/lib/document-kinds";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { DocumentPreview } from "./DocumentPreview";
 
 function tamanhoLegivel(bytes: number): string {
@@ -38,6 +48,15 @@ export function DocumentList({
   const [preview, setPreview] = useState<VersaoResumo | null>(null);
   const [historicoDe, setHistoricoDe] = useState<string | null>(null);
   const [versoes, setVersoes] = useState<VersaoResumo[]>([]);
+  /**
+   * Documento aguardando confirmação de remoção.
+   *
+   * Usamos AlertDialog em vez de window.confirm() por um motivo concreto: no
+   * Chrome o usuário pode marcar "não exibir mais diálogos", e a partir daí
+   * confirm() devolve false para sempre — o botão de excluir pararia de
+   * funcionar sem nenhum aviso. Falha silenciosa é pior que diálogo feio.
+   */
+  const [docParaExcluir, setDocParaExcluir] = useState<DocumentoComVersao | null>(null);
   /** Último histórico pedido — descarta resposta que chega fora de ordem. */
   const historicoPedidoRef = useRef<string | null>(null);
 
@@ -77,8 +96,10 @@ export function DocumentList({
     }
   }
 
-  async function excluir(documentId: string) {
-    if (!window.confirm("Remover este documento da lista? O histórico é preservado.")) return;
+  async function confirmarExclusao() {
+    const documentId = docParaExcluir?.id;
+    if (!documentId) return;
+    setDocParaExcluir(null);
     setErroAcao(null);
     try {
       await excluirDocumento(documentId);
@@ -90,7 +111,10 @@ export function DocumentList({
     }
   }
 
-  if (carregando) {
+  // Spinner só na primeira carga. Nas recargas (após um envio) a lista antiga
+  // continua visível: trocá-la por um spinner faria o conteúdo sumir e voltar,
+  // com salto de layout, a cada arquivo enviado.
+  if (carregando && docs.length === 0) {
     return (
       <div className="flex h-24 items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin text-ink-soft" />
@@ -164,7 +188,7 @@ export function DocumentList({
               {podeExcluir && (
                 <button
                   type="button"
-                  onClick={() => excluir(d.id)}
+                  onClick={() => setDocParaExcluir(d)}
                   className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-surface"
                   title="Remover da lista"
                   aria-label="Remover da lista"
@@ -197,6 +221,25 @@ export function DocumentList({
       </div>
 
       <DocumentPreview versao={preview} onFechar={() => setPreview(null)} />
+
+      <AlertDialog
+        open={docParaExcluir !== null}
+        onOpenChange={(aberto) => !aberto && setDocParaExcluir(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover este documento da lista?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {docParaExcluir?.versao?.original_name ?? docParaExcluir?.name} sai da listagem, mas o
+              arquivo e o histórico de versões continuam guardados — nada é apagado de verdade.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarExclusao}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
