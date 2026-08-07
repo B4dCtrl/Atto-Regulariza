@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import React, { useState, useRef, useEffect, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
-  ChevronRight, FileText, MapPin, MessageSquare, Plus,
-  Send, Upload, User, BookOpen, StickyNote,
+  ChevronRight, FileText, MapPin, MessageSquare,
+  Send, User, BookOpen, StickyNote,
   AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X, Sparkles, Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tables } from "@/integrations/supabase/types";
 import { chatAssistant } from "@/lib/api/assistant.functions";
+import { UploadDocumento } from "@/components/documentos/UploadDocumento";
+import { DocumentList } from "@/components/documentos/DocumentList";
 
 type PropertyRow = Tables<"properties">;
 
@@ -92,15 +94,6 @@ interface LocalMsg {
   isClient: boolean;
   sender: string;
   ts: string;
-}
-
-interface LocalDoc {
-  id: string;
-  name: string;
-  size: string;
-  ts: string;
-  status: "Enviado" | "Em análise" | "Aprovado";
-  by: "prof" | "client";
 }
 
 const STAGE_DEFS: StageDef[] = [
@@ -205,7 +198,6 @@ function ProfissionalPage() {
   const [showPendencyForm, setShowPendencyForm] = useState(false);
   const [showAvatarMenu,   setShowAvatarMenu]   = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   /* Fecha dropdown ao clicar fora */
@@ -241,9 +233,10 @@ function ProfissionalPage() {
   const [allFields, setAllFields] = useState<Record<string, Record<number, Record<string, FieldVal>>>>(
     () => storeGet("rz-stage-fields", {})
   );
-  /* Chat e docs agora vêm do Supabase (em memória, por processo selecionado) */
+  /* Chat vem do Supabase (em memória, por processo selecionado) */
   const [allMsgs, setAllMsgs] = useState<Record<string, LocalMsg[]>>({});
-  const [allDocs, setAllDocs] = useState<Record<string, LocalDoc[]>>({});
+  /* Documentos são responsabilidade do DocumentList; aqui só sinalizamos recarga. */
+  const [recargaDocs, setRecargaDocs] = useState(0);
   const [allPendencies, setAllPendencies] = useState<Record<string, Pendency[]>>(
     () => storeGet("rz-pendencies", {})
   );
@@ -263,7 +256,6 @@ function ProfissionalPage() {
   const myProcs       = processes;
   const availProcs: MockProcess[] = [];
   const msgs          = selectedId ? (allMsgs[selectedId] ?? []) : [];
-  const docs          = selectedId ? (allDocs[selectedId] ?? []) : [];
   const stageDef      = STAGE_DEFS.find((s) => s.num === activeStage) ?? STAGE_DEFS[0];
 
   /* ── Carrega processos atribuídos a este profissional + seu perfil ── */
@@ -303,7 +295,7 @@ function ProfissionalPage() {
     return () => { supabase.removeChannel(ch); };
   }, [userId]);
 
-  /* ── Carrega chat + docs do processo selecionado (Supabase + realtime) ── */
+  /* ── Carrega chat do processo selecionado (Supabase + realtime) ── */
   useEffect(() => {
     if (!selectedId) return;
     const pid = selectedId;
@@ -321,28 +313,11 @@ function ProfissionalPage() {
           }));
         });
     }
-    function loadDocs() {
-      supabase.from("documents").select("*").eq("property_id", pid).order("created_at")
-        .then(({ data }) => {
-          if (!data) return;
-          setAllDocs((prev) => ({
-            ...prev,
-            [pid]: data.map((d) => ({
-              id: d.id, name: d.name, size: d.size_text ?? "—",
-              ts: d.created_at,
-              status: (d.status as LocalDoc["status"]) ?? "Enviado",
-              by: d.uploaded_by === userId ? "prof" : "client",
-            })),
-          }));
-        });
-    }
     loadMsgs();
-    loadDocs();
 
     const ch = supabase
       .channel(`prof-detail-${pid}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `property_id=eq.${pid}` }, loadMsgs)
-      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${pid}` }, loadDocs)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [selectedId, userId]);
@@ -518,20 +493,6 @@ function ProfissionalPage() {
       alert(`Assistente IA indisponível: ${(err as Error).message}`);
     }
     setAskingAI(false);
-  };
-
-  const uploadDocs = async (files: FileList | null) => {
-    if (!files || !selectedId) return;
-    const pid = selectedId;
-    const rows = Array.from(files).map((f) => ({
-      property_id: pid,
-      name: f.name,
-      size_text: `${Math.max(1, Math.round(f.size / 1024))} KB`,
-      status: "Enviado",
-      uploaded_by: userId,
-    }));
-    await supabase.from("documents").insert(rows);
-    // realtime recarrega a lista
   };
 
   /* ── Field renderer ── */
@@ -979,37 +940,21 @@ function ProfissionalPage() {
                       ))}
                     </div>
 
-                    {/* Upload area */}
+                    {/* Envio de arquivos desta etapa — usa o fluxo real de documentos */}
                     <div className="mt-6">
                       <div className="mb-2 text-sm font-medium">Arquivos desta etapa</div>
-                      <div
-                        onClick={() => fileRef.current?.click()}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => { e.preventDefault(); uploadDocs(e.dataTransfer.files); }}
-                        className="cursor-pointer rounded-2xl border-2 border-dashed border-border bg-background p-5 text-center transition-colors hover:border-foreground/30 hover:bg-surface"
-                      >
-                        <Upload className="mx-auto h-6 w-6 text-ink-soft" />
-                        <div className="mt-2 text-sm text-ink-soft">
-                          Arraste ou <span className="text-foreground underline">clique para enviar</span>
-                        </div>
-                        <div className="mt-1 text-xs text-ink-soft/60">PDF, DWG, JPG, PNG, DOC — máx. 25 MB</div>
-                      </div>
-                      <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => uploadDocs(e.target.files)} />
+                      {selectedId && (
+                        <UploadDocumento
+                          propertyId={selectedId}
+                          origem="profissional"
+                          onEnviado={() => setRecargaDocs((n) => n + 1)}
+                        />
+                      )}
+                      <p className="mt-2 text-xs text-ink-soft/70">
+                        Os arquivos enviados aparecem na aba Docs, com histórico de versões.
+                      </p>
                     </div>
 
-                    {/* Last uploaded docs */}
-                    {docs.length > 0 && (
-                      <div className="mt-3 space-y-1.5">
-                        {docs.slice(-4).map((d) => (
-                          <div key={d.id} className="flex items-center gap-2 rounded-xl bg-background px-3 py-2 ring-1 ring-border text-sm">
-                            <FileText className="h-4 w-4 shrink-0 text-ink-soft" />
-                            <span className="flex-1 truncate text-sm">{d.name}</span>
-                            <span className="text-xs text-ink-soft">{d.size}</span>
-                            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] text-accent">{d.status}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -1117,7 +1062,7 @@ function ProfissionalPage() {
                   onClick={() => setRightTab("docs")}
                   className={`flex-1 py-2.5 text-xs transition-colors ${rightTab === "docs" ? "border-b-2 border-foreground font-medium text-foreground" : "text-ink-soft hover:text-foreground"}`}
                 >
-                  <FileText className="inline-block h-3 w-3 mr-1" />Docs ({docs.length})
+                  <FileText className="inline-block h-3 w-3 mr-1" />Docs
                 </button>
                 <button
                   onClick={() => {
@@ -1246,37 +1191,19 @@ function ProfissionalPage() {
               )}
 
               {/* Tab: Docs */}
-              {rightTab === "docs" && (
-                <div className="flex-1 overflow-y-auto p-3">
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-ink-soft hover:bg-surface transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Enviar documento
-                  </button>
-                  {docs.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-ink-soft">Nenhum documento ainda.</div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {docs.map((d) => (
-                        <div key={d.id} className="rounded-xl bg-surface px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-3.5 w-3.5 shrink-0 text-ink-soft" />
-                            <span className="flex-1 truncate text-xs font-medium">{d.name}</span>
-                          </div>
-                          <div className="mt-0.5 flex items-center justify-between text-[11px] text-ink-soft">
-                            <span>{d.size}</span>
-                            <span className={`rounded-full px-2 py-0.5 ${
-                              d.status === "Aprovado" ? "bg-accent/10 text-accent" : "bg-background ring-1 ring-border"
-                            }`}>
-                              {d.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              {rightTab === "docs" && selectedId && (
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  <UploadDocumento
+                    propertyId={selectedId}
+                    origem="profissional"
+                    onEnviado={() => setRecargaDocs((n) => n + 1)}
+                  />
+                  <DocumentList
+                    propertyId={selectedId}
+                    mostrarHistorico
+                    podeExcluir
+                    recarregarToken={recargaDocs}
+                  />
                 </div>
               )}
 
