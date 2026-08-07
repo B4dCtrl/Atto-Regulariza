@@ -373,7 +373,10 @@ cd landing && git add package.json package-lock.json vitest.config.ts supabase/f
   - `type DocumentKind` (união literal dos 11 tipos)
   - `type DocumentOrigem = "cliente" | "profissional"`
   - `DOCUMENT_KINDS: readonly { kind: DocumentKind; label: string; origem: DocumentOrigem }[]`
-  - `kindsPara(origem: DocumentOrigem): typeof DOCUMENT_KINDS`
+  - `kindsPara(origem: DocumentOrigem)` — retorno inferido; **não anotar** como
+    `typeof DOCUMENT_KINDS`: no ramo `cliente` o `filter` devolve array mutável de um
+    subtipo, incompatível com a tupla `readonly` de 11 itens. Consumir como
+    `{ kind, label, origem }[]`.
   - `rotuloDoKind(kind: string): string`
 
 - [ ] **Passo 1: Escrever os testes que falham**
