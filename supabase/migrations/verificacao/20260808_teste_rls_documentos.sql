@@ -14,6 +14,18 @@
 -- vazando dado.
 --
 -- Rodar em: Supabase › SQL Editor › New Query › Run
+--
+-- IMPORTANTE: rode com o papel PADRÃO do editor (postgres), SEM ligar a
+-- impersonação de papel. O script troca de identidade sozinho, com
+-- `SET LOCAL role` e `SET LOCAL request.jwt.claims`. Com a impersonação ligada,
+-- o editor executa o lote de outra forma e a tabela temporária não sobrevive
+-- entre as instruções: o erro é `relation "resultado_teste" does not exist`.
+--
+-- Rodar como postgres NÃO enfraquece o teste: a RLS passa a valer assim que o
+-- script faz `SET LOCAL role = authenticated`, porque esse papel não é dono das
+-- tabelas. Os casos 5 e 12 são a prova disso — se a RLS estivesse sendo
+-- ignorada, o estranho enxergaria 2 documentos em vez de 0.
+--
 -- CONFERIR: todas as 14 linhas devem sair com resultado = 'OK'.
 -- ================================================================
 BEGIN;
