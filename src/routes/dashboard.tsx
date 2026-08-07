@@ -1,11 +1,13 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect, type DragEvent, type ChangeEvent, type FormEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent } from "react";
 import {
   Home, FileText, MessageSquare, User, History, Bell, Search,
-  Check, Clock, Upload, AlertCircle, ArrowUpRight,
+  Check, Clock, AlertCircle, ArrowUpRight,
   Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut, Sparkles,
 } from "lucide-react";
+import { UploadDocumento } from "@/components/documentos/UploadDocumento";
+import { DocumentList } from "@/components/documentos/DocumentList";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { TourProvider, TourAlertDialog, useTour, TourHelpButton } from "@/components/ui/tour";
@@ -38,7 +40,6 @@ export const Route = createFileRoute("/dashboard")({
 
 type PropertyRow    = Tables<"properties">;
 type StageRow       = Tables<"process_stages">;
-type DocRow         = Tables<"documents">;
 type MessageRow     = Tables<"messages">;
 type ProfileRow     = Tables<"profiles">;
 
@@ -57,16 +58,6 @@ const navItems = [
   { icon: History,       label: "Histórico",    id: "history"     },
 ];
 
-function statusStyle(s: string) {
-  switch (s) {
-    case "Aprovado":   return "bg-accent/15 text-accent";
-    case "Em análise": return "bg-foreground text-background";
-    case "Pendente":   return "bg-surface text-ink-soft";
-    case "Enviado":    return "bg-border text-foreground";
-    default:           return "bg-surface text-ink-soft";
-  }
-}
-
 function DashboardContent() {
   const { userId } = Route.useRouteContext();
   const [showTourDialog, setShowTourDialog] = useState(true);
@@ -79,15 +70,14 @@ function DashboardContent() {
   const [propertyId, setPropertyId]       = useState<string | null>(null);
   const [property, setProperty]           = useState<PropertyRow | null>(null);
   const [stages,   setStages]             = useState<StageRow[]>([]);
-  const [docs,     setDocs]               = useState<DocRow[]>([]);
   const [msgs,     setMsgs]               = useState<MessageRow[]>([]);
   const [loading,  setLoading]            = useState(true);
-  const [dragOver, setDragOver]           = useState(false);
+  /** Incrementa a cada envio para o `DocumentList` recarregar do servidor. */
+  const [recargaDocs, setRecargaDocs]     = useState(0);
   const [chatInput, setChatInput]         = useState("");
   const [sendingMsg, setSendingMsg]       = useState(false);
   const [askingAI, setAskingAI]           = useState(false);
   const [healError, setHealError]         = useState<string | null>(null);
-  const fileRef   = useRef<HTMLInputElement>(null);
   const chatRef   = useRef<HTMLDivElement>(null);
 
   /* ── Busca imóvel do cliente logado ── */
@@ -125,16 +115,15 @@ function DashboardContent() {
       setPropertyId(pid);
       setProperty(propData);
 
-      // 2. Carrega etapas, docs e mensagens em paralelo
-      const [{ data: stagesData }, { data: docsData }, { data: msgsData }] =
+      // 2. Carrega etapas e mensagens em paralelo.
+      //    Os documentos são carregados pelo próprio `DocumentList`.
+      const [{ data: stagesData }, { data: msgsData }] =
         await Promise.all([
           supabase.from("process_stages").select("*").eq("property_id", pid).order("stage_number"),
-          supabase.from("documents").select("*").eq("property_id", pid).order("created_at"),
           supabase.from("messages").select("*").eq("property_id", pid).order("created_at"),
         ]);
       if (cancelled) return;
       if (stagesData) setStages(stagesData);
-      if (docsData)   setDocs(docsData);
       if (msgsData)   setMsgs(msgsData);
 
       // 3. Carrega o profissional designado (se houver)
@@ -186,20 +175,6 @@ function DashboardContent() {
             const without = cur.filter((s) => s.id !== (next as StageRow).id);
             return [...without, next as StageRow].sort((a, b) => a.stage_number - b.stage_number);
           });
-        }
-      )
-      /* new documents */
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "documents", filter: `property_id=eq.${propertyId}` },
-        ({ new: next }) => { if (next) setDocs((d) => [...d, next as DocRow]); }
-      )
-      /* document status updates (admin approves) */
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "documents", filter: `property_id=eq.${propertyId}` },
-        ({ new: next }) => {
-          if (next) setDocs((d) => d.map((doc) => doc.id === (next as DocRow).id ? next as DocRow : doc));
         }
       )
       /* new messages */
@@ -256,30 +231,11 @@ function DashboardContent() {
     chatRef.current?.scrollTo({ top: 9e9 });
   }, [msgs]);
 
-  /* ── Document upload ── */
-  const addFiles = async (files: FileList | null) => {
-    if (!files) return;
-    const inserts = Array.from(files).map((f) => ({
-      property_id: propertyId,
-      name: f.name,
-      size_text: `${Math.max(1, Math.round(f.size / 1024))} KB`,
-      status: "Enviado",
-    }));
-    const { data } = await supabase.from("documents").insert(inserts).select();
-    if (data) setDocs((d) => [...d, ...data]);
-  };
-
-  const onDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragOver(false);
-    addFiles(e.dataTransfer.files);
-  };
-
   /* ── Send message ── */
   const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
     const text = chatInput.trim();
-    if (!text || sendingMsg) return;
+    if (!text || sendingMsg || !propertyId) return;
     setSendingMsg(true);
     setChatInput("");
     await supabase.from("messages").insert({
@@ -558,66 +514,19 @@ function DashboardContent() {
               <div className="mt-6 grid gap-6 lg:grid-cols-3">
                 {/* Upload card */}
                 <section id={TOUR_TOPICS.DOCUMENTS} className="lg:col-span-2 rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                  <div className="mb-5 flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-ink-soft">Documentos</div>
-                      <h2 className="font-serif text-2xl tracking-tight">Envie seus documentos</h2>
-                    </div>
-                    <button
-                      onClick={() => fileRef.current?.click()}
-                      className="group inline-flex items-center gap-2 rounded-full bg-foreground py-2 pl-4 pr-2 text-sm text-background"
-                    >
-                      Enviar
-                      <span className="grid h-7 w-7 place-items-center rounded-full bg-accent">
-                        <Upload className="h-3.5 w-3.5" />
-                      </span>
-                    </button>
+                  <div className="mb-5">
+                    <div className="text-xs text-ink-soft">Documentos</div>
+                    <h2 className="font-serif text-2xl tracking-tight">Envie seus documentos</h2>
                   </div>
 
-                  <div
-                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={onDrop}
-                    onClick={() => fileRef.current?.click()}
-                    className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-10 text-center transition-colors ${
-                      dragOver ? "border-accent bg-accent/5" : "border-border bg-surface/40"
-                    }`}
-                  >
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-accent/15 text-accent">
-                      <Upload className="h-5 w-5" />
-                    </div>
-                    <p className="text-sm">
-                      Arraste arquivos aqui ou{" "}
-                      <span className="text-accent underline-offset-4 hover:underline">clique para enviar</span>
-                    </p>
-                    <p className="text-xs text-ink-soft">PDF, JPG ou PNG · até 20 MB</p>
-                    <input
-                      ref={fileRef} type="file" multiple className="hidden"
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => addFiles(e.target.files)}
+                  <div className="space-y-4">
+                    <UploadDocumento
+                      propertyId={property.id}
+                      origem="cliente"
+                      onEnviado={() => setRecargaDocs((n) => n + 1)}
                     />
+                    <DocumentList propertyId={property.id} recarregarToken={recargaDocs} />
                   </div>
-
-                  <ul className="mt-6 space-y-2">
-                    {docs.map((d) => (
-                      <li key={d.id} className="flex items-center gap-3 rounded-xl bg-surface px-3 py-2.5">
-                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-background ring-1 ring-border">
-                          <FileText className="h-4 w-4 text-ink-soft" />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{d.name}</div>
-                          <div className="text-xs text-ink-soft">{d.size_text ?? "—"}</div>
-                        </div>
-                        <span className={`rounded-full px-2.5 py-1 text-[11px] ${statusStyle(d.status)}`}>
-                          {d.status}
-                        </span>
-                      </li>
-                    ))}
-                    {docs.length === 0 && (
-                      <li className="py-4 text-center text-sm text-ink-soft">
-                        Nenhum documento enviado ainda.
-                      </li>
-                    )}
-                  </ul>
                 </section>
 
                 {/* Side column */}
@@ -722,63 +631,19 @@ function DashboardContent() {
           {activeSection === "docs" && (
             <motion.div key="docs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
               <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                <div className="mb-5 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-ink-soft">Central de documentos</div>
-                    <h2 className="font-serif text-2xl tracking-tight">Todos os documentos</h2>
-                  </div>
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="inline-flex items-center gap-2 rounded-full bg-foreground py-2 pl-4 pr-2 text-sm text-background"
-                  >
-                    Enviar
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-accent">
-                      <Upload className="h-3.5 w-3.5" />
-                    </span>
-                  </button>
+                <div className="mb-5">
+                  <div className="text-xs text-ink-soft">Central de documentos</div>
+                  <h2 className="font-serif text-2xl tracking-tight">Todos os documentos</h2>
                 </div>
 
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={onDrop}
-                  onClick={() => fileRef.current?.click()}
-                  className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-10 mb-6 text-center transition-colors ${
-                    dragOver ? "border-accent bg-accent/5" : "border-border bg-surface/40"
-                  }`}
-                >
-                  <div className="grid h-10 w-10 place-items-center rounded-full bg-accent/15 text-accent">
-                    <Upload className="h-5 w-5" />
-                  </div>
-                  <p className="text-sm">
-                    Arraste ou <span className="text-accent">clique para enviar</span>
-                  </p>
-                  <p className="text-xs text-ink-soft">PDF, JPG, PNG · até 20 MB</p>
-                  <input ref={fileRef} type="file" multiple className="hidden"
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => addFiles(e.target.files)} />
+                <div className="space-y-4">
+                  <UploadDocumento
+                    propertyId={property.id}
+                    origem="cliente"
+                    onEnviado={() => setRecargaDocs((n) => n + 1)}
+                  />
+                  <DocumentList propertyId={property.id} recarregarToken={recargaDocs} />
                 </div>
-
-                <div className="grid grid-cols-4 gap-3 mb-3 px-3 text-[11px] text-ink-soft uppercase tracking-wider">
-                  <span className="col-span-2">Arquivo</span>
-                  <span>Tamanho</span>
-                  <span>Status</span>
-                </div>
-                <ul className="space-y-2">
-                  {docs.map((d) => (
-                    <li key={d.id} className="grid grid-cols-4 items-center gap-3 rounded-xl bg-surface px-3 py-3">
-                      <div className="col-span-2 flex items-center gap-3 min-w-0">
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background ring-1 ring-border">
-                          <FileText className="h-4 w-4 text-ink-soft" />
-                        </span>
-                        <span className="text-sm font-medium truncate">{d.name}</span>
-                      </div>
-                      <span className="text-xs text-ink-soft">{d.size_text ?? "—"}</span>
-                      <span className={`justify-self-start rounded-full px-2.5 py-1 text-[11px] ${statusStyle(d.status)}`}>
-                        {d.status}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
               </section>
             </motion.div>
           )}
