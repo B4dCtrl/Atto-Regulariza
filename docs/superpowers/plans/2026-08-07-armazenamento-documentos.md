@@ -22,7 +22,7 @@
 - SVG e HTML são proibidos por decisão explícita (script embutido → XSS armazenado)
 - Nome do arquivo: remover caracteres de controle `\x00-\x1f`, cortar em 255; **preservar acento e espaço**
 - Sem tokens CSRF — a sessão é Bearer em `localStorage`, não cookie (ver spec, seção CSRF)
-- Referência do projeto Supabase: `dcgqqvasrekhlluhuubi`
+- Referência do projeto Supabase: `fmscewpxmqnbodzstiqa`
 - Textos de interface e comentários de código em **português (PT-BR)**
 - Marcador `[PENDÊNCIA: e-mail do admin]` fica literal na mensagem de arquivo grande até o usuário criar o endereço
 
@@ -1136,7 +1136,7 @@ verify_jwt = true
 - [ ] **Passo 4: Publicar**
 
 ```bash
-cd landing && npx supabase functions deploy upload-documento --project-ref dcgqqvasrekhlluhuubi
+cd landing && npx supabase functions deploy upload-documento --project-ref fmscewpxmqnbodzstiqa
 ```
 
 Esperado: `Deployed Function upload-documento`.
@@ -1144,7 +1144,7 @@ Esperado: `Deployed Function upload-documento`.
 - [ ] **Passo 5: Verificar que rejeita quem não está autenticado**
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" -X POST https://dcgqqvasrekhlluhuubi.supabase.co/functions/v1/upload-documento
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://fmscewpxmqnbodzstiqa.supabase.co/functions/v1/upload-documento
 ```
 
 Esperado: `401`.
@@ -1268,7 +1268,7 @@ frame-src https://www.youtube-nocookie.com https://www.youtube.com;
 por:
 
 ```
-frame-src https://www.youtube-nocookie.com https://www.youtube.com https://dcgqqvasrekhlluhuubi.supabase.co;
+frame-src https://www.youtube-nocookie.com https://www.youtube.com https://fmscewpxmqnbodzstiqa.supabase.co;
 ```
 
 Sem isso, o preview de PDF é bloqueado pela nossa própria política — o `<iframe>` aponta para o domínio do Storage.
@@ -1276,7 +1276,7 @@ Sem isso, o preview de PDF é bloqueado pela nossa própria política — o `<if
 - [ ] **Passo 4: Publicar**
 
 ```bash
-cd landing && npx supabase functions deploy documento-url --project-ref dcgqqvasrekhlluhuubi
+cd landing && npx supabase functions deploy documento-url --project-ref fmscewpxmqnbodzstiqa
 ```
 
 Esperado: `Deployed Function documento-url`.
@@ -1284,7 +1284,7 @@ Esperado: `Deployed Function documento-url`.
 - [ ] **Passo 5: Verificar que rejeita anônimo**
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" -X POST https://dcgqqvasrekhlluhuubi.supabase.co/functions/v1/documento-url -H "Content-Type: application/json" -d '{"version_id":"00000000-0000-0000-0000-000000000000"}'
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://fmscewpxmqnbodzstiqa.supabase.co/functions/v1/documento-url -H "Content-Type: application/json" -d '{"version_id":"00000000-0000-0000-0000-000000000000"}'
 ```
 
 Esperado: `401`.

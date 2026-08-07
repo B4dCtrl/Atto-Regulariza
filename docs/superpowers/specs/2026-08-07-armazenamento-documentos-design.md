@@ -328,7 +328,7 @@ Geração via edge function `documento-url`, que confere `can_read_document()` a
 
 ### Origem cruzada como última rede
 
-A URL assinada aponta para `dcgqqvasrekhlluhuubi.supabase.co`, **origem diferente** de
+A URL assinada aponta para `fmscewpxmqnbodzstiqa.supabase.co`, **origem diferente** de
 `atoregulariza.com.br`. Se algum conteúdo ativo escapasse de todas as validações, executaria
 no contexto do domínio do Storage — sem acesso à sessão, ao token ou ao `localStorage` do
 site. Existe de graça, só por não hospedarmos arquivo no domínio próprio.
@@ -339,7 +339,7 @@ O `vercel.json` criado no hardening libera `frame-src` apenas para o YouTube, o 
 o preview de PDF. Precisa incluir o domínio do Storage:
 
 ```
-frame-src https://www.youtube-nocookie.com https://www.youtube.com https://dcgqqvasrekhlluhuubi.supabase.co;
+frame-src https://www.youtube-nocookie.com https://www.youtube.com https://fmscewpxmqnbodzstiqa.supabase.co;
 ```
 
 `img-src` já contempla `https://*.supabase.co`.
