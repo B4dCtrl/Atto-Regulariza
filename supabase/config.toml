@@ -7,3 +7,6 @@ verify_jwt = true
 
 [functions.upload-documento]
 verify_jwt = true
+
+[functions.documento-url]
+verify_jwt = true
