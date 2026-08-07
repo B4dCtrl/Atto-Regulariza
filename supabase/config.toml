@@ -4,3 +4,6 @@ project_id = "dcgqqvasrekhlluhuubi"
 # de a função rodar. A função ainda revalida a sessão e exige papel de admin.
 [functions.admin-chat]
 verify_jwt = true
+
+[functions.upload-documento]
+verify_jwt = true
