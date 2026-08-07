@@ -1,12 +1,13 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { LOGIN_PAUSED } from "@/lib/site-config";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: async () => {
-    // Durante o pré-lançamento o login está pausado: libera a visualização
-    if (LOGIN_PAUSED) return;
+    // ATENÇÃO: o back office nunca é liberado sem autenticação. A flag
+    // LOGIN_PAUSED do pré-lançamento vale só para páginas públicas — aqui ela
+    // abria o painel inteiro (dados de clientes, processos, documentos) para
+    // qualquer visitante com um único caractere trocado. Não reintroduzir.
     const {
       data: { session },
     } = await supabase.auth.getSession();

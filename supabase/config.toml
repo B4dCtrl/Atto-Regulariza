@@ -1,4 +1,6 @@
 project_id = "dcgqqvasrekhlluhuubi"
 
+# verify_jwt = true: o gateway do Supabase rejeita chamadas sem JWT válido antes mesmo
+# de a função rodar. A função ainda revalida a sessão e exige papel de admin.
 [functions.admin-chat]
-verify_jwt = false
+verify_jwt = true

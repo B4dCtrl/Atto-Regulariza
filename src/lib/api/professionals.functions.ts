@@ -5,19 +5,23 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const createProfessional = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    password: z.string().min(6),
-    council: z.string().optional().default(""),
-    registro: z.string().optional().default(""),
-    specialties: z.array(z.string()).optional().default([]),
-    regions: z.array(z.string()).optional().default([]),
-  }))
+  .inputValidator(
+    z.object({
+      name: z.string().min(1),
+      email: z.string().email(),
+      password: z.string().min(6),
+      council: z.string().optional().default(""),
+      registro: z.string().optional().default(""),
+      specialties: z.array(z.string()).optional().default([]),
+      regions: z.array(z.string()).optional().default([]),
+    }),
+  )
   .handler(async ({ data, context }) => {
     // Só admin pode criar contas de profissional
     const { data: roles } = await supabaseAdmin
-      .from("user_roles").select("role").eq("user_id", context.userId);
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
     if (!roles?.some((r) => r.role === "admin")) {
       throw new Error("Apenas administradores podem cadastrar profissionais.");
     }
@@ -31,12 +35,26 @@ export const createProfessional = createServerFn({ method: "POST" })
     if (error || !created.user) throw new Error(error?.message ?? "Falha ao criar usuário.");
 
     const uid = created.user.id;
-    const initials = data.name.trim().split(/\s+/).map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+    const initials = data.name
+      .trim()
+      .split(/\s+/)
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+    // Criado pelo admin no painel: já nasce aprovado. O cadastro público é que
+    // entra como 'pendente' e passa pela fila de aprovação.
     const { error: pErr } = await supabaseAdmin.from("profiles").upsert({
-      id: uid, name: data.name, email: data.email, initials,
+      id: uid,
+      name: data.name,
+      email: data.email,
+      initials,
       role: "profissional",
-      council: data.council, registro: data.registro,
-      specialties: data.specialties, regions: data.regions,
+      approval_status: "aprovado",
+      council: data.council,
+      registro: data.registro,
+      specialties: data.specialties,
+      regions: data.regions,
       specialization: `${data.council} ${data.registro}`.trim(),
     });
     if (pErr) throw new Error(pErr.message);

@@ -36,3 +36,8 @@ dist-ssr
 
 # Vercel build output
 .vercel
+
+# Variáveis de ambiente — nunca versionar
+.env
+.env.*
+!.env.example

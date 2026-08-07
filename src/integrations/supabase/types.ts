@@ -362,6 +362,10 @@ export type Database = {
           max_cases: number
           active: boolean
           settings: Json
+          approval_status: "pendente" | "aprovado" | "recusado"
+          approval_note: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           updated_at: string
         }
@@ -370,6 +374,8 @@ export type Database = {
           name?: string | null
           initials?: string | null
           role?: string
+          approval_status?: "pendente" | "aprovado" | "recusado"
+          approval_note?: string | null
           specialization?: string | null
           email?: string | null
           phone?: string | null
@@ -408,6 +414,10 @@ export type Database = {
           max_cases?: number
           active?: boolean
           settings?: Json
+          approval_status?: "pendente" | "aprovado" | "recusado"
+          approval_note?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           updated_at?: string
         }

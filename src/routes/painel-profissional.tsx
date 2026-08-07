@@ -23,6 +23,19 @@ export const Route = createFileRoute("/painel-profissional")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar" });
+
+    // Só profissional APROVADO entra. Antes bastava ter sessão — qualquer cliente
+    // logado abria o painel. A RLS já barra os dados, mas a rota não pode expor a
+    // interface interna nem sugerir acesso que a pessoa não tem.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, approval_status")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "profissional") throw redirect({ to: "/dashboard" });
+    if (profile.approval_status !== "aprovado") throw redirect({ to: "/analise-cadastro" });
+
     return { userId: session.user.id };
   },
   component: ProfissionalPage,
@@ -268,16 +281,11 @@ function ProfissionalPage() {
           setNotifPrefs({ notifEmail: s.notifEmail ?? true, notifPrazo: s.notifPrazo ?? true });
           return;
         }
-        // Sem linha em profiles (signup com confirmação de e-mail) → cria agora,
-        // já autenticado, a partir dos metadados do cadastro.
-        const { data: { user } } = await supabase.auth.getUser();
-        const nome = (user?.user_metadata?.name as string) ?? "Profissional";
-        const initials = nome.split(/\s+/).filter(Boolean).map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "··";
-        await supabase.from("profiles").upsert({
-          id: userId, name: nome, email: user?.email ?? null,
-          role: "profissional", initials,
-        });
-        setProfProfile({ name: nome, initials });
+        // Chegar aqui sem linha em profiles não deve mais acontecer: o trigger
+        // trg_handle_new_user cria o perfil no próprio signup, e a guarda desta
+        // rota já exigiu role='profissional' aprovado. Fallback só de exibição —
+        // criar a linha aqui seria inútil, o papel é definido no banco.
+        setProfProfile({ name: "Profissional", initials: "··" });
       });
 
     function loadProcs() {
