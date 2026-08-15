@@ -2,9 +2,21 @@
  * CORS restrito. Nunca "*": com origem aberta, qualquer site poderia chamar
  * estas funções a partir do navegador de um usuário logado.
  */
+// Conferido contra os domínios que realmente respondem (2026-08-15):
+//   www.atoregulariza.com      -> 200, é quem serve o site
+//   atoregulariza.com          -> 308 para o www
+//   atoregulariza.com.br       -> 308
+//   curso.atoregulariza.com.br -> 307, área de cursos
+//
+// A lista original só tinha os .com.br, e o site é servido do .com — em
+// produção o upload falharia com "Failed to fetch" para todo mundo. Os que
+// redirecionam entram na lista porque o navegador pode enviar a origem
+// original em alguns fluxos.
 const ORIGENS_PERMITIDAS = new Set([
-  "https://atoregulariza.com.br",
+  "https://www.atoregulariza.com",
+  "https://atoregulariza.com",
   "https://www.atoregulariza.com.br",
+  "https://atoregulariza.com.br",
   "https://curso.atoregulariza.com.br",
   "http://localhost:8080",
 ]);
