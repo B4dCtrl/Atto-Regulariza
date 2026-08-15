@@ -48,7 +48,7 @@ type Urgency = "alta" | "media" | "baixa";
 type FieldType = "text" | "textarea" | "date" | "number" | "select" | "checklist" | "checkbox";
 type FieldVal  = string | string[] | boolean;
 type RightTab  = "docs" | "chat" | "briefing";
-type MainSection = "processos" | "stats" | "notificacoes" | "configuracoes";
+type MainSection = "processos" | "documentos" | "stats" | "notificacoes" | "configuracoes";
 
 interface Pendency {
   id: string;
@@ -237,6 +237,8 @@ function ProfissionalPage() {
   const [allMsgs, setAllMsgs] = useState<Record<string, LocalMsg[]>>({});
   /* Documentos são responsabilidade do DocumentList; aqui só sinalizamos recarga. */
   const [recargaDocs, setRecargaDocs] = useState(0);
+  /** Processo escolhido na aba lateral "Documentos" (separado do caso aberto). */
+  const [docsProcId, setDocsProcId] = useState<string | null>(null);
   const [allPendencies, setAllPendencies] = useState<Record<string, Pendency[]>>(
     () => storeGet("rz-pendencies", {})
   );
@@ -573,6 +575,7 @@ function ProfissionalPage() {
             <nav className="space-y-0.5">
               {([
                 { id: "processos", label: "Meus processos", icon: Briefcase },
+                { id: "documentos", label: "Documentos",    icon: FileText   },
                 { id: "stats",     label: "Estatísticas",   icon: BarChart3  },
                 { id: "notificacoes", label: "Notificações",icon: Bell       },
               ] as { id: MainSection; label: string; icon: React.ElementType }[]).map((item) => (
@@ -735,6 +738,63 @@ function ProfissionalPage() {
             )}
 
             {/* ── ESTATÍSTICAS ── */}
+            {mainSection === "documentos" && (
+              <motion.div key="documentos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+                <div className="mb-6">
+                  <div className="text-[10px] uppercase tracking-widest text-ink-soft">Gestão</div>
+                  <h2 className="font-serif text-2xl tracking-tight">Documentos</h2>
+                  <p className="mt-1 text-sm text-ink-soft">
+                    Escolha um processo para ver e enviar documentos.
+                  </p>
+                </div>
+
+                {/* Seletor de processo: esta aba é geral, não está dentro de um
+                    caso, então precisa perguntar de qual processo se trata. */}
+                <div className="mb-5 flex flex-wrap gap-1.5">
+                  {myProcs.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setDocsProcId(p.id)}
+                      className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+                        docsProcId === p.id
+                          ? "bg-foreground text-background"
+                          : "text-ink-soft hover:bg-surface"
+                      }`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+
+                {myProcs.length === 0 ? (
+                  <div className="rounded-3xl bg-background p-16 text-center ring-1 ring-border">
+                    <FileText className="mx-auto h-7 w-7 text-ink-soft" />
+                    <p className="mt-3 text-sm text-ink-soft">
+                      Você ainda não tem processos designados.
+                    </p>
+                  </div>
+                ) : !docsProcId ? (
+                  <div className="rounded-3xl bg-surface/50 p-12 text-center">
+                    <p className="text-sm text-ink-soft">Selecione um processo acima.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <UploadDocumento
+                      propertyId={docsProcId}
+                      origem="profissional"
+                      onEnviado={() => setRecargaDocs((n) => n + 1)}
+                    />
+                    <DocumentList
+                      propertyId={docsProcId}
+                      mostrarHistorico
+                      podeExcluir
+                      recarregarToken={recargaDocs}
+                    />
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {mainSection === "stats" && (
               <motion.div key="stats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
                 <div className="mb-8">

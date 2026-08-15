@@ -155,6 +155,30 @@ Deno.serve(async (req) => {
     // exatamente a mentira que este trabalho veio corrigir.
     let documentoRecemCriado = false;
 
+    // Reenvio do mesmo TIPO pelo cliente vira nova versão, não documento novo.
+    //
+    // É o que dá sentido ao seletor obrigatório: o cliente escolhe "Matrícula",
+    // e o sistema encaixa no registro que já existe em vez de empilhar cópias.
+    // Sem isto, o seletor não servia para nada — a função sempre criava
+    // documento novo.
+    //
+    // Vale só para origem 'cliente' e tipo diferente de 'outro'. Peça técnica do
+    // profissional é artefato distinto a cada envio (uma ART não substitui um
+    // laudo), e 'outro' é genérico demais para agrupar com segurança.
+    if (!documentId && origem === "cliente" && kind !== "outro") {
+      const { data: existente } = await admin
+        .from("documents")
+        .select("id")
+        .eq("property_id", propertyId)
+        .eq("kind", kind)
+        .eq("origem", "cliente")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (existente) documentId = existente.id;
+    }
+
     if (!documentId) {
       const { data: doc, error: docErr } = await admin
         .from("documents")

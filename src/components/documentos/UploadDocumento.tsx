@@ -23,7 +23,14 @@ export function UploadDocumento({
   origem: DocumentOrigem;
   onEnviado: () => void;
 }) {
-  const [kind, setKind] = useState<DocumentKind | "">("");
+  // Só o CLIENTE escolhe o tipo. Para ele o seletor tem função concreta: é o
+  // que faz o reenvio de "Matrícula" virar versão 2 em vez de um registro
+  // solto. O profissional envia peças distintas a cada vez (ART, laudo,
+  // projeto), que não se substituem entre si — exigir classificação dele seria
+  // burocracia sem retorno.
+  const exigeTipo = origem === "cliente";
+
+  const [kind, setKind] = useState<DocumentKind | "">(exigeTipo ? "" : "outro");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState<string | null>(null);
@@ -46,12 +53,12 @@ export function UploadDocumento({
     setConfirmado(null);
 
     try {
-      await enviarDocumento({ arquivo, propertyId, kind, origem });
+      await enviarDocumento({ arquivo, propertyId, kind: kind as DocumentKind, origem });
       // Só aqui o envio é dado como certo: a confirmação vem do servidor, que
       // já gravou o arquivo e a versão. Foi a mentira do "Enviado" sem arquivo
       // que originou este trabalho — não a repetimos na interface.
       setConfirmado(arquivo.name);
-      setKind("");
+      if (exigeTipo) setKind("");
       onEnviado();
     } catch (e) {
       // A edge function devolve mensagem já escrita para o usuário final
@@ -67,33 +74,39 @@ export function UploadDocumento({
 
   return (
     <div className="rounded-2xl bg-surface/50 p-4">
-      <label htmlFor={selectId} className="block text-sm font-medium">
-        Qual documento você está enviando?
-      </label>
-      <select
-        id={selectId}
-        value={kind}
-        onChange={(e) => {
-          setKind(e.target.value as DocumentKind);
-          setErro(null);
-          setConfirmado(null);
-        }}
-        disabled={enviando}
-        className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/30 disabled:opacity-50"
-      >
-        <option value="">Selecione…</option>
-        {opcoes.map((o) => (
-          <option key={o.kind} value={o.kind}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      {exigeTipo ? (
+        <>
+          <label htmlFor={selectId} className="block text-sm font-medium">
+            Qual documento você está enviando?
+          </label>
+          <select
+            id={selectId}
+            value={kind}
+            onChange={(e) => {
+              setKind(e.target.value as DocumentKind);
+              setErro(null);
+              setConfirmado(null);
+            }}
+            disabled={enviando}
+            className="mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/30 disabled:opacity-50"
+          >
+            <option value="">Selecione…</option>
+            {opcoes.map((o) => (
+              <option key={o.kind} value={o.kind}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : (
+        <p className="text-sm font-medium">Enviar documento</p>
+      )}
 
       <input
         ref={inputRef}
         type="file"
         accept="application/pdf,image/jpeg,image/png"
-        disabled={!kind || enviando}
+        disabled={(exigeTipo && !kind) || enviando}
         onChange={(e) => aoEscolherArquivo(e.target.files?.[0])}
         className="hidden"
         tabIndex={-1}
@@ -102,7 +115,7 @@ export function UploadDocumento({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={!kind || enviando}
+        disabled={(exigeTipo && !kind) || enviando}
         className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm text-background transition-opacity hover:opacity-90 disabled:opacity-40"
       >
         {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
