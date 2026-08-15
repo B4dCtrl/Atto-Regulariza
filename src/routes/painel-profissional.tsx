@@ -320,9 +320,28 @@ function ProfissionalPage() {
     const ch = supabase
       .channel(`prof-detail-${pid}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `property_id=eq.${pid}` }, loadMsgs)
+      // Documento enviado pelo cliente precisa aparecer sem recarregar a página.
+      // O DocumentList recarrega quando `recargaDocs` muda, então só
+      // incrementamos o contador — a lista se vira com a consulta própria dela,
+      // que já respeita a RLS.
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${pid}` },
+        () => setRecargaDocs((n) => n + 1))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [selectedId, userId]);
+
+  /* ── Documentos da aba lateral: recarrega quando o cliente envia ──
+     Assinatura própria porque essa aba tem seu próprio processo selecionado
+     (docsProcId), independente do caso aberto no painel (selectedId). */
+  useEffect(() => {
+    if (!docsProcId) return;
+    const ch = supabase
+      .channel(`prof-docs-${docsProcId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${docsProcId}` },
+        () => setRecargaDocs((n) => n + 1))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [docsProcId]);
 
   /* ── Unread counts ── */
   const unreadCount = (pid: string) => {

@@ -191,6 +191,15 @@ function DashboardContent() {
           }
         }
       )
+      /* documentos → a lista recarrega sozinha */
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${propertyId}` },
+        // O DocumentList refaz a consulta quando `recargaDocs` muda, e essa
+        // consulta respeita a RLS — então o cliente só passa a ver peça técnica
+        // do profissional quando a regra permitir, não porque o canal avisou.
+        () => setRecargaDocs((n) => n + 1),
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
