@@ -9,23 +9,25 @@ Atualizado conforme avançamos.
 
 ## Em andamento
 
-### 1. 🔵 Confirmação de e-mail com identidade da Ato Regulariza
-Hoje o Supabase envia pelo servidor compartilhado dele: remetente genérico, limite de poucos
-envios por hora (já batemos nele hoje) e entrega ruim, com risco de cair em spam.
-Precisa de SMTP próprio com domínio verificado.
-**Depende de:** decisão do usuário sobre o provedor · acesso ao DNS de `atoregulariza.com.br`
+### 1. 🔵 Reputação de envio — e-mails caindo em spam
+SMTP próprio configurado e funcionando (Resend, domínio verificado), mas os e-mails caem em
+spam. Causa: o domínio começou a enviar hoje, reputação zero, e o modelo padrão do Supabase em
+inglês é reconhecido por semelhança com spam conhecido.
+**Feito:** SPF, DKIM e DMARC no DNS · SMTP no Supabase · modelos em português com a marca
+**Falta:** aplicar os modelos no painel · marcar "não é spam" · esperar a reputação firmar
+**Conferir:** SPF/DKIM/DMARC em "Mostrar original" de um e-mail recebido
 
-### 2. ⏸️ Reset das contas de teste
-Apagar todos os clientes e profissionais criados durante os testes, mantendo só o admin
-(`ozanchet@gmail.com`, senha recém-trocada).
-**Bloqueio:** `properties.client_id` e `assigned_professional_id` referenciam `auth.users`
-sem `ON DELETE`, então apagar usuário com processo vinculado **falha**. Precisa de ordem
-correta de exclusão, incluindo os arquivos no Storage.
-**Aguardando:** confirmação do usuário sobre o alcance exato.
+### 2. ✅ Reset das contas de teste — CONCLUÍDO
+Base zerada em 2026-08-15. Apagados: 20 usuários, 11 processos, 9 documentos, 16 leads, 28
+mensagens, 55 etapas e os arquivos do bucket. Preservada só a conta admin
+(`ozanchet@gmail.com`), com o papel de admin intacto.
 
 ---
 
 ## Verificação pendente do trabalho de hoje
+
+> **Base zerada.** Só a conta admin permanece. Os testes abaixo precisam de contas novas: um
+> cliente, um profissional aprovado, e um processo ligando os dois.
 
 ### 3. ⬜ Trava de visibilidade na interface
 Provar que o cliente NÃO vê peça técnica do profissional enquanto o processo corre.
@@ -102,3 +104,8 @@ A exclusão lógica preserva tudo no banco, mas não há tela para desfazer.
 - ✅ Realtime do painel do cliente religado (dependências `[]` o mantinham morto)
 - ✅ Variáveis de ambiente da Vercel corrigidas (`VITE_SUPABASE_UR` sem o `L`)
 - ✅ Lista de origens CORS corrigida (tinha só `.com.br`; o site é servido do `.com`)
+- ✅ SMTP próprio com Resend; `atoregulariza.com.br` verificado (SPF, DKIM, DMARC)
+- ✅ Quatro modelos de e-mail em português com a identidade da Ato
+- ✅ Versionamento por tipo na edge function (o spec previa, nunca foi implementado)
+- ✅ Aba lateral "Documentos" no painel do profissional
+- ✅ Reset da base de teste, preservando a conta admin
