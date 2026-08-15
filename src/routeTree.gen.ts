@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as PrecosRouteImport } from './routes/precos'
 import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
@@ -46,6 +47,11 @@ import { Route as AdminProjetoIdRouteImport } from './routes/admin/projeto.$id'
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   id: '/termos-de-uso',
   path: '/termos-de-uso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfissionaisRoute = ProfissionaisRouteImport.update({
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
@@ -335,6 +344,7 @@ export interface FileRouteTypes {
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
+    | '/redefinir-senha'
     | '/termos-de-uso'
     | '/admin/aprovacoes'
     | '/admin/cadastro-cliente'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
+    | '/redefinir-senha'
     | '/termos-de-uso'
     | '/admin/aprovacoes'
     | '/admin/cadastro-cliente'
@@ -404,6 +415,7 @@ export interface FileRouteTypes {
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
+    | '/redefinir-senha'
     | '/termos-de-uso'
     | '/admin/aprovacoes'
     | '/admin/cadastro-cliente'
@@ -440,6 +452,7 @@ export interface RootRouteChildren {
   PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PrecosRoute: typeof PrecosRouteWithChildren
   ProfissionaisRoute: typeof ProfissionaisRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
   CursosSlugRoute: typeof CursosSlugRoute
   CursosIndexRoute: typeof CursosIndexRoute
@@ -452,6 +465,13 @@ declare module '@tanstack/react-router' {
       path: '/termos-de-uso'
       fullPath: '/termos-de-uso'
       preLoaderRoute: typeof TermosDeUsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profissionais': {
@@ -742,6 +762,7 @@ const rootRouteChildren: RootRouteChildren = {
   PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PrecosRoute: PrecosRouteWithChildren,
   ProfissionaisRoute: ProfissionaisRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
   CursosSlugRoute: CursosSlugRoute,
   CursosIndexRoute: CursosIndexRoute,
