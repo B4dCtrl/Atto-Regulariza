@@ -1,29 +1,33 @@
 # Modelos de e-mail — Supabase Auth
 
-Textos em português com a identidade da Ato Regulariza, para colar em
-**Supabase › Authentication › Emails**, aba de cada modelo, campo **Source**.
+Textos em português com a identidade visual da Ato Regulariza, para colar em
+**Supabase › Authentication › Emails**, no modo **Source** de cada modelo.
 
-Só destravam com SMTP próprio configurado (Resend), o que já foi feito.
+Cores tiradas de `src/styles.css`: laranja `#E1662E`, fundo `#FAFAF7`, texto `#1A1A1A`,
+texto suave `#6B6660`, borda `#E5E1DC`.
 
-## Variáveis do Supabase usadas aqui
+## Variáveis do Supabase
 
-| Variável | O que vira |
+| Variável | Vira |
 |---|---|
-| `{{ .ConfirmationURL }}` | Link de ação, com o token embutido |
+| `{{ .ConfirmationURL }}` | Link de ação com o token |
 | `{{ .Email }}` | E-mail de quem recebe |
-| `{{ .SiteURL }}` | A Site URL configurada no projeto |
 
-## Princípios adotados nos textos
+## Sobre o logo no header
 
-- **Dizer o que a ação faz antes de pedir o clique.** E-mail que só traz um botão
-  "Confirmar" treina o usuário a clicar sem ler — exatamente o hábito que golpe de phishing
-  explora. Numa plataforma que trata matrícula e CPF, isso importa.
-- **Avisar o que fazer se não foi você.** Toda mensagem tem essa linha.
-- **Link visível em texto**, além do botão. Cliente de e-mail que bloqueia HTML ainda
-  funciona, e quem quiser conferir o destino antes de clicar consegue.
-- **Sem imagem externa.** Muitos clientes bloqueiam por padrão, e um e-mail que chega
-  quebrado passa impressão de fraude.
-- **Prazo de validade explícito**, para a pessoa não guardar o link para depois.
+O `<img>` aponta para `https://www.atoregulariza.com.br/ato-lockup.png`, servido pelo próprio
+site. Muitos clientes bloqueiam imagem de remetente novo, então o header traz **também** o
+nome em texto: bloqueada a imagem, o cabeçalho continua com a marca e a faixa laranja, em vez
+de mostrar um quadrado quebrado — que é o que faz e-mail parecer golpe.
+
+## Decisões de conteúdo
+
+- A ação é explicada **antes** do botão. E-mail que só mostra "Confirmar" treina a pessoa a
+  clicar sem ler, que é o hábito de que o phishing vive — sério numa plataforma que trata
+  matrícula e CPF.
+- Toda mensagem diz o que fazer **se não foi você**.
+- Link em texto além do botão, para cliente que bloqueia HTML.
+- Prazo de validade explícito.
 
 ---
 
@@ -32,40 +36,59 @@ Só destravam com SMTP próprio configurado (Resend), o que já foi feito.
 **Subject:** `Confirme seu e-mail — Ato Regulariza`
 
 ```html
-<div style="margin:0;padding:24px;background:#faf8f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:40px 32px;">
+<div style="margin:0;padding:0;background:#F1EEE9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1EEE9;padding:32px 16px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
-    <div style="font-size:20px;letter-spacing:-0.3px;color:#1a1a1a;font-weight:600;">ato</div>
-    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8a8580;margin-top:2px;">Regulariza</div>
+  <tr>
+    <td style="background:#1A1A1A;padding:24px 32px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
+      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
+      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    </td>
+  </tr>
 
-    <h1 style="font-size:24px;line-height:1.3;color:#1a1a1a;margin:28px 0 12px;font-weight:600;">
-      Confirme seu e-mail
-    </h1>
+  <tr><td style="height:4px;background:#E1662E;font-size:0;line-height:0;">&nbsp;</td></tr>
 
-    <p style="font-size:15px;line-height:1.6;color:#57534e;margin:0 0 20px;">
-      Recebemos um cadastro na Ato Regulariza com este endereço. Confirme que é você para
-      liberar o acesso ao seu painel.
-    </p>
+  <tr>
+    <td style="padding:36px 32px 32px;">
+      <h1 style="font-size:23px;line-height:1.3;color:#1A1A1A;margin:0 0 14px;font-weight:600;">Confirme seu e-mail</h1>
 
-    <a href="{{ .ConfirmationURL }}"
-       style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:13px 28px;border-radius:999px;font-size:15px;">
-      Confirmar meu e-mail
-    </a>
+      <p style="font-size:15px;line-height:1.65;color:#6B6660;margin:0 0 24px;">
+        Recebemos um cadastro na Ato Regulariza com este endereço. Confirme que é você para
+        liberar o acesso ao seu painel e acompanhar a regularização do seu imóvel.
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:24px 0 0;">
-      Se o botão não funcionar, copie e cole este endereço no navegador:<br>
-      <span style="color:#57534e;word-break:break-all;">{{ .ConfirmationURL }}</span>
-    </p>
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:999px;background:#1A1A1A;">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 30px;color:#FAFAF7;text-decoration:none;font-size:15px;font-weight:500;border-radius:999px;">Confirmar meu e-mail</a>
+      </td></tr></table>
 
-    <hr style="border:none;border-top:1px solid #eeebe7;margin:28px 0;">
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:26px 0 0;">
+        Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+        <span style="color:#1A1A1A;word-break:break-all;">{{ .ConfirmationURL }}</span>
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:0;">
-      O link vale por 24 horas.<br>
-      <strong style="color:#57534e;">Não foi você que se cadastrou?</strong> Ignore esta
-      mensagem — sem a confirmação, nenhuma conta é criada com o seu e-mail.
-    </p>
+      <div style="height:1px;background:#E5E1DC;margin:28px 0;"></div>
 
-  </div>
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:0;">
+        O link vale por 24 horas.<br>
+        <strong style="color:#1A1A1A;">Não foi você que se cadastrou?</strong> Ignore esta
+        mensagem — sem a confirmação, nenhuma conta é criada com o seu e-mail.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="background:#F1EEE9;padding:18px 32px;text-align:center;">
+      <div style="font-size:12px;color:#6B6660;">Ato Regulariza · Regularização de imóveis</div>
+      <div style="font-size:11px;color:#9A948C;margin-top:4px;">Mensagem automática — não responda a este e-mail.</div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
 </div>
 ```
 
@@ -76,40 +99,60 @@ Só destravam com SMTP próprio configurado (Resend), o que já foi feito.
 **Subject:** `Redefinir sua senha — Ato Regulariza`
 
 ```html
-<div style="margin:0;padding:24px;background:#faf8f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:40px 32px;">
+<div style="margin:0;padding:0;background:#F1EEE9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1EEE9;padding:32px 16px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
-    <div style="font-size:20px;letter-spacing:-0.3px;color:#1a1a1a;font-weight:600;">ato</div>
-    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8a8580;margin-top:2px;">Regulariza</div>
+  <tr>
+    <td style="background:#1A1A1A;padding:24px 32px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
+      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
+      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    </td>
+  </tr>
 
-    <h1 style="font-size:24px;line-height:1.3;color:#1a1a1a;margin:28px 0 12px;font-weight:600;">
-      Criar uma senha nova
-    </h1>
+  <tr><td style="height:4px;background:#E1662E;font-size:0;line-height:0;">&nbsp;</td></tr>
 
-    <p style="font-size:15px;line-height:1.6;color:#57534e;margin:0 0 20px;">
-      Alguém pediu a redefinição de senha da conta <strong style="color:#1a1a1a;">{{ .Email }}</strong>.
-      Clique abaixo para escolher uma senha nova.
-    </p>
+  <tr>
+    <td style="padding:36px 32px 32px;">
+      <h1 style="font-size:23px;line-height:1.3;color:#1A1A1A;margin:0 0 14px;font-weight:600;">Criar uma senha nova</h1>
 
-    <a href="{{ .ConfirmationURL }}"
-       style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:13px 28px;border-radius:999px;font-size:15px;">
-      Criar senha nova
-    </a>
+      <p style="font-size:15px;line-height:1.65;color:#6B6660;margin:0 0 24px;">
+        Alguém pediu a redefinição de senha da conta
+        <strong style="color:#1A1A1A;">{{ .Email }}</strong>. Clique no botão abaixo para
+        escolher uma senha nova.
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:24px 0 0;">
-      Se o botão não funcionar, copie e cole este endereço no navegador:<br>
-      <span style="color:#57534e;word-break:break-all;">{{ .ConfirmationURL }}</span>
-    </p>
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:999px;background:#1A1A1A;">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 30px;color:#FAFAF7;text-decoration:none;font-size:15px;font-weight:500;border-radius:999px;">Criar senha nova</a>
+      </td></tr></table>
 
-    <hr style="border:none;border-top:1px solid #eeebe7;margin:28px 0;">
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:26px 0 0;">
+        Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+        <span style="color:#1A1A1A;word-break:break-all;">{{ .ConfirmationURL }}</span>
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:0;">
-      O link vale por 1 hora e só pode ser usado uma vez.<br>
-      <strong style="color:#57534e;">Não foi você?</strong> Ignore esta mensagem. Sua senha
-      atual continua valendo e nada muda na sua conta.
-    </p>
+      <div style="height:1px;background:#E5E1DC;margin:28px 0;"></div>
 
-  </div>
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:0;">
+        O link vale por 1 hora e só pode ser usado uma vez.<br>
+        <strong style="color:#1A1A1A;">Não foi você?</strong> Ignore esta mensagem. Sua senha
+        atual continua valendo e nada muda na sua conta.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="background:#F1EEE9;padding:18px 32px;text-align:center;">
+      <div style="font-size:12px;color:#6B6660;">Ato Regulariza · Regularização de imóveis</div>
+      <div style="font-size:11px;color:#9A948C;margin-top:4px;">Mensagem automática — não responda a este e-mail.</div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
 </div>
 ```
 
@@ -120,39 +163,58 @@ Só destravam com SMTP próprio configurado (Resend), o que já foi feito.
 **Subject:** `Você foi convidado para a Ato Regulariza`
 
 ```html
-<div style="margin:0;padding:24px;background:#faf8f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:40px 32px;">
+<div style="margin:0;padding:0;background:#F1EEE9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1EEE9;padding:32px 16px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
-    <div style="font-size:20px;letter-spacing:-0.3px;color:#1a1a1a;font-weight:600;">ato</div>
-    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8a8580;margin-top:2px;">Regulariza</div>
+  <tr>
+    <td style="background:#1A1A1A;padding:24px 32px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
+      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
+      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    </td>
+  </tr>
 
-    <h1 style="font-size:24px;line-height:1.3;color:#1a1a1a;margin:28px 0 12px;font-weight:600;">
-      Seu acesso está pronto
-    </h1>
+  <tr><td style="height:4px;background:#E1662E;font-size:0;line-height:0;">&nbsp;</td></tr>
 
-    <p style="font-size:15px;line-height:1.6;color:#57534e;margin:0 0 20px;">
-      A equipe da Ato Regulariza criou um acesso para você. Defina sua senha para entrar e
-      acompanhar a regularização do imóvel.
-    </p>
+  <tr>
+    <td style="padding:36px 32px 32px;">
+      <h1 style="font-size:23px;line-height:1.3;color:#1A1A1A;margin:0 0 14px;font-weight:600;">Seu acesso está pronto</h1>
 
-    <a href="{{ .ConfirmationURL }}"
-       style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:13px 28px;border-radius:999px;font-size:15px;">
-      Definir minha senha
-    </a>
+      <p style="font-size:15px;line-height:1.65;color:#6B6660;margin:0 0 24px;">
+        A equipe da Ato Regulariza criou um acesso para você. Defina sua senha para entrar e
+        acompanhar cada etapa da regularização.
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:24px 0 0;">
-      Se o botão não funcionar, copie e cole este endereço no navegador:<br>
-      <span style="color:#57534e;word-break:break-all;">{{ .ConfirmationURL }}</span>
-    </p>
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:999px;background:#1A1A1A;">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 30px;color:#FAFAF7;text-decoration:none;font-size:15px;font-weight:500;border-radius:999px;">Definir minha senha</a>
+      </td></tr></table>
 
-    <hr style="border:none;border-top:1px solid #eeebe7;margin:28px 0;">
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:26px 0 0;">
+        Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+        <span style="color:#1A1A1A;word-break:break-all;">{{ .ConfirmationURL }}</span>
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:0;">
-      <strong style="color:#57534e;">Não esperava este convite?</strong> Ignore esta
-      mensagem — sem definir a senha, o acesso não é ativado.
-    </p>
+      <div style="height:1px;background:#E5E1DC;margin:28px 0;"></div>
 
-  </div>
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:0;">
+        <strong style="color:#1A1A1A;">Não esperava este convite?</strong> Ignore esta
+        mensagem — sem definir a senha, o acesso não é ativado.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="background:#F1EEE9;padding:18px 32px;text-align:center;">
+      <div style="font-size:12px;color:#6B6660;">Ato Regulariza · Regularização de imóveis</div>
+      <div style="font-size:11px;color:#9A948C;margin-top:4px;">Mensagem automática — não responda a este e-mail.</div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
 </div>
 ```
 
@@ -163,39 +225,59 @@ Só destravam com SMTP próprio configurado (Resend), o que já foi feito.
 **Subject:** `Confirme seu novo e-mail — Ato Regulariza`
 
 ```html
-<div style="margin:0;padding:24px;background:#faf8f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:40px 32px;">
+<div style="margin:0;padding:0;background:#F1EEE9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F1EEE9;padding:32px 16px;">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
-    <div style="font-size:20px;letter-spacing:-0.3px;color:#1a1a1a;font-weight:600;">ato</div>
-    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8a8580;margin-top:2px;">Regulariza</div>
+  <tr>
+    <td style="background:#1A1A1A;padding:24px 32px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
+      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
+      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    </td>
+  </tr>
 
-    <h1 style="font-size:24px;line-height:1.3;color:#1a1a1a;margin:28px 0 12px;font-weight:600;">
-      Confirme seu novo e-mail
-    </h1>
+  <tr><td style="height:4px;background:#E1662E;font-size:0;line-height:0;">&nbsp;</td></tr>
 
-    <p style="font-size:15px;line-height:1.6;color:#57534e;margin:0 0 20px;">
-      Foi pedida a troca do e-mail da sua conta na Ato Regulariza para
-      <strong style="color:#1a1a1a;">{{ .Email }}</strong>. Confirme para concluir.
-    </p>
+  <tr>
+    <td style="padding:36px 32px 32px;">
+      <h1 style="font-size:23px;line-height:1.3;color:#1A1A1A;margin:0 0 14px;font-weight:600;">Confirme seu novo e-mail</h1>
 
-    <a href="{{ .ConfirmationURL }}"
-       style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:13px 28px;border-radius:999px;font-size:15px;">
-      Confirmar novo e-mail
-    </a>
+      <p style="font-size:15px;line-height:1.65;color:#6B6660;margin:0 0 24px;">
+        Foi pedida a troca do e-mail da sua conta na Ato Regulariza para
+        <strong style="color:#1A1A1A;">{{ .Email }}</strong>. Confirme para concluir a
+        alteração.
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:24px 0 0;">
-      Se o botão não funcionar, copie e cole este endereço no navegador:<br>
-      <span style="color:#57534e;word-break:break-all;">{{ .ConfirmationURL }}</span>
-    </p>
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:999px;background:#1A1A1A;">
+        <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 30px;color:#FAFAF7;text-decoration:none;font-size:15px;font-weight:500;border-radius:999px;">Confirmar novo e-mail</a>
+      </td></tr></table>
 
-    <hr style="border:none;border-top:1px solid #eeebe7;margin:28px 0;">
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:26px 0 0;">
+        Se o botão não funcionar, copie e cole este endereço no navegador:<br>
+        <span style="color:#1A1A1A;word-break:break-all;">{{ .ConfirmationURL }}</span>
+      </p>
 
-    <p style="font-size:13px;line-height:1.6;color:#8a8580;margin:0;">
-      <strong style="color:#57534e;">Não foi você?</strong> Ignore esta mensagem e troque a
-      senha da sua conta — alguém pode ter acessado o seu acesso.
-    </p>
+      <div style="height:1px;background:#E5E1DC;margin:28px 0;"></div>
 
-  </div>
+      <p style="font-size:13px;line-height:1.6;color:#6B6660;margin:0;">
+        <strong style="color:#1A1A1A;">Não foi você?</strong> Ignore esta mensagem e troque a
+        senha da sua conta — alguém pode ter acessado o seu acesso.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="background:#F1EEE9;padding:18px 32px;text-align:center;">
+      <div style="font-size:12px;color:#6B6660;">Ato Regulariza · Regularização de imóveis</div>
+      <div style="font-size:11px;color:#9A948C;margin-top:4px;">Mensagem automática — não responda a este e-mail.</div>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
 </div>
 ```
 
@@ -203,13 +285,8 @@ Só destravam com SMTP próprio configurado (Resend), o que já foi feito.
 
 ## Como aplicar
 
-1. Abra <https://supabase.com/dashboard/project/fmscewpxmqnbodzstiqa/auth/templates>
+1. <https://supabase.com/dashboard/project/fmscewpxmqnbodzstiqa/auth/templates>
 2. Escolha o modelo na lista à esquerda
-3. Cole o **Subject** no campo de assunto
-4. No corpo, clique em **Source** (não em Preview) e substitua todo o conteúdo pelo HTML
-5. **Save** em cada um, separadamente
-
-## Depois de aplicar
-
-Peça uma recuperação de senha para você mesmo e confira: remetente "Ato Regulariza",
-texto em português, e o link levando a `/redefinir-senha`.
+3. Cole o **Subject**
+4. No corpo clique em **Source** (não Preview) e substitua tudo
+5. **Save** — um modelo de cada vez
