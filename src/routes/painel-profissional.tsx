@@ -763,26 +763,39 @@ function ProfissionalPage() {
                   <div className="text-[10px] uppercase tracking-widest text-ink-soft">Gestão</div>
                   <h2 className="font-serif text-2xl tracking-tight">Documentos</h2>
                   <p className="mt-1 text-sm text-ink-soft">
-                    Escolha um processo para ver e enviar documentos.
+                    Escolha o cliente para ver e enviar documentos.
                   </p>
                 </div>
 
-                {/* Seletor de processo: esta aba é geral, não está dentro de um
-                    caso, então precisa perguntar de qual processo se trata. */}
-                <div className="mb-5 flex flex-wrap gap-1.5">
-                  {myProcs.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setDocsProcId(p.id)}
-                      className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
-                        docsProcId === p.id
-                          ? "bg-foreground text-background"
-                          : "text-ink-soft hover:bg-surface"
-                      }`}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
+                {/* Seletor por CLIENTE: esta aba é geral, fora de um caso. O
+                    profissional pensa em "documentos da Maria", não em
+                    "documentos do processo Casa Teste 1" — por isso o nome do
+                    cliente vem primeiro, com o imóvel como referência abaixo. */}
+                <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {myProcs.map((p) => {
+                    const ativo = docsProcId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setDocsProcId(p.id)}
+                        className={`rounded-2xl px-4 py-3 text-left ring-1 transition-colors ${
+                          ativo
+                            ? "bg-foreground text-background ring-foreground"
+                            : "bg-background ring-border hover:ring-foreground/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className={`h-3.5 w-3.5 shrink-0 ${ativo ? "" : "text-ink-soft"}`} />
+                          <span className="truncate text-sm font-medium">{p.client}</span>
+                        </div>
+                        <div
+                          className={`mt-1 truncate text-xs ${ativo ? "text-background/60" : "text-ink-soft"}`}
+                        >
+                          {p.name}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {myProcs.length === 0 ? (
@@ -794,7 +807,7 @@ function ProfissionalPage() {
                   </div>
                 ) : !docsProcId ? (
                   <div className="rounded-3xl bg-surface/50 p-12 text-center">
-                    <p className="text-sm text-ink-soft">Selecione um processo acima.</p>
+                    <p className="text-sm text-ink-soft">Selecione um cliente acima.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
