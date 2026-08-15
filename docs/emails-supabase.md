@@ -16,9 +16,18 @@ texto suave `#6B6660`, borda `#E5E1DC`.
 ## Sobre o logo no header
 
 O `<img>` aponta para `https://www.atoregulariza.com.br/ato-lockup.png`, servido pelo próprio
-site. Muitos clientes bloqueiam imagem de remetente novo, então o header traz **também** o
-nome em texto: bloqueada a imagem, o cabeçalho continua com a marca e a faixa laranja, em vez
-de mostrar um quadrado quebrado — que é o que faz e-mail parecer golpe.
+site (confirmado: responde 200 com `content-type: image/png`).
+
+**O header é claro, não preto.** O lockup é laranja com o miolo da casinha em creme, sobre
+fundo transparente — foi desenhado para fundo claro. Em preto, o creme vira um bloco pesado e
+o conjunto destoa do site, que é off-white.
+
+Se o cliente de e-mail bloquear a imagem, o `alt="Ato Regulariza"` aparece como texto e a
+faixa laranja continua ali. Não fica quadrado quebrado sem identificação — que é o que faz
+e-mail parecer golpe.
+
+No preview do Supabase a imagem aparece quebrada: aquele painel bloqueia imagem externa por
+segurança. No envio real carrega normalmente.
 
 ## Decisões de conteúdo
 
@@ -42,10 +51,9 @@ de mostrar um quadrado quebrado — que é o que faz e-mail parecer golpe.
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
   <tr>
-    <td style="background:#1A1A1A;padding:24px 32px;">
-      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
-      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
-      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    <td style="background:#FFFFFF;padding:28px 32px 22px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="128" style="display:block;border:0;max-width:128px;height:auto;">
+      <div style="color:#6B6660;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:12px;">Regularização de imóveis</div>
     </td>
   </tr>
 
@@ -105,10 +113,9 @@ de mostrar um quadrado quebrado — que é o que faz e-mail parecer golpe.
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
   <tr>
-    <td style="background:#1A1A1A;padding:24px 32px;">
-      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
-      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
-      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    <td style="background:#FFFFFF;padding:28px 32px 22px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="128" style="display:block;border:0;max-width:128px;height:auto;">
+      <div style="color:#6B6660;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:12px;">Regularização de imóveis</div>
     </td>
   </tr>
 
@@ -169,10 +176,9 @@ de mostrar um quadrado quebrado — que é o que faz e-mail parecer golpe.
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
   <tr>
-    <td style="background:#1A1A1A;padding:24px 32px;">
-      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
-      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
-      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    <td style="background:#FFFFFF;padding:28px 32px 22px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="128" style="display:block;border:0;max-width:128px;height:auto;">
+      <div style="color:#6B6660;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:12px;">Regularização de imóveis</div>
     </td>
   </tr>
 
@@ -231,10 +237,9 @@ de mostrar um quadrado quebrado — que é o que faz e-mail parecer golpe.
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FAFAF7;border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(26,26,26,0.06);">
 
   <tr>
-    <td style="background:#1A1A1A;padding:24px 32px;">
-      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="132" style="display:block;border:0;max-width:132px;height:auto;">
-      <div style="color:#FAFAF7;font-size:17px;font-weight:600;letter-spacing:-0.2px;margin-top:4px;">Ato Regulariza</div>
-      <div style="color:#E1662E;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;">Regularização de imóveis</div>
+    <td style="background:#FFFFFF;padding:28px 32px 22px;">
+      <img src="https://www.atoregulariza.com.br/ato-lockup.png" alt="Ato Regulariza" width="128" style="display:block;border:0;max-width:128px;height:auto;">
+      <div style="color:#6B6660;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:12px;">Regularização de imóveis</div>
     </td>
   </tr>
 
