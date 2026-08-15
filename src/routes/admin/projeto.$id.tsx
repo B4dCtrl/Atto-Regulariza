@@ -572,16 +572,15 @@ function ProjetoPage() {
             </div>
           )}
 
-          {/* Link painel cliente */}
-          <div className="rounded-2xl bg-surface ring-1 ring-border p-4 text-center">
-            <p className="text-xs text-ink-soft mb-2">Ver como o cliente vê</p>
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-background transition-colors"
-            >
-              <User className="h-3 w-3" /> Abrir painel do cliente
-            </Link>
-          </div>
+          {/* Removido: havia aqui um botão "Abrir painel do cliente" apontando
+              para /dashboard sem parâmetro. Como /dashboard mostra o imóvel de
+              QUEM ESTÁ LOGADO (client_id = auth.uid()), o admin caía numa tela
+              "Nenhum imóvel vinculado a esta conta" — o botão prometia uma
+              coisa e fazia outra.
+
+              Ver o painel pelos olhos do cliente exige personificação, que é
+              funcionalidade própria e com implicação de segurança. Enquanto ela
+              não existir, é melhor não ter o botão do que ter um que engana. */}
         </div>
       </div>
     </div>

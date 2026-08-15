@@ -183,7 +183,10 @@ function DashboardContent() {
         { event: "INSERT", schema: "public", table: "messages", filter: `property_id=eq.${propertyId}` },
         ({ new: next }) => {
           if (next) {
-            setMsgs((m) => [...m, next as MessageRow]);
+            // Filtra por id: a própria mensagem do cliente já foi acrescentada
+            // no envio, e o canal a entrega de novo.
+            const msg = next as MessageRow;
+            setMsgs((m) => (m.some((x) => x.id === msg.id) ? m : [...m, msg]));
             setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
           }
         }
@@ -191,7 +194,17 @@ function DashboardContent() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+    // ATENÇÃO: as dependências precisam incluir propertyId.
+    //
+    // Estava `[]`, e o efeito começa com `if (!propertyId) return`. Como o id é
+    // carregado de forma assíncrona, na montagem ele é null, o efeito saía cedo
+    // e — com array vazio — nunca mais rodava. Nenhum canal era aberto.
+    //
+    // Consequências que isso causava: a mensagem que o cliente enviava não
+    // aparecia na tela dele (chegava ao profissional, cujo painel tem realtime
+    // funcionando), a linha do tempo não avançava quando o admin delegava o
+    // caso, e o progresso não atualizava sozinho.
+  }, [propertyId]);
 
   /* ── Tutorial de primeiro acesso ──
      Disparado pelo wizard via /dashboard?welcome=1 (confiável). Caso o parâmetro
@@ -238,13 +251,24 @@ function DashboardContent() {
     if (!text || sendingMsg || !propertyId) return;
     setSendingMsg(true);
     setChatInput("");
-    await supabase.from("messages").insert({
-      property_id: propertyId,
-      sender_id: userId,
-      sender_name: clientName,
-      content: text,
-      is_client: true,
-    });
+    const { data: enviada } = await supabase
+      .from("messages")
+      .insert({
+        property_id: propertyId,
+        sender_id: userId,
+        sender_name: clientName,
+        content: text,
+        is_client: true,
+      })
+      .select()
+      .single();
+
+    // Mostra na hora, sem esperar o realtime. O canal também vai entregar esta
+    // mensagem, então filtramos por id para não duplicar na tela.
+    if (enviada) {
+      setMsgs((m) => (m.some((x) => x.id === enviada.id) ? m : [...m, enviada as MessageRow]));
+      setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
+    }
     setSendingMsg(false);
   };
 
