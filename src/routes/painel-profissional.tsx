@@ -238,6 +238,10 @@ function ProfissionalPage() {
   /** Campos técnicos da etapa em edição — fonte: process_stages.fields. */
   const [camposEtapa, setCamposEtapa] = useState<Record<string, unknown>>({});
   const [salvandoCampos, setSalvandoCampos] = useState(false);
+  /** Espera da digitação antes de gravar os campos da etapa. */
+  const timerCamposRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Sequência das gravações: só a mais recente vale, o resto é descartado. */
+  const seqCamposRef = useRef(0);
   /** Pendências do processo aberto — fonte: tabela pendencies. */
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   /** Anotação interna do processo aberto — fonte: tabela process_notes. */
@@ -476,19 +480,59 @@ function ProfissionalPage() {
    * Salva o campo no banco. O estado local muda na hora para o campo não "pular"
    * enquanto a escrita vai e volta.
    */
-  const setField = async (stageNum: number, fid: string, val: FieldVal) => {
+  /**
+   * Grava os campos da etapa com espera e proteção contra resposta atrasada.
+   *
+   * Sem a espera, cada tecla virava um UPDATE: uma observação de 200 caracteres
+   * disparava 200 gravações do jsonb inteiro. Pior que o custo era a ordem —
+   * a resposta da tecla 180 podia chegar depois da 200 e regravar texto antigo
+   * por cima do novo, porque cada chamada envia o objeto completo.
+   *
+   * O contador de sequência resolve isso: só a gravação mais recente conta.
+   */
+  const setField = (stageNum: number, fid: string, val: FieldVal) => {
     if (!selectedId) return;
+    const pid = selectedId;
     const novos = { ...camposEtapa, [fid]: val };
+
+    // A tela responde na hora; o banco espera a digitação parar.
     setCamposEtapa(novos);
     setSalvandoCampos(true);
-    try {
-      await salvarCampos(selectedId, stageNum, novos);
-      setErroTrabalho(null);
-    } catch (e) {
-      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível salvar.");
-    } finally {
-      setSalvandoCampos(false);
-    }
+
+    if (timerCamposRef.current) clearTimeout(timerCamposRef.current);
+    timerCamposRef.current = setTimeout(() => {
+      const seq = ++seqCamposRef.current;
+      salvarCampos(pid, stageNum, novos)
+        .then(() => {
+          if (seq !== seqCamposRef.current) return; // veio atrasada: descarta
+          setErroTrabalho(null);
+          setSalvandoCampos(false);
+        })
+        .catch((e: Error) => {
+          if (seq !== seqCamposRef.current) return;
+          setErroTrabalho(e.message);
+          setSalvandoCampos(false);
+        });
+    }, 600);
+  };
+
+  /** Grava agora o que estiver pendente — ao sair do campo ou trocar de etapa. */
+  const gravarCamposAgora = () => {
+    if (!timerCamposRef.current) return;
+    clearTimeout(timerCamposRef.current);
+    timerCamposRef.current = null;
+    if (!selectedId) return;
+    const seq = ++seqCamposRef.current;
+    salvarCampos(selectedId, activeStage, camposEtapa)
+      .then(() => {
+        if (seq === seqCamposRef.current) setSalvandoCampos(false);
+      })
+      .catch((e: Error) => {
+        if (seq === seqCamposRef.current) {
+          setErroTrabalho(e.message);
+          setSalvandoCampos(false);
+        }
+      });
   };
 
   const hasAnyField = () =>
@@ -658,13 +702,13 @@ function ProfissionalPage() {
 
     switch (field.type) {
       case "text":
-        return <input type="text" value={val as string} onChange={(e) => set(e.target.value)} placeholder={field.placeholder} className={base} />;
+        return <input type="text" value={val as string} onChange={(e) => set(e.target.value)} onBlur={gravarCamposAgora} placeholder={field.placeholder} className={base} />;
       case "number":
-        return <input type="number" value={val as string} onChange={(e) => set(e.target.value)} placeholder={field.placeholder} className={base} />;
+        return <input type="number" value={val as string} onChange={(e) => set(e.target.value)} onBlur={gravarCamposAgora} placeholder={field.placeholder} className={base} />;
       case "date":
         return <input type="date" value={val as string} onChange={(e) => set(e.target.value)} className={base} />;
       case "textarea":
-        return <textarea value={val as string} onChange={(e) => set(e.target.value)} placeholder={field.placeholder} rows={3} className={`${base} resize-none`} />;
+        return <textarea value={val as string} onChange={(e) => set(e.target.value)} onBlur={gravarCamposAgora} placeholder={field.placeholder} rows={3} className={`${base} resize-none`} />;
       case "select":
         return (
           <select value={val as string} onChange={(e) => set(e.target.value)} className={`${base} cursor-pointer`}>
@@ -1105,7 +1149,12 @@ function ProfissionalPage() {
                   return (
                     <button
                       key={s.num}
-                      onClick={() => setActiveStage(s.num)}
+                      onClick={() => {
+                        // Grava o que estiver esperando antes de trocar: senão o
+                        // texto digitado nos últimos 600 ms se perderia.
+                        gravarCamposAgora();
+                        setActiveStage(s.num);
+                      }}
                       className={`flex w-full items-start gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors ${
                         active ? "bg-foreground text-background" : "hover:bg-surface"
                       }`}
