@@ -12,6 +12,25 @@ import type { Tables } from "@/integrations/supabase/types";
 import { chatAssistant } from "@/lib/api/assistant.functions";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
+import { ChecklistDocumentos } from "@/components/documentos/ChecklistDocumentos";
+import {
+  carregarEtapas,
+  marcarEtapa,
+  etapasConcluidas,
+  carregarCampos,
+  salvarCampos,
+  carregarLeituraChat,
+  marcarChatLido,
+  type EtapaResumo,
+} from "@/lib/api/etapas";
+import {
+  listarPendencias,
+  criarPendencia,
+  resolverPendencia,
+  textoDaPendencia,
+  type Pendencia,
+} from "@/lib/api/pendencias";
+import { carregarNota, salvarNota } from "@/lib/api/notas";
 
 type PropertyRow = Tables<"properties">;
 
@@ -49,14 +68,6 @@ type FieldType = "text" | "textarea" | "date" | "number" | "select" | "checklist
 type FieldVal  = string | string[] | boolean;
 type RightTab  = "docs" | "chat" | "briefing";
 type MainSection = "processos" | "documentos" | "stats" | "notificacoes" | "configuracoes";
-
-interface Pendency {
-  id: string;
-  stageNum: number;
-  description: string;
-  createdAt: string;
-  status: "aberta" | "resolvida";
-}
 
 interface MockProcess {
   id: string;
@@ -101,7 +112,8 @@ const STAGE_DEFS: StageDef[] = [
     num: 1, label: "Análise documental",
     desc: "Receba e confira todos os documentos do caso antes de avançar.",
     fields: [
-      { id:"docs_recebidos", label:"Documentos recebidos", type:"checklist", options:["IPTU atualizado","Escritura / matrícula","RG e CPF do proprietário","Planta do imóvel","CCIR / CAR (rural)","Habite-se (se houver)"] },
+      // "Documentos recebidos" saiu daqui: virou o ChecklistDocumentos, que
+      // confere os arquivos que existem de verdade em vez de uma lista fixa.
       { id:"pendencias",    label:"Pendências ou inconsistências", type:"textarea", placeholder:"Descreva documentos ausentes, dados divergentes ou outras observações relevantes para este caso..." },
       { id:"obs_inicial",   label:"Situação geral — resumo inicial", type:"text",     placeholder:"Resumo do estado da documentação ao receber o caso" },
     ],
@@ -155,15 +167,6 @@ const URGENCY_CLS: Record<Urgency, string>   = {
   media: "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200",
   baixa: "bg-green-50 text-green-700 ring-1 ring-green-200",
 };
-
-/* ─────────────────────────────────────────────── Storage helpers */
-function storeGet<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; }
-  catch { return fallback; }
-}
-function storeSet(key: string, val: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* noop */ }
-}
 
 /* ─────────────────────────────────────────────── Component */
 /** Mapeia uma propriedade do Supabase para o formato usado pela UI do painel. */
@@ -226,31 +229,35 @@ function ProfissionalPage() {
     if (userId) await supabase.from("profiles").update({ settings: next }).eq("id", userId);
   }
 
-  /* ── Estado de trabalho do profissional (localStorage, por processo real) ── */
-  const [doneStages, setDoneStages] = useState<Record<string, number[]>>(
-    () => storeGet("rz-done-stages", {})
-  );
-  const [allFields, setAllFields] = useState<Record<string, Record<number, Record<string, FieldVal>>>>(
-    () => storeGet("rz-stage-fields", {})
-  );
+  /* ── Trabalho do profissional: tudo vem do banco ──
+     Antes isto morava no localStorage do navegador: limpar o navegador apagava
+     o trabalho, outro computador mostrava tudo em branco e o cliente nunca via
+     as pendências. Agora o estado local é só um espelho do que está no banco. */
+  /** Etapas do processo aberto (estado e campos) — fonte: process_stages. */
+  const [etapas, setEtapas] = useState<EtapaResumo[]>([]);
+  /** Campos técnicos da etapa em edição — fonte: process_stages.fields. */
+  const [camposEtapa, setCamposEtapa] = useState<Record<string, unknown>>({});
+  const [salvandoCampos, setSalvandoCampos] = useState(false);
+  /** Pendências do processo aberto — fonte: tabela pendencies. */
+  const [pendencias, setPendencias] = useState<Pendencia[]>([]);
+  /** Anotação interna do processo aberto — fonte: tabela process_notes. */
+  const [nota, setNota] = useState("");
+  /** Erro do trabalho no caso aberto. Sem isto, falha de rede vira tela vazia
+      indistinguível de "ainda não há nada" — e o profissional redigita tudo. */
+  const [erroTrabalho, setErroTrabalho] = useState<string | null>(null);
   /* Chat vem do Supabase (em memória, por processo selecionado) */
   const [allMsgs, setAllMsgs] = useState<Record<string, LocalMsg[]>>({});
   /* Documentos são responsabilidade do DocumentList; aqui só sinalizamos recarga. */
   const [recargaDocs, setRecargaDocs] = useState(0);
   /** Processo escolhido na aba lateral "Documentos" (separado do caso aberto). */
   const [docsProcId, setDocsProcId] = useState<string | null>(null);
-  const [allPendencies, setAllPendencies] = useState<Record<string, Pendency[]>>(
-    () => storeGet("rz-pendencies", {})
-  );
-  /* ── Notification tracking ── */
-  const [lastChatView, setLastChatView] = useState<Record<string, number>>(
-    () => storeGet("rz-last-chat-view", {})
-  );
-  /* ── Private notes per process ── */
-  const [privateNotes, setPrivateNotes] = useState<Record<string, string>>(
-    () => storeGet("rz-private-notes", {})
-  );
+  /** Quantas etapas cada processo já concluiu — para a lista e as estatísticas. */
+  const [resumoEtapas, setResumoEtapas] = useState<Record<string, number>>({});
+  /** Última leitura do chat por processo, em ms — fonte: tabela chat_reads. */
+  const [leiturasChat, setLeiturasChat] = useState<Record<string, number>>({});
   const [noteInput, setNoteInput] = useState("");
+  /** Ao abrir um caso, a etapa a mostrar só se sabe depois que as etapas chegam. */
+  const acabouDeAbrir = useRef(false);
 
   /* ── Derived ── */
   const acceptedIds   = processes.map((p) => p.id);
@@ -343,9 +350,100 @@ function ProfissionalPage() {
     return () => { supabase.removeChannel(ch); };
   }, [docsProcId]);
 
+  /* ── Trabalho do caso aberto: etapas, pendências e anotação ── */
+  useEffect(() => {
+    const pid = selectedId;
+    if (!pid) return;
+    let cancelado = false;
+
+    setErroTrabalho(null);
+    Promise.all([carregarEtapas(pid), listarPendencias(pid), carregarNota(pid)])
+      .then(([es, ps, n]) => {
+        if (cancelado) return;
+        setEtapas(es);
+        setPendencias(ps);
+        setNota(n);
+        // Só agora dá para saber em que etapa o caso parou.
+        if (acabouDeAbrir.current) {
+          acabouDeAbrir.current = false;
+          const feitas = etapasConcluidas(es);
+          let proxima = 5;
+          for (let i = 1; i <= 5; i++) {
+            if (!feitas.includes(i)) {
+              proxima = i;
+              break;
+            }
+          }
+          setActiveStage(proxima);
+        }
+      })
+      .catch((e: Error) => {
+        if (!cancelado) setErroTrabalho(e.message);
+      });
+
+    // Abrir o processo marca o chat como lido.
+    marcarChatLido(pid);
+    setLeiturasChat((prev) => ({ ...prev, [pid]: Date.now() }));
+
+    return () => {
+      cancelado = true;
+    };
+  }, [selectedId]);
+
+  /* ── Campos da etapa em edição ── */
+  useEffect(() => {
+    const pid = selectedId;
+    if (!pid) {
+      setCamposEtapa({});
+      return;
+    }
+    let cancelado = false;
+    carregarCampos(pid, activeStage)
+      .then((c) => {
+        if (!cancelado) setCamposEtapa(c);
+      })
+      .catch((e: Error) => {
+        if (!cancelado) setErroTrabalho(e.message);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [selectedId, activeStage]);
+
+  /* ── Resumo de todos os processos: progresso na lista e nas estatísticas ── */
+  useEffect(() => {
+    if (myProcs.length === 0) return;
+    let cancelado = false;
+    Promise.all(
+      myProcs.map((p) =>
+        Promise.all([carregarEtapas(p.id), carregarLeituraChat(p.id)]).then(
+          ([es, lido]) => [p.id, etapasConcluidas(es).length, lido] as const,
+        ),
+      ),
+    )
+      .then((linhas) => {
+        if (cancelado) return;
+        setResumoEtapas(Object.fromEntries(linhas.map(([id, n]) => [id, n])));
+        setLeiturasChat((prev) => ({
+          ...Object.fromEntries(
+            linhas.map(([id, , lido]) => [id, lido ? new Date(lido).getTime() : 0]),
+          ),
+          // O que já foi marcado como lido nesta sessão manda: é mais recente
+          // que a consulta e evita o contador "piscar" de volta.
+          ...prev,
+        }));
+      })
+      .catch(() => {
+        /* progresso é indicador; a falha real aparece ao abrir o caso */
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [myProcs]);
+
   /* ── Unread counts ── */
   const unreadCount = (pid: string) => {
-    const lastView = lastChatView[pid] ?? 0;
+    const lastView = leiturasChat[pid] ?? 0;
     return (allMsgs[pid] ?? []).filter(
       (m) => m.isClient && new Date(m.ts).getTime() > lastView
     ).length;
@@ -353,59 +451,59 @@ function ProfissionalPage() {
   const totalUnread = acceptedIds.reduce((sum, pid) => sum + unreadCount(pid), 0);
 
   const markChatRead = (pid: string) => {
-    const now = Date.now();
-    setLastChatView((prev) => {
-      const next = { ...prev, [pid]: now };
-      storeSet("rz-last-chat-view", next);
-      return next;
-    });
+    setLeiturasChat((prev) => ({ ...prev, [pid]: Date.now() }));
+    marcarChatLido(pid);
   };
 
-  const isDone     = (pid: string, n: number) => (doneStages[pid] ?? []).includes(n);
-  const isActiveStg = (pid: string, n: number) => {
-    const done = doneStages[pid] ?? [];
+  /** Etapas concluídas do processo: do caso aberto vem do estado vivo. */
+  const concluidasDe = (pid: string) =>
+    pid === selectedId ? etapasConcluidas(etapas).length : (resumoEtapas[pid] ?? 0);
+
+  const isDone = (n: number) =>
+    etapas.some((e) => e.stage_number === n && e.state === "done");
+  const isActiveStg = (n: number) => {
+    const done = etapasConcluidas(etapas);
     const maxDone = done.length > 0 ? Math.max(...done) : 0;
     return n === maxDone + 1 && !done.includes(n);
   };
-  const currentStage = (pid: string) => {
-    const done = doneStages[pid] ?? [];
-    for (let i = 1; i <= 5; i++) if (!done.includes(i)) return i;
-    return 5;
-  };
-  const progress = (pid: string) =>
-    Math.round(((doneStages[pid] ?? []).length / 5) * 100);
+  const currentStage = (pid: string) => Math.min(concluidasDe(pid) + 1, 5);
+  const progress = (pid: string) => Math.round((concluidasDe(pid) / 5) * 100);
 
   /* ── Field helpers ── */
-  const getField = (pid: string, stageNum: number, fid: string): FieldVal =>
-    allFields[pid]?.[stageNum]?.[fid] ?? "";
+  const getField = (fid: string): FieldVal => (camposEtapa[fid] as FieldVal) ?? "";
 
-  const setField = (pid: string, stageNum: number, fid: string, val: FieldVal) => {
-    setAllFields((prev) => {
-      const next = {
-        ...prev,
-        [pid]: {
-          ...prev[pid],
-          [stageNum]: { ...prev[pid]?.[stageNum], [fid]: val },
-        },
-      };
-      storeSet("rz-stage-fields", next);
-      return next;
-    });
+  /**
+   * Salva o campo no banco. O estado local muda na hora para o campo não "pular"
+   * enquanto a escrita vai e volta.
+   */
+  const setField = async (stageNum: number, fid: string, val: FieldVal) => {
+    if (!selectedId) return;
+    const novos = { ...camposEtapa, [fid]: val };
+    setCamposEtapa(novos);
+    setSalvandoCampos(true);
+    try {
+      await salvarCampos(selectedId, stageNum, novos);
+      setErroTrabalho(null);
+    } catch (e) {
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível salvar.");
+    } finally {
+      setSalvandoCampos(false);
+    }
   };
 
-  const hasAnyField = (pid: string, stageNum: number) => {
-    const fields = allFields[pid]?.[stageNum] ?? {};
-    return Object.values(fields).some((v) => {
+  const hasAnyField = () =>
+    Object.values(camposEtapa).some((v) => {
       if (typeof v === "string")  return v.trim().length > 0;
       if (Array.isArray(v))       return v.length > 0;
       if (typeof v === "boolean") return v;
       return false;
     });
-  };
 
-  /* Reflete o progresso do profissional na propriedade → o cliente vê em tempo real. */
-  async function syncProgressToProperty(pid: string, doneArr: number[]) {
-    const count = doneArr.length;
+  /* Reflete o progresso na propriedade → o cliente vê em tempo real.
+     As etapas em si já foram gravadas por marcarEtapa; aqui só o resumo que a
+     tela do cliente lê. Escrever process_stages de novo aqui recriaria a
+     segunda verdade que este trabalho veio eliminar. */
+  async function syncProgressToProperty(pid: string, count: number) {
     const progressPct = Math.round((count / 5) * 100);
     const status =
       count >= 5 ? "entregue"
@@ -417,60 +515,88 @@ function ProfissionalPage() {
     await supabase.from("properties")
       .update({ status, progress: progressPct, current_stage: clientStage, updated_at: new Date().toISOString() })
       .eq("id", pid);
-    // Espelha nas etapas do cliente (1..count concluídas, próxima ativa)
-    for (let i = 1; i <= 5; i++) {
-      await supabase.from("process_stages")
-        .update({
-          state: i <= count ? "done" : i === count + 1 ? "active" : "pending",
-          completed_at: i <= count ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("property_id", pid).eq("stage_number", i);
-    }
   }
 
   /* ── Actions ── */
-  const completeStage = (pid: string, n: number) => {
-    setDoneStages((prev) => {
-      const arr = [...(prev[pid] ?? []).filter((x) => x !== n), n];
-      const next = { ...prev, [pid]: arr };
-      storeSet("rz-done-stages", next);
-      syncProgressToProperty(pid, arr);
-      return next;
-    });
-    if (n < 5) setActiveStage(n + 1);
+  const completeStage = async (pid: string, n: number) => {
+    try {
+      await marcarEtapa(pid, n, "done");
+      // A próxima só passa a "active" se ainda não estiver concluída — reconcluir
+      // uma etapa do meio não pode rebaixar o que já foi feito.
+      if (n < 5 && !isDone(n + 1)) await marcarEtapa(pid, n + 1, "active");
+      const es = await carregarEtapas(pid);
+      setEtapas(es);
+      const feitas = etapasConcluidas(es).length;
+      setResumoEtapas((prev) => ({ ...prev, [pid]: feitas }));
+      await syncProgressToProperty(pid, feitas);
+      setErroTrabalho(null);
+      if (n < 5) setActiveStage(n + 1);
+    } catch (e) {
+      // Recarrega para a tela mostrar o que o banco tem de fato, e não um
+      // otimismo que a falha desmentiu.
+      carregarEtapas(pid)
+        .then(setEtapas)
+        .catch(() => {});
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível concluir a etapa.");
+    }
   };
 
-  const undoStage = (pid: string, n: number) => {
-    setDoneStages((prev) => {
-      const arr = (prev[pid] ?? []).filter((x) => x !== n);
-      const next = { ...prev, [pid]: arr };
-      storeSet("rz-done-stages", next);
-      syncProgressToProperty(pid, arr);
-      return next;
-    });
+  const undoStage = async (pid: string, n: number) => {
+    try {
+      await marcarEtapa(pid, n, "active");
+      const es = await carregarEtapas(pid);
+      setEtapas(es);
+      const feitas = etapasConcluidas(es).length;
+      setResumoEtapas((prev) => ({ ...prev, [pid]: feitas }));
+      await syncProgressToProperty(pid, feitas);
+      setErroTrabalho(null);
+    } catch (e) {
+      carregarEtapas(pid)
+        .then(setEtapas)
+        .catch(() => {});
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível desfazer a etapa.");
+    }
   };
 
-  const openPendencies = (pid: string, stageNum: number) =>
-    (allPendencies[pid] ?? []).filter((p) => p.stageNum === stageNum && p.status === "aberta");
+  const openPendencies = (stageNum: number) =>
+    pendencias.filter((p) => p.stage_number === stageNum && p.status === "aberta");
 
-  const hasOpenPendencies = (pid: string, stageNum: number) =>
-    openPendencies(pid, stageNum).length > 0;
+  const hasOpenPendencies = (stageNum: number) => openPendencies(stageNum).length > 0;
 
-  const createPendency = (pid: string, stageNum: number, desc: string) => {
+  const createPendency = async (pid: string, stageNum: number, desc: string) => {
     if (!desc.trim()) return;
-    const p: Pendency = { id: crypto.randomUUID(), stageNum, description: desc.trim(), createdAt: new Date().toISOString(), status: "aberta" };
-    setAllPendencies((prev) => { const next = { ...prev, [pid]: [...(prev[pid] ?? []), p] }; storeSet("rz-pendencies", next); return next; });
-    setPendencyInput("");
-    setShowPendencyForm(false);
+    try {
+      await criarPendencia({ propertyId: pid, descricao: desc, stageNumber: stageNum });
+      setPendencias(await listarPendencias(pid));
+      setPendencyInput("");
+      setShowPendencyForm(false);
+      setErroTrabalho(null);
+    } catch (e) {
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível criar a pendência.");
+    }
   };
 
-  const resolvePendency = (pid: string, id: string) => {
-    setAllPendencies((prev) => {
-      const next = { ...prev, [pid]: (prev[pid] ?? []).map((p) => p.id === id ? { ...p, status: "resolvida" as const } : p) };
-      storeSet("rz-pendencies", next);
-      return next;
-    });
+  const resolvePendency = async (pid: string, id: string) => {
+    try {
+      await resolverPendencia(id);
+      setPendencias(await listarPendencias(pid));
+      setErroTrabalho(null);
+    } catch (e) {
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível resolver a pendência.");
+    }
+  };
+
+  /** Anotação interna: acrescenta ao que já existe e grava em process_notes. */
+  const salvarAnotacao = async (pid: string, texto: string) => {
+    const novo = [nota, texto.trim()].filter(Boolean).join("\n\n");
+    setNota(novo);
+    setNoteInput("");
+    try {
+      await salvarNota(pid, novo);
+      setErroTrabalho(null);
+    } catch (e) {
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível salvar a anotação.");
+    }
   };
 
   // Admin atribui diretamente — não há mais "aceitar". Recusar devolve ao admin.
@@ -483,7 +609,9 @@ function ProfissionalPage() {
 
   const openProcess = (pid: string) => {
     setSelectedId(pid);
+    // Chute pelo resumo já carregado; o efeito corrige assim que as etapas chegam.
     setActiveStage(currentStage(pid));
+    acabouDeAbrir.current = true;
     setRightTab("briefing");
   };
 
@@ -519,8 +647,10 @@ function ProfissionalPage() {
   /* ── Field renderer ── */
   const renderField = (field: FieldDef) => {
     if (!selectedId) return null;
-    const val = getField(selectedId, activeStage, field.id);
-    const set = (v: FieldVal) => setField(selectedId, activeStage, field.id, v);
+    const val = getField(field.id);
+    const set = (v: FieldVal) => {
+      void setField(activeStage, field.id, v);
+    };
     const base =
       "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none " +
       "focus:border-foreground/30 focus:ring-2 focus:ring-foreground/10 transition-colors " +
@@ -836,9 +966,9 @@ function ProfissionalPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {[
                     { label: "Total de casos",  value: myProcs.length,                                                                                               icon: Briefcase     },
-                    { label: "Concluídos",       value: myProcs.filter((p) => (doneStages[p.id] ?? []).length === 5).length,                                         icon: CheckCircle2  },
-                    { label: "Em progresso",     value: myProcs.filter((p) => (doneStages[p.id] ?? []).length > 0 && (doneStages[p.id] ?? []).length < 5).length,    icon: BarChart3     },
-                    { label: "Não iniciados",    value: myProcs.filter((p) => (doneStages[p.id] ?? []).length === 0).length,                                         icon: AlertTriangle },
+                    { label: "Concluídos",       value: myProcs.filter((p) => concluidasDe(p.id) === 5).length,                                                       icon: CheckCircle2  },
+                    { label: "Em progresso",     value: myProcs.filter((p) => concluidasDe(p.id) > 0 && concluidasDe(p.id) < 5).length,                              icon: BarChart3     },
+                    { label: "Não iniciados",    value: myProcs.filter((p) => concluidasDe(p.id) === 0).length,                                                      icon: AlertTriangle },
                   ].map((s, i) => (
                     <div key={i} className="rounded-2xl bg-background ring-1 ring-border p-6">
                       <div className="flex items-center justify-between mb-3">
@@ -956,7 +1086,7 @@ function ProfissionalPage() {
                   {selectedProc.name}
                 </div>
                 <div className="mt-2 flex items-center justify-between text-xs text-ink-soft">
-                  <span>{(doneStages[selectedId!] ?? []).length} / 5 etapas</span>
+                  <span>{etapasConcluidas(etapas).length} / 5 etapas</span>
                   <span>{progress(selectedId!)}%</span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface">
@@ -970,7 +1100,7 @@ function ProfissionalPage() {
 
               <nav className="flex-1 overflow-y-auto p-2 space-y-1">
                 {STAGE_DEFS.map((s) => {
-                  const done   = isDone(selectedId!, s.num);
+                  const done   = isDone(s.num);
                   const active = s.num === activeStage;
                   return (
                     <button
@@ -990,7 +1120,7 @@ function ProfissionalPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-medium leading-tight">{s.label}</div>
                         <div className={`mt-0.5 text-[11px] ${active ? "text-background/60" : "text-ink-soft"}`}>
-                          {done ? "Concluída" : isActiveStg(selectedId!, s.num) ? "Em andamento" : "Aguardando"}
+                          {done ? "Concluída" : isActiveStg(s.num) ? "Em andamento" : "Aguardando"}
                         </div>
                       </div>
                     </button>
@@ -1011,9 +1141,9 @@ function ProfissionalPage() {
                     {/* Stage header */}
                     <div className="mb-5 flex items-start gap-3">
                       <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-medium ${
-                        isDone(selectedId!, activeStage) ? "bg-accent text-accent-foreground" : "bg-foreground text-background"
+                        isDone(activeStage) ? "bg-accent text-accent-foreground" : "bg-foreground text-background"
                       }`}>
-                        {isDone(selectedId!, activeStage) ? <Check className="h-4 w-4" /> : stageDef.num}
+                        {isDone(activeStage) ? <Check className="h-4 w-4" /> : stageDef.num}
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-widest text-ink-soft">Etapa {stageDef.num}</div>
@@ -1021,6 +1151,27 @@ function ProfissionalPage() {
                         <p className="mt-1 text-sm text-ink-soft">{stageDef.desc}</p>
                       </div>
                     </div>
+
+                    {/* Falha de carregamento ou de gravação precisa aparecer: sem
+                        isto o profissional acha que digitou e salvou. */}
+                    {erroTrabalho && (
+                      <div role="alert" className="mb-4 flex gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-700 ring-1 ring-red-200">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{erroTrabalho}</span>
+                      </div>
+                    )}
+
+                    {/* Conferência dos documentos reais do cliente (etapa 1) */}
+                    {activeStage === 1 && selectedId && (
+                      <div className="mb-6">
+                        <div className="mb-2 text-sm font-medium">Documentos recebidos</div>
+                        <ChecklistDocumentos
+                          propertyId={selectedId}
+                          recarregarToken={recargaDocs}
+                          onMudou={() => setRecargaDocs((n) => n + 1)}
+                        />
+                      </div>
+                    )}
 
                     {/* Fields */}
                     <div className="space-y-4">
@@ -1054,7 +1205,7 @@ function ProfissionalPage() {
               {/* Bottom bar — complete / undo */}
               <div className="border-t border-border bg-background p-4">
                 <div className="flex items-center gap-3">
-                  {isDone(selectedId!, activeStage) ? (
+                  {isDone(activeStage) ? (
                     <>
                       <div className="flex flex-1 items-center gap-2 text-sm text-accent">
                         <CheckCircle2 className="h-4 w-4" />
@@ -1069,14 +1220,16 @@ function ProfissionalPage() {
                     </>
                   ) : (
                     <>
-                      {hasOpenPendencies(selectedId!, activeStage) ? (
+                      {hasOpenPendencies(activeStage) ? (
                         <div className="flex flex-1 items-center gap-2 text-xs text-red-500">
                           <AlertTriangle className="h-4 w-4 shrink-0" />
                           Resolva as pendências antes de concluir
                         </div>
                       ) : (
                         <p className="flex-1 text-xs text-ink-soft">
-                          {hasAnyField(selectedId!, activeStage) ? "Pronto para concluir." : "Preencha ao menos um campo."}
+                          {salvandoCampos
+                            ? "Salvando…"
+                            : hasAnyField() ? "Pronto para concluir." : "Preencha ao menos um campo."}
                         </p>
                       )}
                       <button
@@ -1087,7 +1240,7 @@ function ProfissionalPage() {
                       </button>
                       <button
                         onClick={() => completeStage(selectedId!, activeStage)}
-                        disabled={!hasAnyField(selectedId!, activeStage) || hasOpenPendencies(selectedId!, activeStage)}
+                        disabled={!hasAnyField() || hasOpenPendencies(activeStage)}
                         className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                       >
                         <Check className="h-3.5 w-3.5" />
@@ -1096,12 +1249,12 @@ function ProfissionalPage() {
                     </>
                   )}
                   {/* Pendências abertas desta etapa */}
-                  {selectedId && openPendencies(selectedId, activeStage).length > 0 && (
+                  {selectedId && openPendencies(activeStage).length > 0 && (
                     <div className="mt-2 w-full space-y-1.5">
-                      {openPendencies(selectedId, activeStage).map((p) => (
+                      {openPendencies(activeStage).map((p) => (
                         <div key={p.id} className="flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700 ring-1 ring-red-200">
                           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                          <span className="flex-1">{p.description}</span>
+                          <span className="flex-1">{textoDaPendencia(p)}</span>
                           <button onClick={() => resolvePendency(selectedId, p.id)} className="font-medium underline hover:no-underline">Resolver</button>
                         </div>
                       ))}
@@ -1224,7 +1377,7 @@ function ProfissionalPage() {
                     <div className="mb-2 text-[10px] uppercase tracking-widest text-ink-soft">Progresso</div>
                     <div className="space-y-1.5">
                       {STAGE_DEFS.map((s) => {
-                        const done = selectedId ? isDone(selectedId!, s.num) : false;
+                        const done = isDone(s.num);
                         const active = s.num === activeStage && !done;
                         return (
                           <div key={s.num} className="flex items-center gap-2 text-xs">
@@ -1244,12 +1397,17 @@ function ProfissionalPage() {
 
                   {/* Private notes */}
                   <div className="rounded-xl bg-surface p-3">
-                    <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-soft">
+                    <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-soft">
                       <StickyNote className="h-3 w-3" /> Notas privadas
                     </div>
-                    {selectedId && privateNotes[selectedId] && (
+                    {/* O profissional precisa saber que o cliente não lê isto —
+                        sem o rótulo, dá para escrever aqui achando que avisou. */}
+                    <div className="mb-2 inline-flex items-center rounded-full bg-background px-2 py-0.5 text-[10px] text-ink-soft ring-1 ring-border">
+                      Só a equipe vê
+                    </div>
+                    {nota && (
                       <p className="mb-2 text-xs leading-relaxed text-foreground whitespace-pre-wrap">
-                        {privateNotes[selectedId]}
+                        {nota}
                       </p>
                     )}
                     <textarea
@@ -1262,16 +1420,7 @@ function ProfissionalPage() {
                     <button
                       onClick={() => {
                         if (!selectedId || !noteInput.trim()) return;
-                        const combined = [
-                          privateNotes[selectedId] ?? "",
-                          noteInput.trim(),
-                        ].filter(Boolean).join("\n\n");
-                        setPrivateNotes((prev) => {
-                          const next = { ...prev, [selectedId!]: combined };
-                          storeSet("rz-private-notes", next);
-                          return next;
-                        });
-                        setNoteInput("");
+                        void salvarAnotacao(selectedId, noteInput);
                       }}
                       disabled={!noteInput.trim()}
                       className="mt-1.5 w-full rounded-lg bg-foreground py-1.5 text-xs text-background disabled:opacity-40 hover:bg-foreground/90 transition-colors"
