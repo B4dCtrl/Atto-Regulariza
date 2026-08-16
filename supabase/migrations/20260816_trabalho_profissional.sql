@@ -233,6 +233,43 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.tem_aprovacao(uuid,text,uuid) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION public.tem_aprovacao(uuid,text,uuid) TO authenticated, service_role;
 
+-- Coluna que marca o pedido como já usado.
+ALTER TABLE public.approval_requests
+  ADD COLUMN IF NOT EXISTS consumido_em timestamptz;
+
+/**
+ * Uma aprovação, um uso.
+ *
+ * Encontra um pedido aprovado e ainda não usado, marca como consumido e diz
+ * se achou. Sem isto, `tem_aprovacao` apenas constata que existe um pedido
+ * aprovado — e o profissional poderia reconcluir o processo indefinidamente,
+ * ou reexcluir o mesmo documento, sempre reaproveitando o aval de meses atrás.
+ *
+ * Marcar o consumo não dispara notificação: trg_notificar_aprovacao só avisa
+ * quando `status` muda, e aqui o status continua 'aprovado'.
+ */
+CREATE OR REPLACE FUNCTION public.consumir_aprovacao(
+  _property_id uuid, _tipo text, _document_id uuid DEFAULT NULL
+) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_id uuid;
+BEGIN
+  SELECT a.id INTO v_id
+  FROM public.approval_requests a
+  WHERE a.property_id = _property_id
+    AND a.tipo = _tipo
+    AND a.status = 'aprovado'
+    AND a.consumido_em IS NULL
+    AND (_document_id IS NULL OR a.document_id = _document_id)
+  ORDER BY a.decidido_em NULLS LAST
+  LIMIT 1;
+
+  IF v_id IS NULL THEN RETURN false; END IF;
+
+  UPDATE public.approval_requests SET consumido_em = now() WHERE id = v_id;
+  RETURN true;
+END $$;
+REVOKE EXECUTE ON FUNCTION public.consumir_aprovacao(uuid,text,uuid) FROM PUBLIC, anon, authenticated;
+
 
 -- ---------------------------------------------------------------
 -- 7) LEITURA DO CHAT
@@ -266,7 +303,7 @@ BEGIN
   IF public.is_trusted_context() OR public.is_admin() THEN RETURN NEW; END IF;
 
   IF NEW.status = 'entregue' AND OLD.status IS DISTINCT FROM 'entregue' THEN
-    IF NOT public.tem_aprovacao(NEW.id, 'conclusao', NULL) THEN
+    IF NOT public.consumir_aprovacao(NEW.id, 'conclusao', NULL) THEN
       RAISE EXCEPTION 'Concluir o processo depende de aprovação do administrador';
     END IF;
   END IF;
@@ -300,7 +337,7 @@ BEGIN
   ELSE
     -- Profissional atribuído: excluir passa a exigir aprovação do admin.
     IF NEW.deleted_at IS DISTINCT FROM OLD.deleted_at AND NEW.deleted_at IS NOT NULL THEN
-      IF NOT public.tem_aprovacao(NEW.property_id, 'exclusao_documento', NEW.id) THEN
+      IF NOT public.consumir_aprovacao(NEW.property_id, 'exclusao_documento', NEW.id) THEN
         RAISE EXCEPTION 'Excluir documento depende de aprovação do administrador';
       END IF;
     END IF;

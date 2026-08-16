@@ -546,7 +546,7 @@ Criar `supabase/migrations/verificacao/20260816_teste_rls_trabalho.sql`:
 -- impersonação. O script troca de identidade sozinho; com impersonação a
 -- tabela temporária não sobrevive entre instruções.
 --
--- CONFERIR: todas as 16 linhas devem sair com resultado = 'OK'.
+-- CONFERIR: todas as 17 linhas devem sair com resultado = 'OK'.
 -- ================================================================
 BEGIN;
 
@@ -648,6 +648,27 @@ BEGIN
 END $$;
 
 
+-- ---- A APROVAÇÃO NÃO SE REUTILIZA ----
+RESET role;
+UPDATE public.properties SET status = 'analise'
+ WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+SET LOCAL role = authenticated;
+SET LOCAL request.jwt.claims = '{"sub":"22222222-2222-2222-2222-222222222222","role":"authenticated"}';
+
+DO $$
+DECLARE barrou boolean := false;
+BEGIN
+  BEGIN
+    UPDATE public.properties SET status = 'entregue'
+     WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  EXCEPTION WHEN others THEN barrou := true;
+  END;
+  -- A aprovação foi consumida no caso 11; reconcluir exige pedido novo.
+  INSERT INTO r VALUES (17, 'aprovação já usada NÃO serve de novo', true, barrou);
+END $$;
+
+
 -- ---- NOTIFICAÇÕES ----
 RESET role;
 
@@ -705,7 +726,7 @@ ROLLBACK;
 
 Copiar todo o conteúdo e colar no SQL Editor, botão **Run**.
 
-Esperado: **16 linhas, todas com `resultado = OK`**.
+Esperado: **17 linhas, todas com `resultado = OK`**.
 
 Qualquer `FALHOU` é brecha de autorização ou automação quebrada — **pare e corrija antes de
 seguir**. Os casos 1 e 9 são os mais importantes: provam que a anotação interna não vaza nem
