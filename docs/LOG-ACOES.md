@@ -37,10 +37,9 @@ O que o profissional envia não aparece para o cliente. Provado no banco (17 cas
 ### 5. ✅ Redefinição de senha — FUNCIONA
 Rota `/redefinir-senha`, SMTP próprio e Redirect URLs configuradas.
 
-### 5b. ⬜ Testar o painel do profissional sem `localStorage`
-O plano 2 acabou de trocar cinco conjuntos de dados por acesso ao banco. Precisa de teste no
-navegador: preencher campo de etapa, concluir etapa, criar pendência, escrever anotação,
-conferir documento no checklist — e recarregar a página para ver se tudo persistiu.
+### 5b. ✅ Painel do profissional sem `localStorage` — CONFIRMADO
+Os cinco conjuntos gravam no banco e sobrevivem ao recarregamento: campos das etapas, estado
+das etapas, pendências, anotações internas e leitura do chat.
 
 ---
 
@@ -68,7 +67,12 @@ terceiros e passa a receber as notificações do processo alheio.
 Três assinaturas acrescentadas (caso aberto, aba Documentos, painel do cliente). O canal só
 avisa; quem busca é o DocumentList, cuja consulta passa pela RLS.
 
-### 10. ⬜ Dois pontos de envio na tela do profissional
+### 10. ⬜ Campo de texto "Pendências" duplicando o botão "+ Pendência"
+A etapa 1 tem um campo de texto livre chamado "Pendências ou inconsistências" ao lado do botão
+que cria pendência de verdade. Dois lugares para a mesma coisa, e só um chega ao cliente.
+**Decisão pendente do usuário:** remover o campo de texto.
+
+### 10b. ⬜ Dois pontos de envio na tela do profissional
 Há o bloco "Arquivos desta etapa" no painel central e a aba Documentos. O rótulo "desta
 etapa" promete algo que o modelo de dados não entrega: não existe coluna ligando documento a
 etapa. Recomendação: remover o da etapa.
@@ -107,5 +111,6 @@ A exclusão lógica preserva tudo no banco, mas não há tela para desfazer.
   para o cliente
 - ✅ Pull Request aberto: https://github.com/B4dCtrl/Atto-Regulariza/pull/1
 - ✅ Frente 2, plano 1: 5 tabelas, RLS e gatilhos; 17 casos de autorização; camada de API
-- ✅ Frente 2, plano 2: painel do profissional sem `localStorage`; conferência sobre os
-  documentos reais
+- ✅ Frente 2, plano 2: painel do profissional sem `localStorage`, confirmado no navegador;
+  conferência sobre os documentos reais; dispensar vistoria; responsável técnico automático;
+  aviso flutuante de salvamento
