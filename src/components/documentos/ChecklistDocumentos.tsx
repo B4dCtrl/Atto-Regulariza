@@ -1,24 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check, FileText, Loader2, Send, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { listarDocumentos, type DocumentoComVersao, type VersaoResumo } from "@/lib/api/documentos";
-import { criarPendencia } from "@/lib/api/pendencias";
+import {
+  listarDocumentos,
+  marcarConferencia,
+  type DocumentoComVersao,
+  type VersaoResumo,
+} from "@/lib/api/documentos";
+import { criarPendencia, listarPendencias, type Pendencia } from "@/lib/api/pendencias";
 import { kindsPara, rotuloDoKind, type DocumentKind } from "@/lib/document-kinds";
 import { DocumentPreview } from "./DocumentPreview";
 
 /**
  * Conferência dos documentos do cliente.
  *
- * Antes isto era uma lista fixa de seis itens no `localStorage`, sem qualquer
- * relação com os arquivos: marcar "IPTU atualizado" não significava que o IPTU
- * tinha chegado. Agora a lista É a dos documentos do processo, em três estados:
+ * Antes isto era uma lista fixa de seis itens no `localStorage`, sem relação
+ * com os arquivos: marcar "IPTU atualizado" não significava que o IPTU tinha
+ * chegado. Agora a lista É a dos documentos do processo, em três estados:
  *
  *   não enviado  → opaco, com botão de pedir ao cliente
  *   enviado      → abre o arquivo, e a caixa marca como conferido
  *   conferido    → `documents.status = 'Aprovado'`
  *
- * A marcação usa a coluna `status`, que já existia — nenhuma estrutura nova, e
- * impossível a conferência divergir da realidade.
+ * Abaixo dos tipos conhecidos vem uma segunda lista, com o que o cliente
+ * mandou sem se encaixar em nenhum deles — inclusive o tipo "outro", que é
+ * justamente o que quem está confuso escolhe. Sem ela, o profissional não veria
+ * esses arquivos e poderia pedir algo que já chegou.
  */
 export function ChecklistDocumentos({
   propertyId,
@@ -30,16 +36,22 @@ export function ChecklistDocumentos({
   onMudou?: () => void;
 }) {
   const [docs, setDocs] = useState<DocumentoComVersao[]>([]);
+  const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [preview, setPreview] = useState<VersaoResumo | null>(null);
-  const [pedidos, setPedidos] = useState<string[]>([]);
 
   const carregar = useCallback(() => {
     setCarregando(true);
-    listarDocumentos(propertyId)
-      .then(setDocs)
+    // As pendências abertas vêm do banco, não de estado local: sem isso, o
+    // profissional que recarregasse a página veria "Solicitar" de novo e criaria
+    // uma segunda pendência do mesmo tipo — que o cliente veria duplicada.
+    Promise.all([listarDocumentos(propertyId), listarPendencias(propertyId, true)])
+      .then(([ds, ps]) => {
+        setDocs(ds);
+        setPendencias(ps);
+      })
       .catch((e: Error) => setErro(e.message))
       .finally(() => setCarregando(false));
   }, [propertyId]);
@@ -50,38 +62,120 @@ export function ChecklistDocumentos({
 
   // Só os tipos que o cliente envia: a conferência é do que ELE entregou.
   const tipos = kindsPara("cliente").filter((t) => t.kind !== "outro");
+  const tiposConhecidos = new Set<string>(tipos.map((t) => t.kind));
+
+  const doDoCliente = (d: DocumentoComVersao) => d.origem === "cliente" && !d.deleted_at;
+
+  /** Enviados pelo cliente que não casam com nenhum tipo da lista acima. */
+  const semTipo = docs.filter((d) => doDoCliente(d) && !tiposConhecidos.has(d.kind));
 
   async function alternarConferido(doc: DocumentoComVersao) {
-    const novo = doc.status === "Aprovado" ? "Enviado" : "Aprovado";
+    const conferido = doc.status === "Aprovado";
     setOcupado(doc.id);
     setErro(null);
-    const { error } = await supabase.from("documents").update({ status: novo }).eq("id", doc.id);
-    setOcupado(null);
-
-    if (error) {
-      setErro("Não foi possível registrar a conferência.");
-      return;
+    try {
+      await marcarConferencia(doc.id, !conferido);
+      setDocs((ds) =>
+        ds.map((d) => (d.id === doc.id ? { ...d, status: conferido ? "Enviado" : "Aprovado" } : d)),
+      );
+      onMudou?.();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível registrar a conferência.");
+    } finally {
+      setOcupado(null);
     }
-    setDocs((ds) => ds.map((d) => (d.id === doc.id ? { ...d, status: novo } : d)));
-    onMudou?.();
   }
 
   async function solicitar(kind: DocumentKind) {
     setOcupado(kind);
     setErro(null);
     try {
-      await criarPendencia({
-        propertyId,
-        descricao: `Envie: ${rotuloDoKind(kind)}`,
-        kind,
-      });
-      setPedidos((p) => [...p, kind]);
+      await criarPendencia({ propertyId, descricao: `Envie: ${rotuloDoKind(kind)}`, kind });
+      // Recarrega do banco: a lista de pendências abertas é a verdade.
+      setPendencias(await listarPendencias(propertyId, true));
       onMudou?.();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Não foi possível pedir o documento.");
     } finally {
       setOcupado(null);
     }
+  }
+
+  /** Uma linha da conferência, usada pelos tipos conhecidos e pelos avulsos. */
+  function Linha({
+    rotulo,
+    doc,
+    kind,
+  }: {
+    rotulo: string;
+    doc?: DocumentoComVersao;
+    kind?: DocumentKind;
+  }) {
+    const enviado = !!doc?.versao;
+    const conferido = doc?.status === "Aprovado";
+    const jaPedido = !!kind && pendencias.some((p) => p.kind === kind);
+    const processando = ocupado === (doc?.id ?? kind);
+
+    return (
+      <div
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
+          enviado ? "bg-background ring-1 ring-border" : "bg-surface/40"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => doc && alternarConferido(doc)}
+          disabled={!enviado || processando}
+          aria-label={conferido ? "Desmarcar conferência" : "Marcar como conferido"}
+          className={`grid h-5 w-5 shrink-0 place-items-center rounded-md ring-1 transition-colors ${
+            conferido ? "bg-foreground text-background ring-foreground" : "ring-border"
+          } ${enviado ? "" : "cursor-not-allowed opacity-40"}`}
+        >
+          {processando ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : conferido ? (
+            <Check className="h-3 w-3" />
+          ) : null}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => doc?.versao && setPreview(doc.versao)}
+          disabled={!enviado}
+          className={`min-w-0 flex-1 text-left ${enviado ? "" : "cursor-default"}`}
+        >
+          <div className={`truncate text-sm ${enviado ? "" : "text-ink-soft"}`}>{rotulo}</div>
+          <div className="truncate text-xs text-ink-soft">
+            {enviado ? (
+              <span className="inline-flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                {doc?.versao?.original_name}
+                {conferido && " · conferido"}
+              </span>
+            ) : (
+              "ainda não enviado"
+            )}
+          </div>
+        </button>
+
+        {!enviado && kind && (
+          <button
+            type="button"
+            onClick={() => solicitar(kind)}
+            disabled={jaPedido || processando}
+            title={jaPedido ? "Já pedido ao cliente" : "Pedir este documento ao cliente"}
+            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-ink-soft transition-colors hover:border-foreground/30 disabled:opacity-50"
+          >
+            {processando ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Send className="h-3 w-3" />
+            )}
+            {jaPedido ? "Pedido" : "Solicitar"}
+          </button>
+        )}
+      </div>
+    );
   }
 
   if (carregando) {
@@ -102,81 +196,28 @@ export function ChecklistDocumentos({
       )}
 
       <div className="space-y-1.5">
-        {tipos.map((t) => {
-          // Documento removido não conta como entregue: `listarDocumentos`
-          // devolve os excluídos para a equipe poder distingui-los.
-          const doc = docs.find(
-            (d) => d.kind === t.kind && d.origem === "cliente" && !d.deleted_at,
-          );
-          const enviado = !!doc?.versao;
-          const conferido = doc?.status === "Aprovado";
-          const jaPedido = pedidos.includes(t.kind);
-          const processando = ocupado === (doc?.id ?? t.kind);
-
-          return (
-            <div
-              key={t.kind}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${
-                enviado ? "bg-background ring-1 ring-border" : "bg-surface/40"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => doc && alternarConferido(doc)}
-                disabled={!enviado || processando}
-                aria-label={conferido ? "Desmarcar conferência" : "Marcar como conferido"}
-                className={`grid h-5 w-5 shrink-0 place-items-center rounded-md ring-1 transition-colors ${
-                  conferido ? "bg-foreground text-background ring-foreground" : "ring-border"
-                } ${enviado ? "" : "cursor-not-allowed opacity-40"}`}
-              >
-                {processando ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : conferido ? (
-                  <Check className="h-3 w-3" />
-                ) : null}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => doc?.versao && setPreview(doc.versao)}
-                disabled={!enviado}
-                className={`min-w-0 flex-1 text-left ${enviado ? "" : "cursor-default"}`}
-              >
-                <div className={`truncate text-sm ${enviado ? "" : "text-ink-soft"}`}>
-                  {t.label}
-                </div>
-                <div className="truncate text-xs text-ink-soft">
-                  {enviado ? (
-                    <span className="inline-flex items-center gap-1">
-                      <FileText className="h-3 w-3" />
-                      {doc?.versao?.original_name}
-                      {conferido && " · conferido"}
-                    </span>
-                  ) : (
-                    "ainda não enviado"
-                  )}
-                </div>
-              </button>
-
-              {!enviado && (
-                <button
-                  type="button"
-                  onClick={() => solicitar(t.kind)}
-                  disabled={jaPedido || processando}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] text-ink-soft transition-colors hover:border-foreground/30 disabled:opacity-50"
-                >
-                  {processando ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Send className="h-3 w-3" />
-                  )}
-                  {jaPedido ? "Pedido" : "Solicitar"}
-                </button>
-              )}
-            </div>
-          );
-        })}
+        {tipos.map((t) => (
+          <Linha
+            key={t.kind}
+            rotulo={t.label}
+            kind={t.kind}
+            doc={docs.find((d) => doDoCliente(d) && d.kind === t.kind)}
+          />
+        ))}
       </div>
+
+      {semTipo.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-1.5 text-[10px] uppercase tracking-widest text-ink-soft">
+            Outros enviados pelo cliente
+          </div>
+          <div className="space-y-1.5">
+            {semTipo.map((d) => (
+              <Linha key={d.id} rotulo={rotuloDoKind(d.kind)} doc={d} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <DocumentPreview versao={preview} onFechar={() => setPreview(null)} />
     </>

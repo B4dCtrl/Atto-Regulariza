@@ -156,6 +156,24 @@ export async function urlDoDocumento(versionId: string): Promise<string> {
   return corpo.url as string;
 }
 
+/**
+ * Marca ou desmarca o documento como conferido pela equipe.
+ *
+ * Usa a coluna `status`, que já existia com 'Enviado' | 'Em análise' |
+ * 'Aprovado' — nenhuma estrutura nova, e a conferência não tem como divergir do
+ * documento que ela confere.
+ *
+ * Fica aqui, e não no componente, para o vocabulário de status viver num lugar
+ * só e para o erro do Postgres não chegar cru à tela.
+ */
+export async function marcarConferencia(documentId: string, conferido: boolean): Promise<void> {
+  const { error } = await supabase
+    .from("documents")
+    .update({ status: conferido ? "Aprovado" : "Enviado" })
+    .eq("id", documentId);
+  if (error) throw new Error("Não foi possível registrar a conferência.");
+}
+
 /** Exclusão lógica: some das listagens, versões e arquivos ficam. */
 export async function excluirDocumento(documentId: string): Promise<void> {
   const { error } = await supabase

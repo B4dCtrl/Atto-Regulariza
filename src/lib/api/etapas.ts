@@ -101,11 +101,19 @@ export function progressoDasEtapas(etapas: EtapaResumo[], total = 5): number {
 
 /** Momento da última leitura do chat, ou null se nunca leu. */
 export async function carregarLeituraChat(propertyId: string): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
   const { data } = await supabase
     .from("chat_reads")
     .select("lido_ate")
     .eq("property_id", propertyId)
+    // Filtro explícito por usuário, além da RLS: sem ele, uma policy
+    // permissiva devolveria várias linhas e o maybeSingle() estouraria — falha
+    // que o `?? null` esconderia como "nunca leu".
+    .eq("user_id", user.id)
     .maybeSingle();
+
   // Sem leitura registrada é estado normal, não erro: tudo conta como não lido.
   return data?.lido_ate ?? null;
 }
