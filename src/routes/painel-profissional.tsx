@@ -122,6 +122,12 @@ const STAGE_DEFS: StageDef[] = [
     num: 2, label: "Vistoria técnica",
     desc: "Visite o imóvel e registre o levantamento técnico.",
     fields: [
+      // Nem todo caso precisa de visita: imóvel com planta atualizada e
+      // documentação em ordem passa direto. Marcar aqui deixa o motivo
+      // registrado, em vez de a etapa ser concluída em branco e ninguém
+      // entender depois por que não houve vistoria.
+      { id:"dispensada",      label:"Esta etapa não se aplica",              type:"checkbox", checkLabel:"Dispensar a vistoria neste caso" },
+      { id:"motivo_dispensa", label:"Por que dispensou",                     type:"text",     placeholder:"ex: planta atualizada e conferida na análise documental" },
       { id:"data_vistoria",   label:"Data da vistoria",                      type:"date" },
       { id:"area_levantada",  label:"Área verificada no local (m²)",         type:"number",   placeholder:"ex: 145.00" },
       { id:"tipo_irr",        label:"Tipo de irregularidade principal",       type:"select",   options:["Construção não averbada","Área maior que escritura","Área menor que escritura","Sem habite-se","Subdivisão não registrada","Uso divergente","Outro"] },
@@ -132,10 +138,17 @@ const STAGE_DEFS: StageDef[] = [
     num: 3, label: "Projeto e ART / RRT",
     desc: "Elabore o projeto técnico e emita a ART ou RRT correspondente.",
     fields: [
+      // "Responsável técnico" saiu: é sempre quem está logado, e digitar de
+      // novo só cria divergência entre o cadastro e o que foi escrito à mão.
+      // O nome e o registro aparecem abaixo, puxados do perfil.
+      //
+      // "Link do projeto (Drive/OneDrive/Dropbox)" também saiu. Existia porque
+      // o upload não funcionava — era a única forma de entregar o arquivo.
+      // Link externo pode ser apagado ou perder permissão sem aviso, não tem
+      // versão nem checksum, e não serve de prova numa exigência de cartório.
+      // O projeto agora é documento enviado pela aba Docs, como a ART.
       { id:"tipo_servico",  label:"Tipo de serviço técnico",                      type:"select",  options:["Projeto de regularização","Projeto de averbação","Laudo técnico de vistoria","Planta de subdivisão","Projeto de desmembramento"] },
       { id:"art_numero",    label:"N° da ART / RRT",                              type:"text",    placeholder:"ex: 2026AT000123" },
-      { id:"resp_tecnico",  label:"Responsável técnico (nome + CREA/CAU/OAB)",    type:"text",    placeholder:"ex: Carla Rocha — CREA/SP 123456" },
-      { id:"link_projeto",  label:"Link do projeto (Drive / OneDrive / Dropbox)", type:"text",    placeholder:"https://..." },
     ],
   },
   {
@@ -216,8 +229,8 @@ function ProfissionalPage() {
 
   /* ── Dados reais do Supabase ── */
   const [processes,   setProcesses]   = useState<MockProcess[]>([]);
-  const [profProfile, setProfProfile] = useState<{ name: string; initials: string }>({
-    name: "Profissional", initials: "··",
+  const [profProfile, setProfProfile] = useState<{ name: string; initials: string; registro: string }>({
+    name: "Profissional", initials: "··", registro: "",
   });
   const [notifPrefs, setNotifPrefs] = useState<{ notifEmail: boolean; notifPrazo: boolean }>({
     notifEmail: true, notifPrazo: true,
@@ -275,12 +288,15 @@ function ProfissionalPage() {
   useEffect(() => {
     if (!userId) return;
 
-    supabase.from("profiles").select("name, initials, settings").eq("id", userId).maybeSingle()
+    supabase.from("profiles").select("name, initials, settings, specialization, council, registro").eq("id", userId).maybeSingle()
       .then(async ({ data }) => {
         if (data) {
           setProfProfile({
             name: data.name ?? "Profissional",
             initials: data.initials ?? (data.name ? data.name.split(/\s+/).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "··"),
+            // Conselho e registro vêm do cadastro. O campo "Responsável técnico"
+            // da etapa 3 saiu justamente para não existirem duas verdades.
+            registro: [data.council, data.registro].filter(Boolean).join(" ") || (data.specialization ?? ""),
           });
           const s = (data.settings ?? {}) as Record<string, boolean>;
           setNotifPrefs({ notifEmail: s.notifEmail ?? true, notifPrazo: s.notifPrazo ?? true });
@@ -290,7 +306,7 @@ function ProfissionalPage() {
         // trg_handle_new_user cria o perfil no próprio signup, e a guarda desta
         // rota já exigiu role='profissional' aprovado. Fallback só de exibição —
         // criar a linha aqui seria inútil, o papel é definido no banco.
-        setProfProfile({ name: "Profissional", initials: "··" });
+        setProfProfile({ name: "Profissional", initials: "··", registro: "" });
       });
 
     function loadProcs() {
@@ -1228,14 +1244,39 @@ function ProfissionalPage() {
                       </div>
                     )}
 
+                    {/* Responsável técnico da etapa 3: vem do cadastro, não é
+                        digitado. Campo à mão criaria divergência entre o
+                        registro do perfil e o que foi escrito aqui. */}
+                    {activeStage === 3 && (
+                      <div className="mb-4 rounded-xl bg-surface/60 p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-ink-soft">
+                          Responsável técnico
+                        </div>
+                        <div className="mt-0.5 text-sm font-medium">{profProfile.name}</div>
+                        {profProfile.registro && (
+                          <div className="text-xs text-ink-soft">{profProfile.registro}</div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Fields */}
                     <div className="space-y-4">
-                      {stageDef.fields.map((field) => (
-                        <div key={field.id}>
-                          <label className="mb-1.5 block text-sm font-medium">{field.label}</label>
-                          {renderField(field)}
-                        </div>
-                      ))}
+                      {stageDef.fields
+                        .filter((field) => {
+                          // Vistoria dispensada: os campos de levantamento somem,
+                          // ficam só a marcação e o motivo. Deixá-los visíveis e
+                          // vazios sugeriria trabalho por fazer que não existe.
+                          if (activeStage !== 2) return true;
+                          const dispensada = camposEtapa["dispensada"] === true;
+                          if (!dispensada) return field.id !== "motivo_dispensa";
+                          return field.id === "dispensada" || field.id === "motivo_dispensa";
+                        })
+                        .map((field) => (
+                          <div key={field.id}>
+                            <label className="mb-1.5 block text-sm font-medium">{field.label}</label>
+                            {renderField(field)}
+                          </div>
+                        ))}
                     </div>
 
                     {/* Envio de arquivos desta etapa — usa o fluxo real de documentos */}
