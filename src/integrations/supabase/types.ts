@@ -339,6 +339,7 @@ export type Database = {
           completed_at: string | null;
           updated_by: string | null;
           notes: string | null;
+          fields: Json;
           created_at: string;
           updated_at: string;
         };
@@ -351,6 +352,7 @@ export type Database = {
           completed_at?: string | null;
           updated_by?: string | null;
           notes?: string | null;
+          fields?: Json;
           created_at?: string;
           updated_at?: string;
         };
@@ -363,6 +365,7 @@ export type Database = {
           completed_at?: string | null;
           updated_by?: string | null;
           notes?: string | null;
+          fields?: Json;
           created_at?: string;
           updated_at?: string;
         };
@@ -481,6 +484,156 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      pendencies: {
+        Row: {
+          id: string;
+          property_id: string;
+          stage_number: number | null;
+          descricao: string;
+          kind: string | null;
+          status: string;
+          criada_por: string | null;
+          criada_em: string;
+          resolvida_em: string | null;
+          resolvida_por: string | null;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          stage_number?: number | null;
+          descricao: string;
+          kind?: string | null;
+          status?: string;
+          criada_por?: string | null;
+          criada_em?: string;
+          resolvida_em?: string | null;
+          resolvida_por?: string | null;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          stage_number?: number | null;
+          descricao?: string;
+          kind?: string | null;
+          status?: string;
+          criada_por?: string | null;
+          criada_em?: string;
+          resolvida_em?: string | null;
+          resolvida_por?: string | null;
+        };
+        Relationships: [];
+      };
+      process_notes: {
+        Row: {
+          id: string;
+          property_id: string;
+          conteudo: string;
+          autor_id: string | null;
+          criada_em: string;
+          atualizada_em: string;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          conteudo: string;
+          autor_id?: string | null;
+          criada_em?: string;
+          atualizada_em?: string;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          conteudo?: string;
+          autor_id?: string | null;
+          criada_em?: string;
+          atualizada_em?: string;
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          property_id: string | null;
+          tipo: string;
+          titulo: string;
+          corpo: string | null;
+          lida: boolean;
+          criada_em: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          property_id?: string | null;
+          tipo: string;
+          titulo: string;
+          corpo?: string | null;
+          lida?: boolean;
+          criada_em?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          property_id?: string | null;
+          tipo?: string;
+          titulo?: string;
+          corpo?: string | null;
+          lida?: boolean;
+          criada_em?: string;
+        };
+        Relationships: [];
+      };
+      approval_requests: {
+        Row: {
+          id: string;
+          property_id: string;
+          tipo: string;
+          document_id: string | null;
+          justificativa: string | null;
+          status: string;
+          solicitado_por: string | null;
+          solicitado_em: string;
+          decidido_por: string | null;
+          decidido_em: string | null;
+          motivo_recusa: string | null;
+          consumido_em: string | null;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          tipo: string;
+          document_id?: string | null;
+          justificativa?: string | null;
+          status?: string;
+          solicitado_por?: string | null;
+          solicitado_em?: string;
+          decidido_por?: string | null;
+          decidido_em?: string | null;
+          motivo_recusa?: string | null;
+          consumido_em?: string | null;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          tipo?: string;
+          document_id?: string | null;
+          justificativa?: string | null;
+          status?: string;
+          solicitado_por?: string | null;
+          solicitado_em?: string;
+          decidido_por?: string | null;
+          decidido_em?: string | null;
+          motivo_recusa?: string | null;
+          consumido_em?: string | null;
+        };
+        Relationships: [];
+      };
+      chat_reads: {
+        Row: { user_id: string; property_id: string; lido_ate: string };
+        Insert: { user_id: string; property_id: string; lido_ate?: string };
+        Update: { user_id?: string; property_id?: string; lido_ate?: string };
+        Relationships: [];
       };
       messages: {
         Row: {
