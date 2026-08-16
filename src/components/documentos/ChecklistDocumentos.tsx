@@ -28,10 +28,19 @@ import { DocumentPreview } from "./DocumentPreview";
  */
 export function ChecklistDocumentos({
   propertyId,
+  stageNumber,
   recarregarToken = 0,
   onMudou,
 }: {
   propertyId: string;
+  /**
+   * Etapa à qual as solicitações ficam presas.
+   *
+   * Sem isto a pendência nascia órfã: não aparecia na lista da etapa nem
+   * impedia a conclusão. Concluir "Análise documental" com documento pendente
+   * é justamente o que a etapa existe para impedir.
+   */
+  stageNumber: number;
   recarregarToken?: number;
   onMudou?: () => void;
 }) {
@@ -90,7 +99,12 @@ export function ChecklistDocumentos({
     setOcupado(kind);
     setErro(null);
     try {
-      await criarPendencia({ propertyId, descricao: `Envie: ${rotuloDoKind(kind)}`, kind });
+      await criarPendencia({
+        propertyId,
+        descricao: `Envie: ${rotuloDoKind(kind)}`,
+        kind,
+        stageNumber,
+      });
       // Recarrega do banco: a lista de pendências abertas é a verdade.
       setPendencias(await listarPendencias(propertyId, true));
       onMudou?.();

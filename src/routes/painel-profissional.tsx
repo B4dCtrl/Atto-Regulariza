@@ -1216,8 +1216,14 @@ function ProfissionalPage() {
                         <div className="mb-2 text-sm font-medium">Documentos recebidos</div>
                         <ChecklistDocumentos
                           propertyId={selectedId}
+                          stageNumber={1}
                           recarregarToken={recargaDocs}
-                          onMudou={() => setRecargaDocs((n) => n + 1)}
+                          onMudou={async () => {
+                            setRecargaDocs((n) => n + 1);
+                            // A solicitação virou pendência da etapa 1: recarrega
+                            // para ela aparecer na lista e travar a conclusão.
+                            if (selectedId) setPendencias(await listarPendencias(selectedId));
+                          }}
                         />
                       </div>
                     )}
