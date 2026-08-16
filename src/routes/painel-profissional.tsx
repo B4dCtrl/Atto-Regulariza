@@ -251,6 +251,15 @@ function ProfissionalPage() {
   /** Campos técnicos da etapa em edição — fonte: process_stages.fields. */
   const [camposEtapa, setCamposEtapa] = useState<Record<string, unknown>>({});
   const [salvandoCampos, setSalvandoCampos] = useState(false);
+  /**
+   * Aviso flutuante de "salvo automaticamente".
+   *
+   * O salvamento acontece sozinho 600 ms após parar de digitar. Sem sinal
+   * nenhum, o profissional não sabe se pode fechar a aba — e a dúvida faz ele
+   * clicar no botão de salvar por precaução, que era o motivo do botão existir.
+   */
+  const [avisoSalvo, setAvisoSalvo] = useState(false);
+  const timerAvisoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Espera da digitação antes de gravar os campos da etapa. */
   const timerCamposRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Sequência das gravações: só a mais recente vale, o resto é descartado. */
@@ -506,6 +515,13 @@ function ProfissionalPage() {
    *
    * O contador de sequência resolve isso: só a gravação mais recente conta.
    */
+  /** Mostra o aviso por 2,2 s. Chamada nova reinicia a contagem. */
+  const mostrarAvisoSalvo = () => {
+    setAvisoSalvo(true);
+    if (timerAvisoRef.current) clearTimeout(timerAvisoRef.current);
+    timerAvisoRef.current = setTimeout(() => setAvisoSalvo(false), 2200);
+  };
+
   const setField = (stageNum: number, fid: string, val: FieldVal) => {
     if (!selectedId) return;
     const pid = selectedId;
@@ -523,6 +539,7 @@ function ProfissionalPage() {
           if (seq !== seqCamposRef.current) return; // veio atrasada: descarta
           setErroTrabalho(null);
           setSalvandoCampos(false);
+          mostrarAvisoSalvo();
         })
         .catch((e: Error) => {
           if (seq !== seqCamposRef.current) return;
@@ -541,7 +558,9 @@ function ProfissionalPage() {
     const seq = ++seqCamposRef.current;
     salvarCampos(selectedId, activeStage, camposEtapa)
       .then(() => {
-        if (seq === seqCamposRef.current) setSalvandoCampos(false);
+        if (seq !== seqCamposRef.current) return;
+        setSalvandoCampos(false);
+        mostrarAvisoSalvo();
       })
       .catch((e: Error) => {
         if (seq === seqCamposRef.current) {
@@ -1654,6 +1673,27 @@ function ProfissionalPage() {
         </main>
 
       {/* ── MODAL PENDÊNCIA ── */}
+      {/* Aviso de salvamento automático — topo central, some sozinho.
+          `pointer-events-none` para não bloquear clique no que estiver atrás. */}
+      <AnimatePresence>
+        {avisoSalvo && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18 }}
+            role="status"
+            aria-live="polite"
+            className="pointer-events-none fixed left-1/2 top-5 z-[60] -translate-x-1/2"
+          >
+            <div className="flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background shadow-lg">
+              <Check className="h-3.5 w-3.5" />
+              Salvo automaticamente
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {showPendencyForm && selectedId && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center" onClick={() => setShowPendencyForm(false)}>
           <div className="w-full rounded-t-3xl bg-background p-6 sm:mx-auto sm:w-[440px] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
