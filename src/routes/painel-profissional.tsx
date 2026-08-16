@@ -1303,10 +1303,30 @@ function ProfissionalPage() {
                 <div className="flex items-center gap-3">
                   {isDone(activeStage) ? (
                     <>
-                      <div className="flex flex-1 items-center gap-2 text-sm text-accent">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Etapa {activeStage} concluída
+                      {/* Etapa concluída também se edita. Antes não havia sinal
+                          nenhum de que a alteração tinha sido gravada — só o
+                          selo de "concluída". Agora o estado do salvamento
+                          aparece e há como forçar a gravação sem esperar. */}
+                      <div className="flex flex-1 items-center gap-2 text-sm">
+                        {salvandoCampos ? (
+                          <span className="inline-flex items-center gap-2 text-ink-soft">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando…
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 text-accent">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Etapa {activeStage} concluída
+                          </span>
+                        )}
                       </div>
+                      <button
+                        onClick={gravarCamposAgora}
+                        disabled={!salvandoCampos}
+                        title="Gravar agora as alterações desta etapa"
+                        className="rounded-full border border-border px-4 py-2 text-xs text-ink-soft hover:bg-surface hover:border-foreground/30 disabled:opacity-40 transition-colors"
+                      >
+                        Salvar alterações
+                      </button>
                       <button
                         onClick={() => undoStage(selectedId!, activeStage)}
                         className="rounded-full border border-border px-4 py-2 text-xs text-ink-soft hover:bg-surface hover:border-foreground/30 transition-colors"
@@ -1325,8 +1345,17 @@ function ProfissionalPage() {
                         <p className="flex-1 text-xs text-ink-soft">
                           {salvandoCampos
                             ? "Salvando…"
-                            : hasAnyField() ? "Pronto para concluir." : "Preencha ao menos um campo."}
+                            : hasAnyField() ? "Alterações salvas." : "Preencha ao menos um campo."}
                         </p>
+                      )}
+                      {salvandoCampos && (
+                        <button
+                          onClick={gravarCamposAgora}
+                          title="Gravar agora, sem esperar"
+                          className="rounded-full border border-border px-3 py-2 text-xs text-ink-soft hover:bg-surface transition-colors"
+                        >
+                          Salvar agora
+                        </button>
                       )}
                       <button
                         onClick={() => setShowPendencyForm(true)}
