@@ -29,24 +29,18 @@ mensagens, 55 etapas e os arquivos do bucket. Preservada só a conta admin
 > **Base zerada.** Só a conta admin permanece. Os testes abaixo precisam de contas novas: um
 > cliente, um profissional aprovado, e um processo ligando os dois.
 
-### 3. ⬜ Trava de visibilidade na interface
-Provar que o cliente NÃO vê peça técnica do profissional enquanto o processo corre.
-Provado no banco (14 casos automatizados); falta a interface.
-**Como testar:** profissional `ozanchet+teste96@gmail.com` envia documento no processo
-"Gabriel Zanchet — escritura_velha" → entrar como `ozanchet+teste95@gmail.com` (cliente) e
-confirmar que o arquivo não aparece.
+### 3. ✅ Trava de visibilidade — CONFIRMADA NA INTERFACE
+O que o profissional envia não aparece para o cliente. Provado no banco (17 casos) e na tela.
 
-### 4. ⬜ Profissional abrindo documento do cliente
-Testar com o par correto: `ozanchet+teste96@gmail.com` no processo "Gabriel Zanchet —
-escritura_velha", onde existe `proposta-kleber.pdf` com 1 versão.
-*(A tentativa anterior usou um processo sem profissional designado — nada apareceria mesmo.)*
+### 4. ✅ Profissional abrindo documento do cliente — FUNCIONA
 
-### 5. ⬜ Redefinição de senha ponta a ponta
-Rota `/redefinir-senha` criada e URLs configuradas no Supabase. Falta o teste completo:
-pedir link, clicar, definir senha nova, entrar com ela.
-**Pendente também:** acrescentar `https://www.atoregulariza.com.br/**` e
-`https://atoregulariza.com.br/**` às Redirect URLs — a Site URL é `.com.br` e esses dois
-não estão na lista.
+### 5. ✅ Redefinição de senha — FUNCIONA
+Rota `/redefinir-senha`, SMTP próprio e Redirect URLs configuradas.
+
+### 5b. ⬜ Testar o painel do profissional sem `localStorage`
+O plano 2 acabou de trocar cinco conjuntos de dados por acesso ao banco. Precisa de teste no
+navegador: preencher campo de etapa, concluir etapa, criar pendência, escrever anotação,
+conferir documento no checklist — e recarregar a página para ver se tudo persistiu.
 
 ---
 
@@ -70,9 +64,9 @@ terceiros e passa a receber as notificações do processo alheio.
 
 ## Dívidas conhecidas, sem urgência
 
-### 9. ⬜ Realtime do painel do profissional para documentos
-Ao integrar os componentes novos, o listener de `documents` foi removido. A lista dele não
-atualiza sozinha quando o cliente envia algo — só ao recarregar ou trocar de processo.
+### 9. ✅ Realtime de documentos — CONCLUÍDO
+Três assinaturas acrescentadas (caso aberto, aba Documentos, painel do cliente). O canal só
+avisa; quem busca é o DocumentList, cuja consulta passa pela RLS.
 
 ### 10. ⬜ Dois pontos de envio na tela do profissional
 Há o bloco "Arquivos desta etapa" no painel central e a aba Documentos. O rótulo "desta
@@ -109,3 +103,9 @@ A exclusão lógica preserva tudo no banco, mas não há tela para desfazer.
 - ✅ Versionamento por tipo na edge function (o spec previa, nunca foi implementado)
 - ✅ Aba lateral "Documentos" no painel do profissional
 - ✅ Reset da base de teste, preservando a conta admin
+- ✅ Trava de visibilidade confirmada NA INTERFACE: o que o profissional envia não aparece
+  para o cliente
+- ✅ Pull Request aberto: https://github.com/B4dCtrl/Atto-Regulariza/pull/1
+- ✅ Frente 2, plano 1: 5 tabelas, RLS e gatilhos; 17 casos de autorização; camada de API
+- ✅ Frente 2, plano 2: painel do profissional sem `localStorage`; conferência sobre os
+  documentos reais
