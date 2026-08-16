@@ -57,14 +57,25 @@ export async function decidirAprovacao(
   aprovado: boolean,
   motivo?: string,
 ): Promise<void> {
-  const { error } = await supabase
+  // Só atualiza se ainda estiver pendente. Dois admins olhando a mesma fila é
+  // o cenário provável, e sem este filtro o segundo receberia a mensagem
+  // genérica de falha sem entender que o pedido já tinha sido resolvido.
+  const { data, error } = await supabase
     .from("approval_requests")
     .update({
       status: aprovado ? "aprovado" : "recusado",
       motivo_recusa: aprovado ? null : (motivo ?? null),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "pendente")
+    .select("id");
 
-  // O gatilho recusa decidir de novo um pedido já decidido.
   if (error) throw new Error("Não foi possível registrar a decisão.");
+
+  // Nenhuma linha alterada: o pedido saiu de 'pendente' entre a tela carregar
+  // e o clique. O gatilho no banco cobre a corrida de verdade; este filtro
+  // existe para a mensagem fazer sentido para quem clicou.
+  if (!data || data.length === 0) {
+    throw new Error("Este pedido já foi decidido por outro administrador.");
+  }
 }

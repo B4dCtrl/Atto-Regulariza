@@ -31,8 +31,13 @@ export async function contarNaoLidas(): Promise<number> {
     .select("id", { count: "exact", head: true })
     .eq("lida", false);
 
-  // Contador é enfeite: falhar aqui não deve quebrar a tela.
-  if (error) return 0;
+  // Contador é enfeite: falhar aqui não deve quebrar a tela. Mas sem o aviso
+  // no console, "nenhuma novidade" e "a consulta falhou" ficam idênticos —
+  // sessão expirada ou RLS quebrada zerariam o sino em silêncio.
+  if (error) {
+    console.warn("[notificações] falha ao contar não lidas:", error.message);
+    return 0;
+  }
   return count ?? 0;
 }
 
