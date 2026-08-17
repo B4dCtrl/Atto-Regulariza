@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
+import { TarefasDoCliente } from "@/components/cliente/TarefasDoCliente";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { TourProvider, TourAlertDialog, useTour, TourHelpButton } from "@/components/ui/tour";
@@ -198,6 +199,14 @@ function DashboardContent() {
         // O DocumentList refaz a consulta quando `recargaDocs` muda, e essa
         // consulta respeita a RLS — então o cliente só passa a ver peça técnica
         // do profissional quando a regra permitir, não porque o canal avisou.
+        () => setRecargaDocs((n) => n + 1),
+      )
+      /* pendências → a lista de tarefas recarrega sozinha */
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pendencies", filter: `property_id=eq.${propertyId}` },
+        // O canal só avisa; quem busca é o TarefasDoCliente, cuja consulta
+        // passa pela RLS.
         () => setRecargaDocs((n) => n + 1),
       )
       .subscribe();
@@ -569,21 +578,17 @@ function DashboardContent() {
                     <div className="flex items-center gap-2 text-xs text-background/60">
                       <AlertCircle className="h-3.5 w-3.5" /> O que falta de você
                     </div>
-                    <h3 className="mt-2 font-serif text-2xl leading-tight">
-                      {property?.next_action
-                        ? `${property.next_action} até ${property.next_action_deadline ? new Date(property.next_action_deadline).toLocaleDateString("pt-BR", { day: "numeric", month: "long" }) : ""}`
-                        : "Aguardando equipe"}
-                    </h3>
-                    {property?.next_action && (
-                      <button
-                        onClick={() => setActiveSection("docs")}
-                        className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent text-accent-foreground py-2 pl-4 pr-2 text-sm"
-                      >
-                        Enviar agora
-                        <span className="grid h-6 w-6 place-items-center rounded-full bg-background text-foreground">
-                          <ArrowUpRight className="h-3.5 w-3.5" />
-                        </span>
-                      </button>
+                    {/* Pendências primeiro: são pedidos concretos da equipe, com o
+                        envio ali. O next_action do processo é genérico e só aparece
+                        quando não há tarefa. */}
+                    {propertyId && (
+                      <div className="mt-3">
+                        <TarefasDoCliente
+                          propertyId={propertyId}
+                          recarregarToken={recargaDocs}
+                          onMudou={() => setRecargaDocs((n) => n + 1)}
+                        />
+                      </div>
                     )}
                   </section>
 

@@ -1,7 +1,12 @@
 import { useId, useRef, useState } from "react";
 import { Upload, Loader2, AlertCircle, Check } from "lucide-react";
 import { enviarDocumento } from "@/lib/api/documentos";
-import { kindsPara, type DocumentKind, type DocumentOrigem } from "@/lib/document-kinds";
+import {
+  kindsPara,
+  rotuloDoKind,
+  type DocumentKind,
+  type DocumentOrigem,
+} from "@/lib/document-kinds";
 
 /**
  * Envio com tipo obrigatório.
@@ -17,10 +22,17 @@ import { kindsPara, type DocumentKind, type DocumentOrigem } from "@/lib/documen
 export function UploadDocumento({
   propertyId,
   origem,
+  tipoFixo,
   onEnviado,
 }: {
   propertyId: string;
   origem: DocumentOrigem;
+  /**
+   * Tipo já decidido por quem pediu — usado quando o envio nasce de uma
+   * pendência. O seletor some: perguntar o tipo de novo, depois de a equipe já
+   * ter dito qual é, só cria chance de erro.
+   */
+  tipoFixo?: DocumentKind;
   onEnviado: () => void;
 }) {
   // Só o CLIENTE escolhe o tipo. Para ele o seletor tem função concreta: é o
@@ -28,9 +40,11 @@ export function UploadDocumento({
   // solto. O profissional envia peças distintas a cada vez (ART, laudo,
   // projeto), que não se substituem entre si — exigir classificação dele seria
   // burocracia sem retorno.
-  const exigeTipo = origem === "cliente";
+  const exigeTipo = origem === "cliente" && !tipoFixo;
 
-  const [kind, setKind] = useState<DocumentKind | "">(exigeTipo ? "" : "outro");
+  const [kind, setKind] = useState<DocumentKind | "">(
+    tipoFixo ?? (origem === "cliente" ? "" : "outro"),
+  );
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState<string | null>(null);
@@ -99,7 +113,9 @@ export function UploadDocumento({
           </select>
         </>
       ) : (
-        <p className="text-sm font-medium">Enviar documento</p>
+        <p className="text-sm font-medium">
+          {tipoFixo ? `Enviar: ${rotuloDoKind(tipoFixo)}` : "Enviar documento"}
+        </p>
       )}
 
       <input
