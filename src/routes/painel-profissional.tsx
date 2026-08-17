@@ -114,7 +114,10 @@ const STAGE_DEFS: StageDef[] = [
     fields: [
       // "Documentos recebidos" saiu daqui: virou o ChecklistDocumentos, que
       // confere os arquivos que existem de verdade em vez de uma lista fixa.
-      { id:"pendencias",    label:"Pendências ou inconsistências", type:"textarea", placeholder:"Descreva documentos ausentes, dados divergentes ou outras observações relevantes para este caso..." },
+      // "Pendências ou inconsistências" era um campo de texto solto, ao lado do
+      // botão "+ Pendência" que cria pendência de verdade. Dois lugares para a
+      // mesma coisa, e só um chegava ao cliente — o que ficava aqui morria no
+      // formulário. Quem precisa registrar pendência usa o botão.
       { id:"obs_inicial",   label:"Situação geral — resumo inicial", type:"text",     placeholder:"Resumo do estado da documentação ao receber o caso" },
     ],
   },
@@ -1298,20 +1301,11 @@ function ProfissionalPage() {
                         ))}
                     </div>
 
-                    {/* Envio de arquivos desta etapa — usa o fluxo real de documentos */}
-                    <div className="mt-6">
-                      <div className="mb-2 text-sm font-medium">Arquivos desta etapa</div>
-                      {selectedId && (
-                        <UploadDocumento
-                          propertyId={selectedId}
-                          origem="profissional"
-                          onEnviado={() => setRecargaDocs((n) => n + 1)}
-                        />
-                      )}
-                      <p className="mt-2 text-xs text-ink-soft/70">
-                        Os arquivos enviados aparecem na aba Docs, com histórico de versões.
-                      </p>
-                    </div>
+                    {/* O bloco "Arquivos desta etapa" foi removido. Ele duplicava
+                        a aba Docs e o rótulo prometia um vínculo que o banco não
+                        tem: não existe coluna ligando documento a etapa, então
+                        enviar ali ou pela aba dava exatamente no mesmo. Dois
+                        pontos de envio na mesma tela só criavam dúvida. */}
 
                   </motion.div>
                 </AnimatePresence>
