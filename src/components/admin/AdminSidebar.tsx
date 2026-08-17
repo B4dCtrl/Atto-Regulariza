@@ -14,6 +14,7 @@ import {
   Library,
   GraduationCap,
   ShieldCheck,
+  Flag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -28,6 +29,7 @@ const mainItems = [
 
 const cadastroItems = [
   { to: "/admin/aprovacoes", label: "Aprovações", icon: ShieldCheck },
+  { to: "/admin/aprovacoes-processo", label: "Aprov. processo", icon: Flag },
   { to: "/admin/cadastro-profissional", label: "Profissional", icon: UserPlus },
   { to: "/admin/cadastro-cliente", label: "Cliente", icon: UserCheck },
 ] as const;

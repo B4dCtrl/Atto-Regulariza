@@ -41,6 +41,7 @@ import { Route as AdminCursosRouteImport } from './routes/admin/cursos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
 import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/cadastro-profissional'
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
+import { Route as AdminAprovacoesProcessoRouteImport } from './routes/admin/aprovacoes-processo'
 import { Route as AdminAprovacoesRouteImport } from './routes/admin/aprovacoes'
 import { Route as AdminProjetoIdRouteImport } from './routes/admin/projeto.$id'
 
@@ -205,6 +206,11 @@ const AdminCadastroClienteRoute = AdminCadastroClienteRouteImport.update({
   path: '/cadastro-cliente',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAprovacoesProcessoRoute = AdminAprovacoesProcessoRouteImport.update({
+  id: '/aprovacoes-processo',
+  path: '/aprovacoes-processo',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAprovacoesRoute = AdminAprovacoesRouteImport.update({
   id: '/aprovacoes',
   path: '/aprovacoes',
@@ -237,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
+  '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -272,6 +279,7 @@ export interface FileRoutesByTo {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
+  '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -309,6 +317,7 @@ export interface FileRoutesById {
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
+  '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -347,6 +356,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/termos-de-uso'
     | '/admin/aprovacoes'
+    | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/termos-de-uso'
     | '/admin/aprovacoes'
+    | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
@@ -418,6 +429,7 @@ export interface FileRouteTypes {
     | '/redefinir-senha'
     | '/termos-de-uso'
     | '/admin/aprovacoes'
+    | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
@@ -684,6 +696,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCadastroClienteRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/aprovacoes-processo': {
+      id: '/admin/aprovacoes-processo'
+      path: '/aprovacoes-processo'
+      fullPath: '/admin/aprovacoes-processo'
+      preLoaderRoute: typeof AdminAprovacoesProcessoRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/aprovacoes': {
       id: '/admin/aprovacoes'
       path: '/aprovacoes'
@@ -703,6 +722,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAprovacoesRoute: typeof AdminAprovacoesRoute
+  AdminAprovacoesProcessoRoute: typeof AdminAprovacoesProcessoRoute
   AdminCadastroClienteRoute: typeof AdminCadastroClienteRoute
   AdminCadastroProfissionalRoute: typeof AdminCadastroProfissionalRoute
   AdminClientesRoute: typeof AdminClientesRoute
@@ -718,6 +738,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAprovacoesRoute: AdminAprovacoesRoute,
+  AdminAprovacoesProcessoRoute: AdminAprovacoesProcessoRoute,
   AdminCadastroClienteRoute: AdminCadastroClienteRoute,
   AdminCadastroProfissionalRoute: AdminCadastroProfissionalRoute,
   AdminClientesRoute: AdminClientesRoute,
