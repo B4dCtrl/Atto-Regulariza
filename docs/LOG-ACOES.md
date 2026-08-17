@@ -111,6 +111,9 @@ A exclusão lógica preserva tudo no banco, mas não há tela para desfazer.
   para o cliente
 - ✅ Pull Request aberto: https://github.com/B4dCtrl/Atto-Regulariza/pull/1
 - ✅ Frente 2, plano 1: 5 tabelas, RLS e gatilhos; 17 casos de autorização; camada de API
+- ✅ Frente 2, plano 3: pendência vira tarefa com envio embutido na caixa "O que falta de
+  você"; sino de notificações; pedido de aprovação de conclusão no painel do profissional
+  *(falta conferir na tela com um cliente de teste)*
 - ✅ Frente 2, plano 2: painel do profissional sem `localStorage`, confirmado no navegador;
   conferência sobre os documentos reais; dispensar vistoria; responsável técnico automático;
   aviso flutuante de salvamento
