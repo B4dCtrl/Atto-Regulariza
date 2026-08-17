@@ -52,6 +52,27 @@ export async function listarAprovacoesPendentes(): Promise<Aprovacao[]> {
   return data ?? [];
 }
 
+/**
+ * Pedidos de um processo, do mais novo para o mais antigo.
+ *
+ * Existe separada de `listarAprovacoesPendentes` de propósito: aquela tem nome
+ * de fila do admin e é usada para montar botões de decidir. O profissional
+ * enxerga os pedidos dos processos dele pela mesma RLS, mas o UPDATE exige
+ * `is_admin()` — reusar a outra função aqui convidaria alguém a pendurar um
+ * "Aprovar" que sempre falharia. Esta é só de leitura, para a tela saber que já
+ * existe pedido em aberto e não deixar o profissional abrir um segundo.
+ */
+export async function listarMeusPedidos(propertyId: string): Promise<Aprovacao[]> {
+  const { data, error } = await supabase
+    .from("approval_requests")
+    .select("*")
+    .eq("property_id", propertyId)
+    .order("solicitado_em", { ascending: false });
+
+  if (error) throw new Error("Não foi possível carregar os pedidos deste processo.");
+  return data ?? [];
+}
+
 export async function decidirAprovacao(
   id: string,
   aprovado: boolean,

@@ -6,6 +6,7 @@ import {
   ChevronRight, FileText, MapPin, MessageSquare,
   Send, User, BookOpen, StickyNote,
   AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X, Sparkles, Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tables } from "@/integrations/supabase/types";
@@ -31,6 +32,8 @@ import {
   type Pendencia,
 } from "@/lib/api/pendencias";
 import { carregarNota, salvarNota } from "@/lib/api/notas";
+import { pedirAprovacao, listarMeusPedidos, type Aprovacao } from "@/lib/api/aprovacoes";
+import { SinoNotificacoes } from "@/components/notificacoes/SinoNotificacoes";
 
 type PropertyRow = Tables<"properties">;
 
@@ -274,6 +277,15 @@ function ProfissionalPage() {
   /** Erro do trabalho no caso aberto. Sem isto, falha de rede vira tela vazia
       indistinguível de "ainda não há nada" — e o profissional redigita tudo. */
   const [erroTrabalho, setErroTrabalho] = useState<string | null>(null);
+  /**
+   * Pedido de conclusão mais recente deste processo, vindo do banco.
+   *
+   * De propósito não é um booleano local "já pedi": recarregar a página apagaria
+   * o booleano, o botão "Concluir" voltaria e o profissional abriria um segundo
+   * pedido para o mesmo processo. É o mesmo erro que a lista de pendências do
+   * ChecklistDocumentos já evita lendo do banco.
+   */
+  const [pedidoConclusao, setPedidoConclusao] = useState<Aprovacao | null>(null);
   /* Chat vem do Supabase (em memória, por processo selecionado) */
   const [allMsgs, setAllMsgs] = useState<Record<string, LocalMsg[]>>({});
   /* Documentos são responsabilidade do DocumentList; aqui só sinalizamos recarga. */
@@ -389,12 +401,21 @@ function ProfissionalPage() {
     let cancelado = false;
 
     setErroTrabalho(null);
-    Promise.all([carregarEtapas(pid), listarPendencias(pid), carregarNota(pid)])
-      .then(([es, ps, n]) => {
+    setPedidoConclusao(null);
+    Promise.all([
+      carregarEtapas(pid),
+      listarPendencias(pid),
+      carregarNota(pid),
+      listarMeusPedidos(pid),
+    ])
+      .then(([es, ps, n, pedidos]) => {
         if (cancelado) return;
         setEtapas(es);
         setPendencias(ps);
         setNota(n);
+        // A lista vem do mais novo para o mais antigo: o primeiro de conclusão
+        // é o que vale.
+        setPedidoConclusao(pedidos.find((p) => p.tipo === "conclusao") ?? null);
         // Só agora dá para saber em que etapa o caso parou.
         if (acabouDeAbrir.current) {
           acabouDeAbrir.current = false;
@@ -600,7 +621,32 @@ function ProfissionalPage() {
   }
 
   /* ── Actions ── */
+  /** Já existe aval do admin ainda não gasto para concluir este processo. */
+  const conclusaoLiberada = pedidoConclusao?.status === "aprovado";
+
   const completeStage = async (pid: string, n: number) => {
+    // A etapa 5 é a entrega. O banco recusa mudar o processo para 'entregue'
+    // sem aprovação, então pedimos aqui em vez de deixar o profissional bater
+    // no erro. Com o aval já dado, segue o caminho normal — e é a conclusão
+    // que consome a aprovação.
+    if (n === 5 && !conclusaoLiberada) {
+      try {
+        await pedirAprovacao({
+          propertyId: pid,
+          tipo: "conclusao",
+          justificativa: "Todas as etapas concluídas.",
+        });
+        setErroTrabalho(null);
+        // Relê do banco: o pedido recém-criado é a verdade que sobrevive ao F5.
+        setPedidoConclusao(
+          (await listarMeusPedidos(pid)).find((p) => p.tipo === "conclusao") ?? null,
+        );
+      } catch (e) {
+        setErroTrabalho(e instanceof Error ? e.message : "Não foi possível enviar o pedido.");
+      }
+      return;
+    }
+
     try {
       await marcarEtapa(pid, n, "done");
       // A próxima só passa a "active" se ainda não estiver concluída — reconcluir
@@ -613,6 +659,12 @@ function ProfissionalPage() {
       await syncProgressToProperty(pid, feitas);
       setErroTrabalho(null);
       if (n < 5) setActiveStage(n + 1);
+      // A entrega consome a aprovação: relê para o botão não voltar a oferecer
+      // um aval que já foi gasto.
+      else {
+        const pedidos = await listarMeusPedidos(pid);
+        setPedidoConclusao(pedidos.find((p) => p.tipo === "conclusao") ?? null);
+      }
     } catch (e) {
       // Recarrega para a tela mostrar o que o banco tem de fato, e não um
       // otimismo que a falha desmentiu.
@@ -842,22 +894,22 @@ function ProfissionalPage() {
               </nav>
             </div>
             <div className="mt-auto space-y-0.5">
-              {/* Sino no sidebar */}
-              <button
-                onClick={() => {
-                  if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
-                  const withUnread = acceptedIds.map((pid) => ({ pid, count: unreadCount(pid) })).filter((x) => x.count > 0).sort((a, b) => b.count - a.count);
-                  if (withUnread.length > 0) { openProcess(withUnread[0].pid); setTimeout(() => { setRightTab("chat"); markChatRead(withUnread[0].pid); }, 50); }
-                  else { setMainSection("notificacoes"); setSelectedId(null); }
-                }}
-                className="relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
-              >
-                <Bell className="h-4 w-4 shrink-0" />
-                {totalUnread > 0 && <span className="absolute left-6 top-1.5 h-2 w-2 rounded-full bg-red-500" />}
-                <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  Notificações {totalUnread > 0 && <span className="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">{totalUnread}</span>}
+              {/* Sino no sidebar.
+                  Antes o botão adivinhava: procurava o chat com mais mensagens
+                  não lidas e abria. Documento novo, pendência e pedido de
+                  aprovação não apareciam em lugar nenhum. Agora quem lista é a
+                  tabela notifications, alimentada por gatilho. */}
+              <div className="flex items-center gap-3 px-1.5 py-1">
+                <SinoNotificacoes
+                  onAbrirProcesso={(pid) => {
+                    setMainSection("processos");
+                    openProcess(pid);
+                  }}
+                />
+                <span className="whitespace-nowrap text-sm text-ink-soft opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  Notificações
                 </span>
-              </button>
+              </div>
               <button
                 onClick={() => { window.location.href = "/entrar"; }}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
@@ -1376,15 +1428,39 @@ function ProfissionalPage() {
                       >
                         + Pendência
                       </button>
-                      <button
-                        onClick={() => completeStage(selectedId!, activeStage)}
-                        disabled={!hasAnyField() || hasOpenPendencies(activeStage)}
-                        className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        Concluir etapa {activeStage}
-                      </button>
+                      {/* Entrega com pedido em aberto: não há botão para clicar
+                          de novo — clicar abriria um segundo pedido. */}
+                      {activeStage === 5 && pedidoConclusao?.status === "pendente" ? (
+                        <div className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs text-ink-soft">
+                          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                          Pedido enviado. A entrega será concluída após a aprovação do administrador.
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => completeStage(selectedId!, activeStage)}
+                          disabled={!hasAnyField() || hasOpenPendencies(activeStage)}
+                          className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          {activeStage === 5
+                            ? conclusaoLiberada
+                              ? "Concluir entrega"
+                              : "Pedir aprovação da entrega"
+                            : `Concluir etapa ${activeStage}`}
+                        </button>
+                      )}
                     </>
+                  )}
+                  {/* Recusa: o motivo é o único jeito de o profissional saber o
+                      que corrigir antes de pedir de novo. */}
+                  {activeStage === 5 && pedidoConclusao?.status === "recusado" && (
+                    <div className="mt-2 flex w-full items-start gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700 ring-1 ring-red-200">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span className="flex-1">
+                        Entrega recusada pelo administrador
+                        {pedidoConclusao.motivo_recusa ? `: ${pedidoConclusao.motivo_recusa}` : "."}
+                      </span>
+                    </div>
                   )}
                   {/* Pendências abertas desta etapa */}
                   {selectedId && openPendencies(activeStage).length > 0 && (
