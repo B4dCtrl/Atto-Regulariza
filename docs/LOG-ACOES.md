@@ -45,10 +45,9 @@ das etapas, pendências, anotações internas e leitura do chat.
 
 ## Antes de ir a produção
 
-### 6. ⬜ E-mail do admin para arquivos acima de 25 MB
-A mensagem de erro mostra o texto literal `[PENDÊNCIA: e-mail do admin]` para o usuário
-final. Já está em produção, porque a edge function está publicada.
-**Onde:** `supabase/functions/_shared/documento-validacao.ts`
+### 6. ✅ E-mail do admin para arquivos acima de 25 MB — CONCLUÍDO
+A mensagem agora traz `contato@atoregulariza.com.br`, caixa criada na Hostinger em
+2026-08-19. A edge function `upload-documento` foi republicada, então já vale em produção.
 
 ### 7. ⬜ Religar a confirmação de e-mail
 Foi desligada para os testes. Sem ela, qualquer pessoa se cadastra usando o e-mail de
@@ -67,15 +66,13 @@ terceiros e passa a receber as notificações do processo alheio.
 Três assinaturas acrescentadas (caso aberto, aba Documentos, painel do cliente). O canal só
 avisa; quem busca é o DocumentList, cuja consulta passa pela RLS.
 
-### 10. ⬜ Campo de texto "Pendências" duplicando o botão "+ Pendência"
-A etapa 1 tem um campo de texto livre chamado "Pendências ou inconsistências" ao lado do botão
-que cria pendência de verdade. Dois lugares para a mesma coisa, e só um chega ao cliente.
-**Decisão pendente do usuário:** remover o campo de texto.
+### 10. ✅ Campo de texto "Pendências" duplicando o botão "+ Pendência" — REMOVIDO
+O campo de texto livre da etapa 1 saiu. Restou só o botão "+ Pendência", que cria pendência
+de verdade e chega ao cliente.
 
-### 10b. ⬜ Dois pontos de envio na tela do profissional
-Há o bloco "Arquivos desta etapa" no painel central e a aba Documentos. O rótulo "desta
-etapa" promete algo que o modelo de dados não entrega: não existe coluna ligando documento a
-etapa. Recomendação: remover o da etapa.
+### 10b. ✅ Dois pontos de envio na tela do profissional — "Arquivos desta etapa" REMOVIDO
+O bloco do painel central saiu; o envio ficou só na aba Documentos. O rótulo "desta etapa"
+prometia algo que o modelo de dados não entrega: não existe coluna ligando documento a etapa.
 
 ### 11. ⬜ Recuperar documento excluído
 A exclusão lógica preserva tudo no banco, mas não há tela para desfazer.
