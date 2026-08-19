@@ -72,7 +72,7 @@ export function validarArquivo(input: {
       codigo: "tamanho",
       mensagem:
         `Este arquivo tem ${mb} MB e o limite é 25 MB. Envie uma versão comprimida ` +
-        `ou mande para [PENDÊNCIA: e-mail do admin] que a equipe anexa ao seu processo.`,
+        `ou mande para contato@atoregulariza.com.br que a equipe anexa ao seu processo.`,
     };
   }
 
