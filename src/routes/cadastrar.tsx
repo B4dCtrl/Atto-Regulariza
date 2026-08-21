@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { SeletorLocalidade } from "@/components/forms/SeletorLocalidade";
 import { supabase } from "@/integrations/supabase/client";
 import { createClientIntakeBrowser, type IntakeData } from "@/lib/client-intake";
 
@@ -10,7 +11,9 @@ export const Route = createFileRoute("/cadastrar")({
   // "Criar conta" = conta nova. Encerra qualquer sessão ativa para não cair em
   // loop com o login anterior; o formulário aparece sempre limpo.
   beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (session) await supabase.auth.signOut();
   },
   component: CadastrarPage,
@@ -19,44 +22,72 @@ export const Route = createFileRoute("/cadastrar")({
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type WizardData = {
-  tipo_imovel:  string;
+  tipo_imovel: string;
   tem_escritura: string;
-  situacao:     string;
-  cidade:       string;
-  estado:       string;
-  area_m2:      string;
-  objetivo:     string;
+  situacao: string;
+  cidade: string;
+  estado: string;
+  area_m2: string;
+  objetivo: string;
   nome_projeto: string;
-  nome:         string;
-  email:        string;
-  senha:        string;
+  nome: string;
+  email: string;
+  senha: string;
 };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const TIPOS = [
-  { id: "casa",        emoji: "🏠", label: "Casa"            },
-  { id: "apartamento", emoji: "🏢", label: "Apartamento"     },
-  { id: "terreno",     emoji: "🌿", label: "Terreno"         },
-  { id: "comercial",   emoji: "🏪", label: "Sala comercial"  },
-  { id: "rural",       emoji: "🌾", label: "Imóvel rural"    },
-  { id: "outro",       emoji: "📋", label: "Outro"           },
+  { id: "casa", emoji: "🏠", label: "Casa" },
+  { id: "apartamento", emoji: "🏢", label: "Apartamento" },
+  { id: "terreno", emoji: "🌿", label: "Terreno" },
+  { id: "comercial", emoji: "🏪", label: "Sala comercial" },
+  { id: "rural", emoji: "🌾", label: "Imóvel rural" },
+  { id: "outro", emoji: "📋", label: "Outro" },
 ];
 
 const SITUACOES_COM_ESCRITURA = [
-  { id: "matricula_pendencia", label: "Matrícula com pendências",       desc: "Registro existe mas tem apontamentos ou erros" },
-  { id: "sem_habite",          label: "Sem habite-se / averbação",      desc: "Construção ou reforma sem aprovação na prefeitura" },
-  { id: "retificacao",         label: "Retificação de área",            desc: "Área real diferente do que consta no registro" },
-  { id: "heranca",             label: "Herança / inventário",           desc: "Imóvel de familiar falecido sem partilha" },
-  { id: "outro",               label: "Outra situação",                 desc: "Caso específico que precisa de análise" },
+  {
+    id: "matricula_pendencia",
+    label: "Matrícula com pendências",
+    desc: "Registro existe mas tem apontamentos ou erros",
+  },
+  {
+    id: "sem_habite",
+    label: "Sem habite-se / averbação",
+    desc: "Construção ou reforma sem aprovação na prefeitura",
+  },
+  {
+    id: "retificacao",
+    label: "Retificação de área",
+    desc: "Área real diferente do que consta no registro",
+  },
+  {
+    id: "heranca",
+    label: "Herança / inventário",
+    desc: "Imóvel de familiar falecido sem partilha",
+  },
+  { id: "outro", label: "Outra situação", desc: "Caso específico que precisa de análise" },
 ];
 
 const SITUACOES_SEM_ESCRITURA = [
-  { id: "sem_escritura",   label: "Nunca teve escritura",               desc: "Comprado no papel ou de boca, sem registro" },
-  { id: "escritura_velha", label: "Escritura antiga não registrada",    desc: "Tem o documento mas nunca foi ao cartório" },
-  { id: "usucapiao",       label: "Usucapião",                          desc: "Morando há muitos anos sem documento formal" },
-  { id: "heranca_s_doc",   label: "Herança sem documentação",           desc: "Herdou mas não tem como provar" },
-  { id: "outro",           label: "Outra situação",                     desc: "Caso específico que precisa de análise" },
+  {
+    id: "sem_escritura",
+    label: "Nunca teve escritura",
+    desc: "Comprado no papel ou de boca, sem registro",
+  },
+  {
+    id: "escritura_velha",
+    label: "Escritura antiga não registrada",
+    desc: "Tem o documento mas nunca foi ao cartório",
+  },
+  { id: "usucapiao", label: "Usucapião", desc: "Morando há muitos anos sem documento formal" },
+  {
+    id: "heranca_s_doc",
+    label: "Herança sem documentação",
+    desc: "Herdou mas não tem como provar",
+  },
+  { id: "outro", label: "Outra situação", desc: "Caso específico que precisa de análise" },
 ];
 
 const OBJETIVOS = [
@@ -67,17 +98,18 @@ const OBJETIVOS = [
   "Alugar com documentação correta",
 ];
 
-const UFS = [
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA",
-  "MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN",
-  "RS","RO","RR","SC","SP","SE","TO",
-];
-
 const EMPTY: WizardData = {
-  tipo_imovel: "", tem_escritura: "", situacao: "",
-  cidade: "", estado: "", area_m2: "",
+  tipo_imovel: "",
+  tem_escritura: "",
+  situacao: "",
+  cidade: "",
+  estado: "",
+  area_m2: "",
   objetivo: "",
-  nome_projeto: "", nome: "", email: "", senha: "",
+  nome_projeto: "",
+  nome: "",
+  email: "",
+  senha: "",
 };
 
 const TOTAL_STEPS = 6;
@@ -86,24 +118,23 @@ const TOTAL_STEPS = 6;
 
 function CadastrarPage() {
   const navigate = useNavigate();
-  const [step,    setStep]    = useState(1);
-  const [data,    setData]    = useState<WizardData>({ ...EMPTY });
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState<WizardData>({ ...EMPTY });
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [confirmSent, setConfirmSent] = useState(false);
 
   const set = (k: keyof WizardData, v: string) => setData((d) => ({ ...d, [k]: v }));
 
   const progress = ((step - 1) / TOTAL_STEPS) * 100;
 
-  const situacoes = data.tem_escritura === "sim"
-    ? SITUACOES_COM_ESCRITURA
-    : SITUACOES_SEM_ESCRITURA;
+  const situacoes =
+    data.tem_escritura === "sim" ? SITUACOES_COM_ESCRITURA : SITUACOES_SEM_ESCRITURA;
 
   const situacaoLabel =
-    [...SITUACOES_COM_ESCRITURA, ...SITUACOES_SEM_ESCRITURA].find((s) => s.id === data.situacao)?.label
-    ?? data.situacao;
+    [...SITUACOES_COM_ESCRITURA, ...SITUACOES_SEM_ESCRITURA].find((s) => s.id === data.situacao)
+      ?.label ?? data.situacao;
 
   function canNext(): boolean {
     if (step === 1) return !!data.tipo_imovel;
@@ -114,7 +145,9 @@ function CadastrarPage() {
     return true;
   }
 
-  const next = () => { if (canNext()) setStep((s) => Math.min(s + 1, TOTAL_STEPS)); };
+  const next = () => {
+    if (canNext()) setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  };
   const back = () => setStep((s) => Math.max(s - 1, 1));
 
   async function submit() {
@@ -127,34 +160,40 @@ function CadastrarPage() {
 
     // Captura o lead antes (funciona mesmo se o signup falhar)
     await supabase.from("leads").insert({
-      name:        data.nome,
-      email:       data.email,
-      city:        data.cidade,
-      state:       data.estado,
+      name: data.nome,
+      email: data.email,
+      city: data.cidade,
+      state: data.estado,
       tipo_imovel: data.tipo_imovel,
-      situacao:    data.situacao,
-      objetivo:    data.objetivo,
-      source:      "wizard",
+      situacao: data.situacao,
+      objetivo: data.objetivo,
+      source: "wizard",
     });
 
     // Intake guardado nos metadados → se a conta exigir confirmação de e-mail,
     // o processo é montado no 1º login (self-heal no dashboard), sem service role.
     const intake: IntakeData = {
-      nome: data.nome, email: data.email, cidade: data.cidade, estado: data.estado,
-      tipo_imovel: data.tipo_imovel, situacao: data.situacao,
-      objetivo: data.objetivo, nome_projeto: data.nome_projeto,
+      nome: data.nome,
+      email: data.email,
+      cidade: data.cidade,
+      estado: data.estado,
+      tipo_imovel: data.tipo_imovel,
+      situacao: data.situacao,
+      objetivo: data.objetivo,
+      nome_projeto: data.nome_projeto,
     };
 
     // Criar conta
     const { data: authData, error: authErr } = await supabase.auth.signUp({
-      email:    data.email,
+      email: data.email,
       password: data.senha,
-      options:  { data: { name: data.nome, first_login: true, intake } },
+      options: { data: { name: data.nome, first_login: true, intake } },
     });
 
     if (authErr) {
       setError(
-        authErr.message.includes("already registered") || authErr.message.includes("already been registered")
+        authErr.message.includes("already registered") ||
+          authErr.message.includes("already been registered")
           ? "Este email já tem uma conta. Faça login em /entrar."
           : authErr.message,
       );
@@ -193,7 +232,11 @@ function CadastrarPage() {
     return (
       <div className="min-h-screen bg-surface/40 flex flex-col items-center justify-center px-4 py-12">
         <div className="mb-8 text-center">
-          <img src="/ato-lockup.png" alt="Ato Regulariza" className="mx-auto h-12 w-auto object-contain" />
+          <img
+            src="/ato-lockup.png"
+            alt="Ato Regulariza"
+            className="mx-auto h-12 w-auto object-contain"
+          />
           <div className="mt-2 text-xs uppercase tracking-widest text-ink-soft">Regulariza</div>
         </div>
         <div className="w-full max-w-[460px] rounded-3xl bg-background ring-1 ring-border p-8 text-center shadow-sm">
@@ -202,13 +245,16 @@ function CadastrarPage() {
           </div>
           <h1 className="font-serif text-2xl mb-2">Conta criada! Confirme seu e-mail</h1>
           <p className="text-sm text-ink-soft leading-relaxed">
-            Enviamos um e-mail de confirmação para <strong className="text-foreground">{data.email}</strong>.
-            Clique no link da mensagem da <strong className="text-foreground">Ato Regulariza</strong> para
-            ativar sua conta e acessar seu painel.
+            Enviamos um e-mail de confirmação para{" "}
+            <strong className="text-foreground">{data.email}</strong>. Clique no link da mensagem da{" "}
+            <strong className="text-foreground">Ato Regulariza</strong> para ativar sua conta e
+            acessar seu painel.
           </p>
           <p className="mt-4 text-xs text-ink-soft">
             Não recebeu? Verifique a caixa de spam. Já confirmou?{" "}
-            <a href="/entrar" className="underline hover:text-foreground">Entrar</a>
+            <a href="/entrar" className="underline hover:text-foreground">
+              Entrar
+            </a>
           </p>
         </div>
       </div>
@@ -219,14 +265,20 @@ function CadastrarPage() {
     <div className="min-h-screen bg-surface/40 flex flex-col items-center justify-center px-4 py-12">
       {/* Logo */}
       <div className="mb-8 text-center">
-        <img src="/ato-lockup.png" alt="Ato Regulariza" className="mx-auto h-12 w-auto object-contain" />
+        <img
+          src="/ato-lockup.png"
+          alt="Ato Regulariza"
+          className="mx-auto h-12 w-auto object-contain"
+        />
         <div className="mt-2 text-xs uppercase tracking-widest text-ink-soft">Regulariza</div>
       </div>
 
       {/* Progress bar */}
       <div className="mb-6 w-full max-w-[520px]">
         <div className="flex justify-between text-[11px] text-ink-soft mb-2">
-          <span>Etapa {step} de {TOTAL_STEPS}</span>
+          <span>
+            Etapa {step} de {TOTAL_STEPS}
+          </span>
           <span>{Math.round(progress)}% completo</span>
         </div>
         <div className="h-1 rounded-full bg-border overflow-hidden">
@@ -254,9 +306,11 @@ function CadastrarPage() {
                     type="button"
                     onClick={() => set("tipo_imovel", t.id)}
                     className={`flex flex-col items-center gap-2 rounded-2xl p-4 text-sm transition-all ring-1
-                      ${data.tipo_imovel === t.id
-                        ? "ring-foreground bg-foreground text-background"
-                        : "ring-border hover:ring-foreground/30"}`}
+                      ${
+                        data.tipo_imovel === t.id
+                          ? "ring-foreground bg-foreground text-background"
+                          : "ring-border hover:ring-foreground/30"
+                      }`}
                   >
                     <span className="text-2xl">
                       {data.tipo_imovel === t.id ? <Check className="h-6 w-6" /> : t.emoji}
@@ -277,20 +331,41 @@ function CadastrarPage() {
               </p>
               <div className="space-y-3">
                 {[
-                  { id: "sim",     label: "Sim, tem escritura ou matrícula", desc: "Existe um documento mas pode ter pendências" },
-                  { id: "nao",     label: "Não tem escritura",                desc: "Nunca foi registrado ou está só no papel" },
-                  { id: "nao_sei", label: "Não tenho certeza",               desc: "Vou verificar — pode analisar meu caso?" },
+                  {
+                    id: "sim",
+                    label: "Sim, tem escritura ou matrícula",
+                    desc: "Existe um documento mas pode ter pendências",
+                  },
+                  {
+                    id: "nao",
+                    label: "Não tem escritura",
+                    desc: "Nunca foi registrado ou está só no papel",
+                  },
+                  {
+                    id: "nao_sei",
+                    label: "Não tenho certeza",
+                    desc: "Vou verificar — pode analisar meu caso?",
+                  },
                 ].map((op) => (
                   <label
                     key={op.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-2xl p-4 ring-1 transition-colors
                       ${data.tem_escritura === op.id ? "ring-foreground bg-surface" : "ring-border hover:ring-foreground/20"}`}
                   >
-                    <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border flex items-center justify-center
-                      ${data.tem_escritura === op.id ? "border-foreground bg-foreground" : "border-border"}`}>
-                      {data.tem_escritura === op.id && <div className="h-1.5 w-1.5 rounded-full bg-background" />}
+                    <div
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border flex items-center justify-center
+                      ${data.tem_escritura === op.id ? "border-foreground bg-foreground" : "border-border"}`}
+                    >
+                      {data.tem_escritura === op.id && (
+                        <div className="h-1.5 w-1.5 rounded-full bg-background" />
+                      )}
                     </div>
-                    <input type="radio" className="sr-only" value={op.id} onChange={() => set("tem_escritura", op.id)} />
+                    <input
+                      type="radio"
+                      className="sr-only"
+                      value={op.id}
+                      onChange={() => set("tem_escritura", op.id)}
+                    />
                     <div>
                       <div className="text-sm font-medium">{op.label}</div>
                       <div className="text-xs text-ink-soft">{op.desc}</div>
@@ -305,7 +380,9 @@ function CadastrarPage() {
           {step === 3 && (
             <motion.div key="s3" {...slide}>
               <h1 className="font-serif text-2xl mb-1">Qual é a situação principal?</h1>
-              <p className="text-sm text-ink-soft mb-6">Escolha a que melhor descreve seu imóvel.</p>
+              <p className="text-sm text-ink-soft mb-6">
+                Escolha a que melhor descreve seu imóvel.
+              </p>
               <div className="space-y-2">
                 {situacoes.map((s) => (
                   <label
@@ -313,11 +390,20 @@ function CadastrarPage() {
                     className={`flex cursor-pointer items-start gap-3 rounded-2xl p-4 ring-1 transition-colors
                       ${data.situacao === s.id ? "ring-foreground bg-surface" : "ring-border hover:ring-foreground/20"}`}
                   >
-                    <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border flex items-center justify-center
-                      ${data.situacao === s.id ? "border-foreground bg-foreground" : "border-border"}`}>
-                      {data.situacao === s.id && <div className="h-1.5 w-1.5 rounded-full bg-background" />}
+                    <div
+                      className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border flex items-center justify-center
+                      ${data.situacao === s.id ? "border-foreground bg-foreground" : "border-border"}`}
+                    >
+                      {data.situacao === s.id && (
+                        <div className="h-1.5 w-1.5 rounded-full bg-background" />
+                      )}
                     </div>
-                    <input type="radio" className="sr-only" value={s.id} onChange={() => set("situacao", s.id)} />
+                    <input
+                      type="radio"
+                      className="sr-only"
+                      value={s.id}
+                      onChange={() => set("situacao", s.id)}
+                    />
                     <div>
                       <div className="text-sm font-medium">{s.label}</div>
                       <div className="text-xs text-ink-soft">{s.desc}</div>
@@ -336,22 +422,13 @@ function CadastrarPage() {
                 Para identificar a legislação e cartório responsável.
               </p>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Cidade *</label>
-                  <input
-                    value={data.cidade}
-                    onChange={(e) => set("cidade", e.target.value)}
-                    placeholder="São Paulo"
-                    className={inp()}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Estado *</label>
-                  <select value={data.estado} onChange={(e) => set("estado", e.target.value)} className={inp()}>
-                    <option value="">Selecione…</option>
-                    {UFS.map((uf) => <option key={uf} value={uf}>{uf}</option>)}
-                  </select>
-                </div>
+                <SeletorLocalidade
+                  uf={data.estado}
+                  cidade={data.cidade}
+                  obrigatorio
+                  className={inp()}
+                  onChange={({ uf, cidade }) => setData((d) => ({ ...d, estado: uf, cidade }))}
+                />
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Área aproximada (m²)</label>
                   <input
@@ -380,11 +457,20 @@ function CadastrarPage() {
                     className={`flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-3 ring-1 transition-colors
                       ${data.objetivo === o ? "ring-foreground bg-surface" : "ring-border hover:ring-foreground/20"}`}
                   >
-                    <div className={`h-4 w-4 shrink-0 rounded-full border flex items-center justify-center
-                      ${data.objetivo === o ? "border-foreground bg-foreground" : "border-border"}`}>
-                      {data.objetivo === o && <div className="h-1.5 w-1.5 rounded-full bg-background" />}
+                    <div
+                      className={`h-4 w-4 shrink-0 rounded-full border flex items-center justify-center
+                      ${data.objetivo === o ? "border-foreground bg-foreground" : "border-border"}`}
+                    >
+                      {data.objetivo === o && (
+                        <div className="h-1.5 w-1.5 rounded-full bg-background" />
+                      )}
                     </div>
-                    <input type="radio" className="sr-only" value={o} onChange={() => set("objetivo", o)} />
+                    <input
+                      type="radio"
+                      className="sr-only"
+                      value={o}
+                      onChange={() => set("objetivo", o)}
+                    />
                     <span className="text-sm">{o}</span>
                   </label>
                 ))}
@@ -396,7 +482,9 @@ function CadastrarPage() {
           {step === 6 && (
             <motion.div key="s6" {...slide}>
               <h1 className="font-serif text-2xl mb-1">Crie sua conta</h1>
-              <p className="text-sm text-ink-soft mb-6">Para acompanhar seu processo em tempo real.</p>
+              <p className="text-sm text-ink-soft mb-6">
+                Para acompanhar seu processo em tempo real.
+              </p>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Nome completo</label>
@@ -414,11 +502,14 @@ function CadastrarPage() {
                   <input
                     value={data.nome_projeto}
                     onChange={(e) => set("nome_projeto", e.target.value)}
-                    placeholder={data.nome ? `${data.nome} — ${situacaoLabel}` : "Ex: Casa da praia"}
+                    placeholder={
+                      data.nome ? `${data.nome} — ${situacaoLabel}` : "Ex: Casa da praia"
+                    }
                     className={inp()}
                   />
                   <p className="mt-1 text-[11px] text-ink-soft">
-                    Como você quer chamar este processo. Se deixar em branco, usaremos seu nome e a situação.
+                    Como você quer chamar este processo. Se deixar em branco, usaremos seu nome e a
+                    situação.
                   </p>
                 </div>
                 <div>
@@ -432,7 +523,9 @@ function CadastrarPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Senha (mín. 6 caracteres)</label>
+                  <label className="block text-sm font-medium mb-1.5">
+                    Senha (mín. 6 caracteres)
+                  </label>
                   <div className="relative">
                     <input
                       type={showPwd ? "text" : "password"}
@@ -454,7 +547,9 @@ function CadastrarPage() {
 
               {/* Resumo diagnóstico */}
               <div className="mt-5 rounded-2xl bg-accent/10 p-4">
-                <div className="text-[11px] font-medium text-accent uppercase tracking-wide mb-2">Seu diagnóstico</div>
+                <div className="text-[11px] font-medium text-accent uppercase tracking-wide mb-2">
+                  Seu diagnóstico
+                </div>
                 <div className="text-sm space-y-1">
                   <div>
                     <span className="text-ink-soft">Imóvel: </span>
@@ -463,10 +558,13 @@ function CadastrarPage() {
                   </div>
                   <div>
                     <span className="text-ink-soft">Situação: </span>
-                    {[...SITUACOES_COM_ESCRITURA, ...SITUACOES_SEM_ESCRITURA].find((s) => s.id === data.situacao)?.label ?? data.situacao}
+                    {[...SITUACOES_COM_ESCRITURA, ...SITUACOES_SEM_ESCRITURA].find(
+                      (s) => s.id === data.situacao,
+                    )?.label ?? data.situacao}
                   </div>
                   <div>
-                    <span className="text-ink-soft">Objetivo: </span>{data.objetivo}
+                    <span className="text-ink-soft">Objetivo: </span>
+                    {data.objetivo}
                   </div>
                 </div>
               </div>
@@ -507,10 +605,15 @@ function CadastrarPage() {
               className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-2 text-sm text-white
                 hover:opacity-80 disabled:opacity-50 transition-opacity"
             >
-              {loading
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> Criando conta…</>
-                : <><Check className="h-4 w-4" /> Criar conta e acessar</>
-              }
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Criando conta…
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" /> Criar conta e acessar
+                </>
+              )}
             </button>
           )}
         </div>
@@ -518,7 +621,9 @@ function CadastrarPage() {
 
       <p className="mt-6 text-xs text-ink-soft">
         Já tem conta?{" "}
-        <a href="/entrar" className="underline hover:text-foreground">Entrar</a>
+        <a href="/entrar" className="underline hover:text-foreground">
+          Entrar
+        </a>
       </p>
     </div>
   );
@@ -531,8 +636,8 @@ function inp() {
 }
 
 const slide = {
-  initial:    { opacity: 0, x: 16 },
-  animate:    { opacity: 1, x: 0  },
-  exit:       { opacity: 0, x: -16 },
+  initial: { opacity: 0, x: 16 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -16 },
   transition: { duration: 0.2 },
 };

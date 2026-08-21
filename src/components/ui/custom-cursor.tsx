@@ -14,6 +14,16 @@ export function CustomCursor() {
   const ringRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<CursorState>("default");
   const [visible, setVisible] = useState(false);
+  // Montado so depois da hidratacao.
+  //
+  // Antes havia `if (typeof window === "undefined") return null` aqui: o
+  // servidor devolvia null e o cliente devolvia o cursor ja na PRIMEIRA
+  // renderizacao, entao as duas arvores nao batiam. Hidratacao falhando nao
+  // degrada so o cursor: o React descarta o HTML do servidor e a pagina fica
+  // sem manipulador de evento nenhum. No /cadastrar, clicar nas opcoes nao
+  // avancava o formulario.
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
 
   useEffect(() => {
     // Não mostrar em dispositivos touch
@@ -101,7 +111,7 @@ export function CustomCursor() {
     },
   };
 
-  if (typeof window === "undefined") return null;
+  if (!montado) return null;
 
   return (
     <>

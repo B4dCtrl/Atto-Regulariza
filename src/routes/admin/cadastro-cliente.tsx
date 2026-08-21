@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { SeletorLocalidade } from "@/components/forms/SeletorLocalidade";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/cadastro-cliente")({
@@ -89,36 +90,6 @@ const OBJETIVOS = [
   "Quero regularizar para uso pessoal",
   "Quero deixar em ordem para herança",
   "Quero alugar com documentação correta",
-];
-
-const UFS = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
 ];
 
 const TUTORIAL_STEPS = [
@@ -539,28 +510,14 @@ function CadastroClientePage() {
                     className={inp()}
                   />
                 </Field>
-                <Field label="Cidade">
-                  <input
-                    value={form.cidade}
-                    onChange={(e) => set("cidade", e.target.value)}
-                    placeholder="São Paulo"
+                <div className="sm:col-span-2">
+                  <SeletorLocalidade
+                    uf={form.estado}
+                    cidade={form.cidade}
                     className={inp()}
+                    onChange={({ uf, cidade }) => setForm((f) => ({ ...f, estado: uf, cidade }))}
                   />
-                </Field>
-                <Field label="Estado">
-                  <select
-                    value={form.estado}
-                    onChange={(e) => set("estado", e.target.value)}
-                    className={inp()}
-                  >
-                    <option value="">Selecione…</option>
-                    {UFS.map((uf) => (
-                      <option key={uf} value={uf}>
-                        {uf}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                </div>
               </div>
 
               <div>
