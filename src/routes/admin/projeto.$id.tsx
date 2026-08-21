@@ -330,7 +330,6 @@ function ProjetoPage() {
                 <InfoField label="Tipo" value={property.tipo_imovel ?? "—"} />
                 <InfoField label="Situação" value={property.situacao ?? "—"} />
                 <InfoField label="Objetivo" value={property.objetivo ?? "—"} />
-                <InfoField label="Urgência" value={property.urgencia ?? "—"} />
               </div>
               {property.notes && (
                 <div className="rounded-xl bg-surface p-3">

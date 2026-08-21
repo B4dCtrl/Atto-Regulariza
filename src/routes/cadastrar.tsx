@@ -26,7 +26,6 @@ type WizardData = {
   estado:       string;
   area_m2:      string;
   objetivo:     string;
-  urgencia:     string;
   nome_projeto: string;
   nome:         string;
   email:        string;
@@ -68,12 +67,6 @@ const OBJETIVOS = [
   "Alugar com documentação correta",
 ];
 
-const URGENCIAS = [
-  { id: "urgente",    label: "Urgente",     desc: "Venda, financiamento ou processo em andamento" },
-  { id: "normal",     label: "Normal",      desc: "Resolver nos próximos meses" },
-  { id: "sem_pressa", label: "Sem pressa",  desc: "Quero resolver, mas sem prazo específico" },
-];
-
 const UFS = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA",
   "MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN",
@@ -83,7 +76,7 @@ const UFS = [
 const EMPTY: WizardData = {
   tipo_imovel: "", tem_escritura: "", situacao: "",
   cidade: "", estado: "", area_m2: "",
-  objetivo: "", urgencia: "",
+  objetivo: "",
   nome_projeto: "", nome: "", email: "", senha: "",
 };
 
@@ -117,7 +110,7 @@ function CadastrarPage() {
     if (step === 2) return !!data.tem_escritura;
     if (step === 3) return !!data.situacao;
     if (step === 4) return !!data.cidade && !!data.estado;
-    if (step === 5) return !!data.objetivo && !!data.urgencia;
+    if (step === 5) return !!data.objetivo;
     return true;
   }
 
@@ -141,7 +134,6 @@ function CadastrarPage() {
       tipo_imovel: data.tipo_imovel,
       situacao:    data.situacao,
       objetivo:    data.objetivo,
-      urgencia:    data.urgencia,
       source:      "wizard",
     });
 
@@ -150,7 +142,7 @@ function CadastrarPage() {
     const intake: IntakeData = {
       nome: data.nome, email: data.email, cidade: data.cidade, estado: data.estado,
       tipo_imovel: data.tipo_imovel, situacao: data.situacao,
-      objetivo: data.objetivo, urgencia: data.urgencia, nome_projeto: data.nome_projeto,
+      objetivo: data.objetivo, nome_projeto: data.nome_projeto,
     };
 
     // Criar conta
@@ -374,11 +366,13 @@ function CadastrarPage() {
             </motion.div>
           )}
 
-          {/* ── PASSO 5: Objetivo + Urgência ── */}
+          {/* ── PASSO 5: Objetivo ── */}
           {step === 5 && (
             <motion.div key="s5" {...slide}>
               <h1 className="font-serif text-2xl mb-1">Qual é seu objetivo?</h1>
-              <p className="text-sm text-ink-soft mb-5">Isso define a prioridade do seu processo.</p>
+              <p className="text-sm text-ink-soft mb-5">
+                Ajuda a equipe a entender o que você precisa.
+              </p>
               <div className="space-y-3 mb-6">
                 {OBJETIVOS.map((o) => (
                   <label
@@ -393,23 +387,6 @@ function CadastrarPage() {
                     <input type="radio" className="sr-only" value={o} onChange={() => set("objetivo", o)} />
                     <span className="text-sm">{o}</span>
                   </label>
-                ))}
-              </div>
-              <div className="text-sm font-medium mb-3">Urgência</div>
-              <div className="flex gap-2">
-                {URGENCIAS.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => set("urgencia", u.id)}
-                    title={u.desc}
-                    className={`flex-1 rounded-xl py-2.5 text-sm transition-colors ring-1
-                      ${data.urgencia === u.id
-                        ? "ring-foreground bg-foreground text-background"
-                        : "ring-border text-ink-soft hover:ring-foreground/30"}`}
-                  >
-                    {u.label}
-                  </button>
                 ))}
               </div>
             </motion.div>
@@ -490,10 +467,6 @@ function CadastrarPage() {
                   </div>
                   <div>
                     <span className="text-ink-soft">Objetivo: </span>{data.objetivo}
-                  </div>
-                  <div>
-                    <span className="text-ink-soft">Urgência: </span>
-                    {URGENCIAS.find((u) => u.id === data.urgencia)?.label}
                   </div>
                 </div>
               </div>

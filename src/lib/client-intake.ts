@@ -9,7 +9,6 @@ export type IntakeData = {
   tipo_imovel:  string;
   situacao:     string;
   objetivo:     string;
-  urgencia:     string;
   nome_projeto: string;
 };
 
@@ -41,7 +40,7 @@ export async function createClientIntakeBrowser(uid: string, d: IntakeData): Pro
       name: projectName, city: d.cidade, state: d.estado,
       client_id: uid, client_name: d.nome, client_email: d.email,
       tipo_imovel: d.tipo_imovel, situacao: d.situacao,
-      objetivo: d.objetivo, urgencia: d.urgencia,
+      objetivo: d.objetivo,
       status: "entrada", current_stage: 1, progress: 0,
     })
     .select("id").single();

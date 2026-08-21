@@ -14,7 +14,6 @@ export const Route = createFileRoute("/admin/leads")({
 });
 
 /* ──────── Types */
-type Urgency    = "alta" | "media" | "baixa";
 type LeadStatus = "novo" | "triagem" | "atribuido" | "ativo" | "recusado";
 
 interface Lead {
@@ -26,7 +25,6 @@ interface Lead {
   state: string;
   propertyType: string;
   situation: string;
-  urgency: Urgency;
   status: LeadStatus;
   professionalName: string | null;
   notes: string;
@@ -52,13 +50,6 @@ const STATUS_CLS: Record<LeadStatus, string> = {
   recusado:  "bg-surface text-ink-soft ring-1 ring-border",
 };
 
-const URGENCY_LABEL: Record<Urgency, string> = { alta: "Urgente", media: "Média", baixa: "Baixa" };
-const URGENCY_CLS: Record<Urgency, string>   = {
-  alta:  "bg-red-50 text-red-600 ring-1 ring-red-200",
-  media: "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200",
-  baixa: "bg-green-50 text-green-700 ring-1 ring-green-200",
-};
-
 const ADVANCE_LABEL: Record<LeadStatus, string> = {
   novo:      "Iniciar triagem",
   triagem:   "Atribuir profissional",
@@ -75,7 +66,6 @@ function rowToLead(r: LeadRow): Lead {
     city: r.city ?? "", state: r.state ?? "",
     propertyType: r.tipo_imovel ?? "—",
     situation: r.situacao ?? "—",
-    urgency: (r.urgencia as Urgency) ?? "media",
     status: (r.status as LeadStatus) ?? "novo",
     professionalName: r.professional_name ?? null,
     notes: r.notes ?? "",
@@ -150,7 +140,6 @@ function LeadsPage() {
         client_phone: selectedLead.phone || null,
         tipo_imovel: tipo || null,
         situacao: selectedLead.situation !== "—" ? selectedLead.situation : null,
-        urgencia: selectedLead.urgency || null,
         notes: selectedLead.notes || null,
       }).select("id").single();
       if (error || !prop) { alert(`Erro ao criar processo: ${error?.message ?? "desconhecido"}`); return; }
@@ -277,9 +266,6 @@ function LeadsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-sm font-medium">{lead.name}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] ${URGENCY_CLS[lead.urgency]}`}>
-                        {URGENCY_LABEL[lead.urgency]}
-                      </span>
                       <span className={`rounded-full px-2 py-0.5 text-[11px] ${STATUS_CLS[lead.status]}`}>
                         {STATUS_LABEL[lead.status]}
                       </span>
@@ -351,12 +337,6 @@ function LeadsPage() {
                     <span>{v}</span>
                   </div>
                 ))}
-                <div className="flex gap-2">
-                  <span className="w-20 shrink-0 text-ink-soft">Urgência</span>
-                  <span className={`rounded-full px-2 py-0.5 ${URGENCY_CLS[selectedLead.urgency]}`}>
-                    {URGENCY_LABEL[selectedLead.urgency]}
-                  </span>
-                </div>
                 <div className="flex gap-2">
                   <span className="w-20 shrink-0 text-ink-soft">Status</span>
                   <span className={`rounded-full px-2 py-0.5 ${STATUS_CLS[selectedLead.status]}`}>

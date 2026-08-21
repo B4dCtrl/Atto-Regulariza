@@ -91,12 +91,6 @@ const OBJETIVOS = [
   "Quero alugar com documentação correta",
 ];
 
-const URGENCIAS = [
-  { id: "urgente", label: "Urgente", desc: "Processo de venda ou herança em andamento" },
-  { id: "normal", label: "Normal", desc: "Nos próximos meses" },
-  { id: "sem_pressa", label: "Sem pressa", desc: "Quero resolver, mas sem prazo específico" },
-];
-
 const UFS = [
   "AC",
   "AL",
@@ -165,7 +159,6 @@ const EMPTY_FORM = {
   estado: "",
   situacao: "",
   objetivo: "",
-  urgencia: "",
   observacoes: "",
 };
 
@@ -258,7 +251,6 @@ function CadastroClientePage() {
         tipo_imovel: form.tipo_imovel || null,
         situacao: form.situacao || null,
         objetivo: form.objetivo || null,
-        urgencia: form.urgencia || null,
         notes: form.observacoes || null,
       })
       .select("id")
@@ -619,23 +611,6 @@ function CadastroClientePage() {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Urgência</label>
-                <div className="flex flex-wrap gap-2">
-                  {URGENCIAS.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      onClick={() => set("urgencia", u.id)}
-                      title={u.desc}
-                      className={`rounded-full px-4 py-2 text-sm transition-colors ${form.urgencia === u.id ? "bg-foreground text-background" : "border border-border text-ink-soft hover:border-foreground/30"}`}
-                    >
-                      {u.label}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <Field label="Observações adicionais">

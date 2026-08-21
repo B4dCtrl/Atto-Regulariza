@@ -151,7 +151,6 @@ function PrecosPage() {
   const [city,       setCity]       = useState("");
   const [state,      setState]      = useState("SP");
   const [situation,  setSituation]  = useState("");
-  const [urgency,    setUrgency]    = useState<"alta"|"media"|"baixa">("media");
 
   /* Dynamic plans */
   const [planos, setPlanos] = useState(products);
@@ -173,7 +172,7 @@ function PrecosPage() {
     setStep(1);
     setDone(false);
     setName(""); setEmail(""); setPhone("");
-    setPropType(""); setCity(""); setState("SP"); setSituation(""); setUrgency("media");
+    setPropType(""); setCity(""); setState("SP"); setSituation("");
   }
 
   function closeModal() { setModalProduct(null); }
@@ -194,7 +193,6 @@ function PrecosPage() {
       state,
       tipo_imovel: propType || "Imóvel",
       situacao:    situation || `Interesse em: ${modalProduct}`,
-      urgencia:    urgency,
       notes:       `Produto de interesse: ${modalProduct}`,
       source:      "precos",
     });
@@ -398,25 +396,6 @@ function PrecosPage() {
                             placeholder="Ex: Construí um cômodo em 2019 sem aprovação da prefeitura. Preciso regularizar para vender o imóvel..."
                             className={`${inputCls} resize-none`}
                           />
-                        </div>
-                        <div>
-                          <label className="mb-2 block text-xs text-ink-soft">Urgência</label>
-                          <div className="grid grid-cols-3 gap-2">
-                            {(["alta", "media", "baixa"] as const).map((u) => {
-                              const labels = { alta: "Urgente", media: "Normal", baixa: "Sem pressa" };
-                              return (
-                                <label
-                                  key={u}
-                                  className={`flex cursor-pointer items-center justify-center rounded-xl border px-3 py-2 text-xs transition-colors ${
-                                    urgency === u ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground/30"
-                                  }`}
-                                  onClick={() => setUrgency(u)}
-                                >
-                                  {labels[u]}
-                                </label>
-                              );
-                            })}
-                          </div>
                         </div>
                         <button
                           type="submit"

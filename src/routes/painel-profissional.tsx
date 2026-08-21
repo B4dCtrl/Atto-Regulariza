@@ -66,7 +66,6 @@ export const Route = createFileRoute("/painel-profissional")({
 });
 
 /* ─────────────────────────────────────────────── Types */
-type Urgency = "alta" | "media" | "baixa";
 type FieldType = "text" | "textarea" | "date" | "number" | "select" | "checklist" | "checkbox";
 type FieldVal  = string | string[] | boolean;
 type RightTab  = "docs" | "chat" | "briefing";
@@ -82,7 +81,6 @@ interface MockProcess {
   state: string;
   type: string;
   area: number;
-  urgency: Urgency;
   situation: string;
 }
 
@@ -179,19 +177,9 @@ const STAGE_DEFS: StageDef[] = [
   },
 ];
 
-/* ─────────────────────────────────────────────── Styles */
-const URGENCY_LABEL: Record<Urgency, string> = { alta:"Urgente", media:"Média", baixa:"Baixa" };
-const URGENCY_CLS: Record<Urgency, string>   = {
-  alta:  "bg-red-50 text-red-600 ring-1 ring-red-200",
-  media: "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200",
-  baixa: "bg-green-50 text-green-700 ring-1 ring-green-200",
-};
-
 /* ─────────────────────────────────────────────── Component */
 /** Mapeia uma propriedade do Supabase para o formato usado pela UI do painel. */
 function propToProc(p: PropertyRow): MockProcess {
-  const urgency: Urgency =
-    p.urgencia === "urgente" ? "alta" : p.urgencia === "sem_pressa" ? "baixa" : "media";
   return {
     id: p.id,
     name: p.name,
@@ -202,7 +190,6 @@ function propToProc(p: PropertyRow): MockProcess {
     state: p.state ?? "—",
     type: p.tipo_imovel ?? p.objetivo ?? "Regularização",
     area: 0,
-    urgency,
     situation: p.situacao ?? p.notes ?? "—",
   };
 }
@@ -990,9 +977,6 @@ function ProfissionalPage() {
                         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-foreground text-background">
                           <Building2 className="h-4 w-4" />
                         </div>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] ${URGENCY_CLS[p.urgency]}`}>
-                          {URGENCY_LABEL[p.urgency]}
-                        </span>
                       </div>
                       <div className="text-sm font-medium leading-tight">{p.name}</div>
                       <div className="mt-0.5 text-xs text-ink-soft">{p.type}</div>
@@ -1491,9 +1475,6 @@ function ProfissionalPage() {
                     <div className="text-sm font-medium truncate">{selectedProc.client}</div>
                     <div className="text-xs text-ink-soft truncate">{selectedProc.clientEmail}</div>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${URGENCY_CLS[selectedProc.urgency]}`}>
-                    {URGENCY_LABEL[selectedProc.urgency]}
-                  </span>
                 </div>
                 <div className="mt-2.5 space-y-1 text-xs text-ink-soft">
                   <div className="flex items-center gap-1.5">
