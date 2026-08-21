@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { Kanban } from "@/components/admin/Kanban";
-import { ChatbotPanel } from "@/components/admin/ChatbotPanel";
+import { PainelGerencial } from "@/components/admin/PainelGerencial";
 import { UploadZone } from "@/components/admin/UploadZone";
 import { Search, Bell, Plus, Loader2, User, Settings, LogOut, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -231,7 +231,7 @@ function AdminHome() {
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <Kanban filter={searchQuery} />
-          <ChatbotPanel />
+          <PainelGerencial />
         </div>
         <div className="space-y-6">
           <UploadZone />
