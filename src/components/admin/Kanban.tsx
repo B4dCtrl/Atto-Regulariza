@@ -1,5 +1,5 @@
 import { useState, useEffect, type DragEvent } from "react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { GripVertical, Building2, Clock, User, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -47,6 +47,7 @@ function rowToCard(p: PropertyRow): Card {
 }
 
 export function Kanban({ filter = "" }: { filter?: string }) {
+  const navigate = useNavigate();
   const [cards,   setCards]   = useState<Card[]>([]);
   const [dragId,  setDragId]  = useState<string | null>(null);
   const [overCol, setOverCol] = useState<Status | null>(null);
@@ -167,11 +168,28 @@ export function Kanban({ filter = "" }: { filter?: string }) {
             </div>
 
             <div className="space-y-2 min-h-[120px]">
+              {/* Arrastar e abrir no MESMO elemento.
+                  Antes havia um Link absoluto cobrindo o cartão para torná-lo
+                  clicável. Ele recebia o mousedown no lugar do div arrastável
+                  embaixo — e, sendo draggable={false}, cancelava o gesto. O
+                  cartão dava para clicar e não dava para arrastar. Agora o
+                  clique navega e o arraste move; o navegador não dispara click
+                  depois de um drop, então não há conflito. */}
               {list.map((c) => (
-                <div key={c.id} className="relative">
+                <div key={c.id}>
                   <div
                     draggable
                     onDragStart={onDragStart(c.id)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Abrir projeto ${c.imovel}`}
+                    onClick={() => navigate({ to: "/admin/projeto/$id", params: { id: c.id } })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigate({ to: "/admin/projeto/$id", params: { id: c.id } });
+                      }
+                    }}
                     className="group cursor-grab active:cursor-grabbing rounded-xl bg-background ring-1 ring-border p-3 hover:ring-foreground/30 transition-all hover:-translate-y-0.5"
                   >
                     <div className="flex items-start gap-2">
@@ -193,13 +211,6 @@ export function Kanban({ filter = "" }: { filter?: string }) {
                       </span>
                     </div>
                   </div>
-                  <Link
-                    to="/admin/projeto/$id"
-                    params={{ id: c.id }}
-                    className="absolute inset-0 rounded-xl"
-                    aria-label={`Abrir projeto ${c.imovel}`}
-                    draggable={false}
-                  />
                 </div>
               ))}
 

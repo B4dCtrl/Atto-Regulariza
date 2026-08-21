@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { gerarBriefing, type Briefing, type ItemFila } from "@/lib/api/briefing.functions";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
@@ -47,7 +48,8 @@ export function PainelGerencial() {
     (d?.profissionaisPendentes.length ?? 0) +
     (d?.aprovacoesPendentes.length ?? 0) +
     (d?.processosParados.length ?? 0) +
-    (d?.leadsSemResposta.length ?? 0);
+    (d?.leadsSemResposta.length ?? 0) +
+    (d?.profissionaisInativos.length ?? 0);
 
   return (
     <section className="rounded-2xl border border-border bg-background p-5">
@@ -107,8 +109,14 @@ export function PainelGerencial() {
             <ul className="mt-4 space-y-1.5">
               {briefing.fila.map((item: ItemFila, i: number) => (
                 <li key={i}>
-                  <a
-                    href={DESTINO[item.destino] ?? "/admin/processos"}
+                  {/* Link, não <a>.
+                      Com <a> o navegador recarrega a página inteira, e aí o
+                      beforeLoad da rota roda NO SERVIDOR, onde
+                      supabase.auth.getSession() não enxerga nada — a sessão
+                      vive no localStorage. Sem sessão, a rota redirecionava
+                      para /entrar: clicar numa tarefa deslogava o admin. */}
+                  <Link
+                    to={DESTINO[item.destino] ?? "/admin/processos"}
                     className="flex gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface"
                   >
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-medium text-background">
@@ -118,7 +126,7 @@ export function PainelGerencial() {
                       <span className="block text-sm">{item.titulo}</span>
                       <span className="block text-xs text-ink-soft">{item.motivo}</span>
                     </span>
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -152,7 +160,7 @@ export function PainelGerencial() {
             </div>
           )}
 
-          {totalTarefas === 0 && !erro && !briefing?.erroIA && briefing && (
+          {totalTarefas === 0 && briefing?.fila.length === 0 && !erro && !briefing?.erroIA && briefing && (
             <p className="mt-4 text-sm text-ink-soft">Nada exige sua ação agora.</p>
           )}
         </>
