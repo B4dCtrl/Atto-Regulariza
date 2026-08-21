@@ -49,10 +49,10 @@ das etapas, pendências, anotações internas e leitura do chat.
 A mensagem agora traz `contato@atoregulariza.com.br`, caixa criada na Hostinger em
 2026-08-19. A edge function `upload-documento` foi republicada, então já vale em produção.
 
-### 7. ⬜ Religar a confirmação de e-mail
-Foi desligada para os testes. Sem ela, qualquer pessoa se cadastra usando o e-mail de
-terceiros e passa a receber as notificações do processo alheio.
-*(Resolve junto com o item 1.)*
+### 7. ✅ Religar a confirmação de e-mail — CONCLUÍDO
+Religada em 2026-08-21 (Authentication › Sign In / Providers › Email › Confirm email).
+Nenhuma conta ficou bloqueada: as três existentes já estavam confirmadas.
+*Falta ainda o item 1 — sem os modelos aplicados, o e-mail de confirmação sai em inglês.*
 
 ### 8. ⬜ Merge da branch `feat/seguranca-e-documentos` na `main`
 30+ commits. Publica o trabalho de segurança e de documentos.
@@ -133,3 +133,19 @@ A exclusão lógica preserva tudo no banco, mas não há tela para desfazer.
 - ✅ Frente 2, plano 2: painel do profissional sem `localStorage`, confirmado no navegador;
   conferência sobre os documentos reais; dispensar vistoria; responsável técnico automático;
   aviso flutuante de salvamento
+
+## Concluído em 2026-08-21
+
+- ✅ Caixa `contato@atoregulariza.com.br` na Hostinger; MX e SPF na raiz, sem duplicar o SPF
+  do Resend (que vive em `send.`)
+- ✅ Item 6: e-mail real na mensagem de arquivo acima de 25 MB, edge function republicada
+- ✅ Item 7: confirmação de e-mail religada
+- ✅ Sino de notificações: painel abria fora da tela e era recortado pelo `overflow-hidden`
+  da barra lateral; agora é renderizado no `body` por portal
+- ✅ Urgência/prioridade removida de sete arquivos — sugeria que o processo poderia correr
+  mais rápido, o que prefeitura e cartório não permitem. Colunas do banco preservadas
+- ✅ Seletor de cidade por estado, com busca: 5.571 municípios em 27 arquivos, carregados
+  sob demanda (6 KB no PR, 12,9 KB em MG)
+- ✅ "Nome do projeto" fora do cadastro do cliente
+- ✅ CTA da Hero (e dos outros três que compartilham o link) para (41) 98447-1404
+- ✅ Cartão da barra lateral do cliente conta pendências reais, não `next_action`
