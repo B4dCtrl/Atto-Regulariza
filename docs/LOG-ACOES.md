@@ -112,13 +112,12 @@ As variáveis de ambiente **estão** na Vercel: o erro vinha da checagem de cabe
 depois da checagem de ambiente.
 **Retestar:** cadastrar profissional pelo painel admin · pedir resposta à IA num processo.
 
-### 15. ⬜ `admin-chat` sem chave de IA — e é do fornecedor errado
-O painel de chat do admin devolve "Falha ao iniciar chat" porque não existe `LOVABLE_API_KEY`
-nos segredos do projeto. A função está publicada e ativa (v2, `verify_jwt`), mas aponta para
-`ai.gateway.lovable.dev` com `google/gemini-3-flash-preview` — resquício do Lovable.
-São **dois** assistentes de fornecedores diferentes no mesmo produto (o outro é NVIDIA NIM, em
-`assistant.functions.ts`). Ver dívida 14.
-**Opções:** (A) apontar para o mesmo NVIDIA NIM · (B) contratar chave Lovable · (C) remover.
+### 15. ✅ `admin-chat` removido — CONCLUÍDO
+O painel gerencial tomou o lugar dele na Visão geral. A edge function foi apagada do
+projeto Supabase e do código, junto com o `ChatbotPanel` e a entrada no `config.toml`.
+Fim do resquício do Lovable: sobra um único fornecedor de IA (NVIDIA NIM), em
+`assistant.functions.ts` e `briefing.functions.ts`.
+
 
 ---
 
@@ -172,3 +171,8 @@ São **dois** assistentes de fornecedores diferentes no mesmo produto (o outro �
 - ✅ Item 11: restaurar documento excluído, e a política `documents_select` corrigida
 - ✅ Item 13: divergência de hidratação — era o `custom-cursor`
 - ✅ Botão "Entrar" na hero antes do scroll, viajando até o menu pelo mesmo `layoutId` do logo
+- ✅ Item 12: `createProfessional` e `chatAssistant` nunca funcionaram — faltava o cabeçalho
+  `Authorization` nas chamadas
+- ✅ StaffBar enxugada (4 destinos inúteis) e 308 linhas de código morto de `/gestao`
+- ✅ Painel gerencial do admin: briefing diário, fila priorizada e alertas, com registro
+  de acesso aos três painéis
