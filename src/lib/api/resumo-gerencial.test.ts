@@ -104,9 +104,7 @@ describe("montarResumo", () => {
             documentosPendentes: 0,
           },
         ],
-        leadsSemResposta: [
-          { cidade: "Curitiba", uf: "PR", desde: "2026-08-17T12:00:00Z" },
-        ],
+        leadsSemResposta: [{ cidade: "Curitiba", uf: "PR", desde: "2026-08-17T12:00:00Z" }],
       }),
       AGORA,
     );
