@@ -551,6 +551,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      acessos: {
+        Row: {
+          id: string;
+          user_id: string;
+          painel: string;
+          entrou_em: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          painel: string;
+          entrou_em?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          painel?: string;
+          entrou_em?: string;
+        };
+        Relationships: [];
+      };
+      briefings_admin: {
+        Row: {
+          dia: string;
+          texto: string;
+          fila: Json;
+          alertas: Json;
+          gerado_em: string;
+        };
+        Insert: {
+          dia?: string;
+          texto: string;
+          fila?: Json;
+          alertas?: Json;
+          gerado_em?: string;
+        };
+        Update: {
+          dia?: string;
+          texto?: string;
+          fila?: Json;
+          alertas?: Json;
+          gerado_em?: string;
+        };
+        Relationships: [];
+      };
       notifications: {
         Row: {
           id: string;
@@ -679,6 +724,7 @@ export type Database = {
           name: string | null;
           initials: string | null;
           role: string;
+          ultimo_acesso_em: string | null;
           specialization: string | null;
           email: string | null;
           phone: string | null;
@@ -706,6 +752,7 @@ export type Database = {
           name?: string | null;
           initials?: string | null;
           role?: string;
+          ultimo_acesso_em?: string | null;
           approval_status?: "pendente" | "aprovado" | "recusado";
           approval_note?: string | null;
           specialization?: string | null;
@@ -731,6 +778,7 @@ export type Database = {
           name?: string | null;
           initials?: string | null;
           role?: string;
+          ultimo_acesso_em?: string | null;
           specialization?: string | null;
           email?: string | null;
           phone?: string | null;
@@ -766,6 +814,12 @@ export type Database = {
           _user_id: string;
         };
         Returns: boolean;
+      };
+      registrar_acesso: {
+        Args: {
+          _painel: string;
+        };
+        Returns: undefined;
       };
       restaurar_documento: {
         Args: {
