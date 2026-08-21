@@ -88,6 +88,10 @@ export function Kanban({ filter = "" }: { filter?: string }) {
   const onDragStart = (id: string) => (e: DragEvent) => {
     setDragId(id);
     e.dataTransfer.effectAllowed = "move";
+    // Sem setData o arraste NÃO começa: o navegador entende que não há carga e
+    // cancela o gesto. Guardar o id no estado do React não basta — quem decide
+    // se existe algo sendo arrastado é o dataTransfer.
+    e.dataTransfer.setData("text/plain", id);
   };
 
   const onDrop = (col: Status) => async (e: DragEvent) => {

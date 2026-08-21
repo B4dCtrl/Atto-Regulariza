@@ -95,10 +95,10 @@ export function PainelGerencial() {
 
           {/* A análise pode falhar sem levar o painel junto: as listas abaixo
               vêm do banco e continuam corretas. */}
-          {erro && (
+          {(erro || briefing?.erroIA) && (
             <div className="mt-4 flex gap-2 rounded-xl bg-surface p-3 text-xs text-ink-soft">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{erro}</span>
+              <span>{erro ?? briefing?.erroIA}</span>
             </div>
           )}
 
@@ -152,7 +152,7 @@ export function PainelGerencial() {
             </div>
           )}
 
-          {totalTarefas === 0 && !erro && briefing && (
+          {totalTarefas === 0 && !erro && !briefing?.erroIA && briefing && (
             <p className="mt-4 text-sm text-ink-soft">Nada exige sua ação agora.</p>
           )}
         </>

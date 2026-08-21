@@ -20,6 +20,14 @@ export type Briefing = {
   alertas: string[];
   gerado_em: string;
   dados: DadosGerenciais;
+  /**
+   * Preenchido quando a IA falhou.
+   *
+   * A função NÃO lança nesse caso: os números vêm do banco e continuam
+   * corretos sem ela. Lançar levaria os dados junto e deixaria o admin sem
+   * nada — justamente quando ele precisa ver o que está pendente.
+   */
+  erroIA?: string;
 };
 
 const SYSTEM_PROMPT = `Você escreve o briefing gerencial da Ato Regulariza, plataforma de regularização imobiliária.
@@ -177,8 +185,17 @@ export const gerarBriefing = createServerFn({ method: "POST" })
       }
     }
 
+    const vazio = { texto: "", fila: [] as ItemFila[], alertas: [] as string[] };
+
     const apiKey = process.env.NVIDIA_API_KEY;
-    if (!apiKey) throw new Error("Análise indisponível: IA não configurada no servidor.");
+    if (!apiKey) {
+      return {
+        ...vazio,
+        gerado_em: new Date().toISOString(),
+        dados,
+        erroIA: "IA não configurada no servidor (NVIDIA_API_KEY ausente).",
+      };
+    }
 
     const resumo = montarResumo(dados, new Date());
 
@@ -186,6 +203,10 @@ export const gerarBriefing = createServerFn({ method: "POST" })
     try {
       const res = await fetch(NIM_URL, {
         method: "POST",
+        // Prazo obrigatório: sem ele, uma chamada que não volta deixa a tela
+        // girando para sempre — o usuário não distingue "demorando" de
+        // "travado". 25s é folgado para um briefing de 900 tokens.
+        signal: AbortSignal.timeout(25_000),
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model: process.env.NVIDIA_MODEL || DEFAULT_MODEL,
@@ -197,11 +218,27 @@ export const gerarBriefing = createServerFn({ method: "POST" })
           ],
         }),
       });
-      if (!res.ok) throw new Error(String(res.status));
+      if (!res.ok) {
+        const corpo = await res.text().catch(() => "");
+        console.error("[briefing] NVIDIA respondeu", res.status, corpo.slice(0, 300));
+        throw new Error(String(res.status));
+      }
       const json = await res.json();
       bruto = json?.choices?.[0]?.message?.content ?? "";
-    } catch {
-      throw new Error("Não foi possível gerar a análise agora.");
+    } catch (e) {
+      // O motivo vai para o log da Vercel; ao usuário chega uma frase que
+      // distingue os dois casos que ele pode agir sobre.
+      const nome = e instanceof Error ? e.name : "";
+      console.error("[briefing] falha ao chamar a IA:", e);
+      return {
+        ...vazio,
+        gerado_em: new Date().toISOString(),
+        dados,
+        erroIA:
+          nome === "TimeoutError"
+            ? "A análise demorou demais e foi interrompida. Tente de novo."
+            : "Não foi possível gerar a análise agora.",
+      };
     }
 
     // O modelo às vezes embrulha o JSON em cercas de código, mesmo instruído a
