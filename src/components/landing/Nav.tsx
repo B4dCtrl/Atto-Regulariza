@@ -291,7 +291,9 @@ export function Nav() {
             className="flex items-center gap-2 px-3 py-2"
           >
             {/* Destino do "Entrar" da intro — mesmo layoutId, ver acima. */}
-            <Link to="/entrar" className="hidden sm:inline-flex">
+            {/* Visível também no celular: sem isto o "Entrar" da intro não tinha
+                destino em tela estreita e sumia ao rolar em vez de viajar. */}
+            <Link to="/entrar" className="inline-flex">
               <motion.div
                 layoutId="ato-entrar"
                 transition={SPRING}

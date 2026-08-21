@@ -74,17 +74,17 @@ de verdade e chega ao cliente.
 O bloco do painel central saiu; o envio ficou só na aba Documentos. O rótulo "desta etapa"
 prometia algo que o modelo de dados não entrega: não existe coluna ligando documento a etapa.
 
-### 13. ⬜ Divergência de hidratação (React #418)
-O HTML do servidor não bate com a primeira renderização do cliente. Em produção o React
-se recupera refazendo a árvore inteira — o site funciona, mas paga uma renderização a mais
-em toda visita. **Em desenvolvimento é pior:** o React aborta a hidratação e a página fica
-sem manipulador de evento nenhum, o que impede testar qualquer coisa no navegador local.
-**Já descartados:** `ConstructionGate` e `StaffBar` (ambos começam com o mesmo estado nos
-dois lados) · `custom-cursor` (corrigido em 2026-08-21, não era a causa única)
-**Suspeito restante:** `framer-motion` — o SSR emite `style="opacity:0;transform:translateX(16px)"`
-e o cliente pode formatar diferente.
-**Como reproduzir:** abrir `/cadastrar` no dev e clicar numa opção; nada acontece.
-**Precisa de:** bisecção com tempo dedicado.
+### 13. ✅ Divergência de hidratação (React #418) — RESOLVIDO
+Causa: `custom-cursor` devolvia `null` no servidor (`typeof window === "undefined"`) e o cursor
+já na PRIMEIRA renderização do cliente. As duas árvores não batiam, e hidratação que falha não
+degrada só o componente — o React descarta o HTML do servidor. Em produção ele se recuperava
+refazendo tudo; em desenvolvimento abortava, deixando a página sem manipulador de evento
+nenhum.
+Corrigido em 2026-08-21 com estado `montado` ligado por `useEffect`.
+**Atenção ao verificar:** o servidor de dev guarda o módulo de SSR em cache. Depois de mexer
+em algo que renderiza no servidor, **reinicie o servidor** — sem isso o erro persiste e leva a
+descartar o culpado certo, que foi o que aconteceu aqui na primeira tentativa.
+**Confirmado:** console limpo em `/entrar` e `/cadastrar`, e os cliques voltaram a responder.
 
 ### 14. ⬜ Assistente de IA duplicado no horizonte
 Hoje o site usa NVIDIA NIM (`gpt-oss-120b`) em `assistant.functions.ts`, com o system prompt
@@ -155,3 +155,6 @@ ver o próprio histórico — o ramo de `DocumentList` que trata `deleted_at` er
 - ✅ "Nome do projeto" fora do cadastro do cliente
 - ✅ CTA da Hero (e dos outros três que compartilham o link) para (41) 98447-1404
 - ✅ Cartão da barra lateral do cliente conta pendências reais, não `next_action`
+- ✅ Item 11: restaurar documento excluído, e a política `documents_select` corrigida
+- ✅ Item 13: divergência de hidratação — era o `custom-cursor`
+- ✅ Botão "Entrar" na hero antes do scroll, viajando até o menu pelo mesmo `layoutId` do logo
