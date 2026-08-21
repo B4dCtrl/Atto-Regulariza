@@ -93,12 +93,14 @@ respondendo pela mesma empresa. **Decisão do usuário (2026-08-21): deixar sepa
 Quando for unificar: extrair o miolo (contexto + prompt + chamada) e deixar dois adaptadores
 finos. Atenção à autorização — no site há sessão; no WhatsApp só o número de telefone.
 
-### 11. 🔵 Recuperar documento excluído — CÓDIGO PRONTO, FALTA RODAR A MIGRAÇÃO
+### 11. ✅ Recuperar documento excluído — CONCLUÍDO
+Migração rodada em 2026-08-21; as quatro verificações voltaram OK.
 Botão "Restaurar" na lista, para admin e profissional atribuído. Corrige de quebra uma
 incoerência: a política `documents_select` filtrava `deleted_at IS NULL` antes de chamar
 `can_read_document`, anulando a regra que a migração `20260808b` tinha escrito para a equipe
 ver o próprio histórico — o ramo de `DocumentList` que trata `deleted_at` era inalcançável.
-**Rodar:** `supabase/migrations/20260821_restaurar_documento.sql` no SQL Editor.
+**Migração:** `supabase/migrations/20260821_restaurar_documento.sql`.
+*Falta conferir na tela: excluir um documento e restaurá-lo.*
 
 ### 12. ⬜ Server functions sem variáveis em produção
 `SUPABASE_SERVICE_ROLE_KEY` e `NVIDIA_API_KEY` foram criadas na Vercel hoje, mas as funções
