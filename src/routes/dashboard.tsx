@@ -6,6 +6,7 @@ import {
   Check, Clock, AlertCircle, ArrowUpRight,
   Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut, Sparkles,
 } from "lucide-react";
+import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
 import { TarefasDoCliente } from "@/components/cliente/TarefasDoCliente";
@@ -312,7 +313,7 @@ function DashboardContent() {
     if (!propertyId || askingAI) return;
     setAskingAI(true);
     try {
-      await chatAssistant({ data: { propertyId } });
+      await chatAssistant({ data: { propertyId }, headers: await cabecalhoAuth() });
     } catch (err) {
       alert(`Assistente IA indisponível: ${(err as Error).message}`);
     }

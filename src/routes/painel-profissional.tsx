@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
+import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { supabase } from "@/integrations/supabase/client";
 import React, { useState, useRef, useEffect, type FormEvent } from "react";
 import {
@@ -757,7 +758,10 @@ function ProfissionalPage() {
     if (!selectedId || askingAI) return;
     setAskingAI(true);
     try {
-      await chatAssistant({ data: { propertyId: selectedId } });
+      await chatAssistant({
+        data: { propertyId: selectedId },
+        headers: await cabecalhoAuth(),
+      });
       setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 200);
     } catch (err) {
       alert(`Assistente IA indisponível: ${(err as Error).message}`);

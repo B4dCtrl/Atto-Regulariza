@@ -6,6 +6,7 @@ import {
   MapPin, ClipboardList, User, Star, X, Mail, FolderOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { supabase } from "@/integrations/supabase/client";
 import { createProfessional } from "@/lib/api/professionals.functions";
 
@@ -132,15 +133,18 @@ function CadastroProfissionalPage() {
     }
     const tempPwd = Math.random().toString(36).slice(-10) + "A1";
     try {
-      await createProfessional({ data: {
-        name: form.nome,
-        email: form.email,
-        password: tempPwd,
-        council: CATEGORIAS.find((c) => c.id === form.categoria)?.registro ?? "",
-        registro: form.registro_num,
-        specialties: form.areas,
-        regions: form.regioes,
-      }});
+      await createProfessional({
+        data: {
+          name: form.nome,
+          email: form.email,
+          password: tempPwd,
+          council: CATEGORIAS.find((c) => c.id === form.categoria)?.registro ?? "",
+          registro: form.registro_num,
+          specialties: form.areas,
+          regions: form.regioes,
+        },
+        headers: await cabecalhoAuth(),
+      });
       alert(`Profissional criado!\nSenha temporária: ${tempPwd}\nRepasse para ${form.email} (ele troca no primeiro acesso).`);
       setSaved(true);
       await loadPros();

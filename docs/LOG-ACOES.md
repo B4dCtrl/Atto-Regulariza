@@ -103,9 +103,22 @@ ver o próprio histórico — o ramo de `DocumentList` que trata `deleted_at` er
 **Migração:** `supabase/migrations/20260821_restaurar_documento.sql`.
 *Falta conferir na tela: excluir um documento e restaurá-lo.*
 
-### 12. ⬜ Server functions sem variáveis em produção
-`SUPABASE_SERVICE_ROLE_KEY` e `NVIDIA_API_KEY` foram criadas na Vercel hoje, mas as funções
-`createProfessional` e `chatAssistant` nunca foram testadas em produção.
+### 12. 🔵 Server functions — CORRIGIDAS, FALTA RETESTAR
+Nunca funcionaram, e não era variável de ambiente: as três chamadas passavam só `data`, sem
+`Authorization`. O token do Supabase mora no `localStorage`, não em cookie, então o navegador
+não anexa nada — o middleware recusava com "No authorization header provided".
+Corrigido em 2026-08-21 com `cabecalhoAuth()` em `src/integrations/supabase/auth-headers.ts`.
+As variáveis de ambiente **estão** na Vercel: o erro vinha da checagem de cabeçalho, que roda
+depois da checagem de ambiente.
+**Retestar:** cadastrar profissional pelo painel admin · pedir resposta à IA num processo.
+
+### 15. ⬜ `admin-chat` sem chave de IA — e é do fornecedor errado
+O painel de chat do admin devolve "Falha ao iniciar chat" porque não existe `LOVABLE_API_KEY`
+nos segredos do projeto. A função está publicada e ativa (v2, `verify_jwt`), mas aponta para
+`ai.gateway.lovable.dev` com `google/gemini-3-flash-preview` — resquício do Lovable.
+São **dois** assistentes de fornecedores diferentes no mesmo produto (o outro é NVIDIA NIM, em
+`assistant.functions.ts`). Ver dívida 14.
+**Opções:** (A) apontar para o mesmo NVIDIA NIM · (B) contratar chave Lovable · (C) remover.
 
 ---
 
