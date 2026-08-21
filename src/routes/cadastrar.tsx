@@ -29,7 +29,6 @@ type WizardData = {
   estado: string;
   area_m2: string;
   objetivo: string;
-  nome_projeto: string;
   nome: string;
   email: string;
   senha: string;
@@ -106,7 +105,6 @@ const EMPTY: WizardData = {
   estado: "",
   area_m2: "",
   objetivo: "",
-  nome_projeto: "",
   nome: "",
   email: "",
   senha: "",
@@ -131,10 +129,6 @@ function CadastrarPage() {
 
   const situacoes =
     data.tem_escritura === "sim" ? SITUACOES_COM_ESCRITURA : SITUACOES_SEM_ESCRITURA;
-
-  const situacaoLabel =
-    [...SITUACOES_COM_ESCRITURA, ...SITUACOES_SEM_ESCRITURA].find((s) => s.id === data.situacao)
-      ?.label ?? data.situacao;
 
   function canNext(): boolean {
     if (step === 1) return !!data.tipo_imovel;
@@ -180,7 +174,6 @@ function CadastrarPage() {
       tipo_imovel: data.tipo_imovel,
       situacao: data.situacao,
       objetivo: data.objetivo,
-      nome_projeto: data.nome_projeto,
     };
 
     // Criar conta
@@ -494,23 +487,6 @@ function CadastrarPage() {
                     placeholder="Maria da Silva"
                     className={inp()}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">
-                    Nome do projeto <span className="text-ink-soft font-normal">(opcional)</span>
-                  </label>
-                  <input
-                    value={data.nome_projeto}
-                    onChange={(e) => set("nome_projeto", e.target.value)}
-                    placeholder={
-                      data.nome ? `${data.nome} — ${situacaoLabel}` : "Ex: Casa da praia"
-                    }
-                    className={inp()}
-                  />
-                  <p className="mt-1 text-[11px] text-ink-soft">
-                    Como você quer chamar este processo. Se deixar em branco, usaremos seu nome e a
-                    situação.
-                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Email</label>
