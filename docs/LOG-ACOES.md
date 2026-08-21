@@ -54,9 +54,10 @@ Religada em 2026-08-21 (Authentication › Sign In / Providers › Email › Con
 Nenhuma conta ficou bloqueada: as três existentes já estavam confirmadas.
 *Falta ainda o item 1 — sem os modelos aplicados, o e-mail de confirmação sai em inglês.*
 
-### 8. ⬜ Merge da branch `feat/seguranca-e-documentos` na `main`
-30+ commits. Publica o trabalho de segurança e de documentos.
-**Não fazer antes** dos itens 3, 4 e 5 estarem verificados.
+### 8. ✅ Merge da branch `feat/seguranca-e-documentos` na `main` — CONCLUÍDO
+77 commits, merge `78dbccd` em 2026-08-21. Branch mantida (não apagada).
+**Falta conferir em produção:** tarefa do cliente com envio embutido · botão Restaurar em
+documento excluído · animação do "Entrar" na hero.
 
 ---
 
