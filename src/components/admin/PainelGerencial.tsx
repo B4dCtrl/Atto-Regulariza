@@ -160,9 +160,11 @@ export function PainelGerencial() {
             </div>
           )}
 
-          {totalTarefas === 0 && briefing?.fila.length === 0 && !erro && !briefing?.erroIA && briefing && (
-            <p className="mt-4 text-sm text-ink-soft">Nada exige sua ação agora.</p>
-          )}
+          {totalTarefas === 0 &&
+            briefing?.fila.length === 0 &&
+            !erro &&
+            !briefing?.erroIA &&
+            briefing && <p className="mt-4 text-sm text-ink-soft">Nada exige sua ação agora.</p>}
         </>
       )}
     </section>
