@@ -9,6 +9,20 @@ Atualizado conforme avançamos.
 
 ## Em andamento
 
+### 16. 🔵 Verificar no ar depois do deploy de 2026-08-21
+Tudo abaixo está no código e publicado, mas não foi visto funcionando:
+- **Arraste do Kanban** — um `Link` absoluto cobria o cartão e cancelava o gesto; agora o
+  mesmo elemento arrasta e abre. *(Não consegui testar: `/admin` local exige sessão.)*
+- **Fila do painel gerencial** — clicar deslogava (era `<a>`, que recarrega e faz o
+  `beforeLoad` rodar no servidor sem sessão). Agora é `<Link>`.
+- **Tarefa do cliente com envio embutido** — pendência com `kind` vira tarefa na caixa
+  "O que falta de você".
+- **Botão Restaurar** em documento excluído.
+- **`createProfessional`** pelo painel admin (o cadastro público já foi testado e funciona).
+- **Divergência a observar:** o rodapé do painel dizia "0 lead(s) sem resposta" enquanto o
+  briefing citava um lead parado há 5 dias. Pode ser o texto em cache; se repetir com
+  números frescos, é invenção da IA e o prompt precisa apertar.
+
 ### 1. 🔵 Reputação de envio — e-mails caindo em spam
 SMTP próprio configurado e funcionando (Resend, domínio verificado), mas os e-mails caem em
 spam. Causa: o domínio começou a enviar hoje, reputação zero, e o modelo padrão do Supabase em
