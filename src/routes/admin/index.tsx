@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
+import { registrarAcesso } from "@/lib/api/acessos";
 import { Kanban } from "@/components/admin/Kanban";
 import { ChatbotPanel } from "@/components/admin/ChatbotPanel";
 import { UploadZone } from "@/components/admin/UploadZone";
@@ -103,6 +104,11 @@ function AdminHome() {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, []);
+
+  /* Registra a entrada uma vez por montagem da tela. */
+  useEffect(() => {
+    registrarAcesso("admin");
   }, []);
 
   return (

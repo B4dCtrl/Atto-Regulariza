@@ -6,6 +6,7 @@ import {
   Check, Clock, AlertCircle, ArrowUpRight,
   Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut, Sparkles,
 } from "lucide-react";
+import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
@@ -146,6 +147,11 @@ function DashboardContent() {
     load();
     return () => { cancelled = true; };
   }, [userId]);
+  /* Registra a entrada uma vez por montagem da tela. */
+  useEffect(() => {
+    registrarAcesso("cliente");
+  }, []);
+
 
   /* ── Realtime subscriptions ── */
   useEffect(() => {

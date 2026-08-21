@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
+import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { supabase } from "@/integrations/supabase/client";
 import React, { useState, useRef, useEffect, type FormEvent } from "react";
@@ -335,6 +336,11 @@ function ProfissionalPage() {
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [userId]);
+
+  /* Registra a entrada uma vez por montagem da tela. */
+  useEffect(() => {
+    registrarAcesso("profissional");
+  }, []);
 
   /* ── Carrega chat do processo selecionado (Supabase + realtime) ── */
   useEffect(() => {
