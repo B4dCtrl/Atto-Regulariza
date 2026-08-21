@@ -74,6 +74,25 @@ de verdade e chega ao cliente.
 O bloco do painel central saiu; o envio ficou só na aba Documentos. O rótulo "desta etapa"
 prometia algo que o modelo de dados não entrega: não existe coluna ligando documento a etapa.
 
+### 13. ⬜ Divergência de hidratação (React #418)
+O HTML do servidor não bate com a primeira renderização do cliente. Em produção o React
+se recupera refazendo a árvore inteira — o site funciona, mas paga uma renderização a mais
+em toda visita. **Em desenvolvimento é pior:** o React aborta a hidratação e a página fica
+sem manipulador de evento nenhum, o que impede testar qualquer coisa no navegador local.
+**Já descartados:** `ConstructionGate` e `StaffBar` (ambos começam com o mesmo estado nos
+dois lados) · `custom-cursor` (corrigido em 2026-08-21, não era a causa única)
+**Suspeito restante:** `framer-motion` — o SSR emite `style="opacity:0;transform:translateX(16px)"`
+e o cliente pode formatar diferente.
+**Como reproduzir:** abrir `/cadastrar` no dev e clicar numa opção; nada acontece.
+**Precisa de:** bisecção com tempo dedicado.
+
+### 14. ⬜ Assistente de IA duplicado no horizonte
+Hoje o site usa NVIDIA NIM (`gpt-oss-120b`) em `assistant.functions.ts`, com o system prompt
+e as travas certas. Se o atendimento do WhatsApp nascer separado, serão duas personalidades
+respondendo pela mesma empresa. **Decisão do usuário (2026-08-21): deixar separado por ora.**
+Quando for unificar: extrair o miolo (contexto + prompt + chamada) e deixar dois adaptadores
+finos. Atenção à autorização — no site há sessão; no WhatsApp só o número de telefone.
+
 ### 11. ⬜ Recuperar documento excluído
 A exclusão lógica preserva tudo no banco, mas não há tela para desfazer.
 

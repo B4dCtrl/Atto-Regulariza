@@ -9,6 +9,7 @@ import {
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
 import { TarefasDoCliente } from "@/components/cliente/TarefasDoCliente";
+import { listarPendencias } from "@/lib/api/pendencias";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { TourProvider, TourAlertDialog, useTour, TourHelpButton } from "@/components/ui/tour";
@@ -75,6 +76,7 @@ function DashboardContent() {
   const [loading,  setLoading]            = useState(true);
   /** Incrementa a cada envio para o `DocumentList` recarregar do servidor. */
   const [recargaDocs, setRecargaDocs]     = useState(0);
+  const [tarefasAbertas, setTarefasAbertas] = useState(0);
   const [chatInput, setChatInput]         = useState("");
   const [sendingMsg, setSendingMsg]       = useState(false);
   const [askingAI, setAskingAI]           = useState(false);
@@ -243,6 +245,21 @@ function DashboardContent() {
     });
   }, []);
 
+  /* ── Quantas tarefas o cliente ainda deve ──
+     A barra lateral aparece em todas as seções; a caixa "O que falta de você"
+     só na visão geral. Sem este contador, quem está em Mensagens ou Histórico
+     não fica sabendo. Vem das MESMAS pendências da caixa — o `next_action` da
+     tabela properties era texto solto e podia dizer "nenhuma ação pendente"
+     com três tarefas abertas na tela ao lado. */
+  useEffect(() => {
+    if (!propertyId) { setTarefasAbertas(0); return; }
+    let ativo = true;
+    listarPendencias(propertyId, true)
+      .then((ps) => { if (ativo) setTarefasAbertas(ps.length); })
+      .catch(() => { if (ativo) setTarefasAbertas(0); });
+    return () => { ativo = false; };
+  }, [propertyId, recargaDocs]);
+
   /* ── Fecha o menu do avatar ao clicar fora ── */
   useEffect(() => {
     function onOut(e: MouseEvent) {
@@ -379,21 +396,20 @@ function DashboardContent() {
             </nav>
 
             <div className="mt-6 rounded-2xl border border-border bg-surface-elevated p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              <div className="text-xs text-ink-soft">Próxima ação</div>
+              <div className="text-xs text-ink-soft">O que falta de você</div>
               <div className="mt-1 text-sm font-medium leading-snug">
-                {property?.next_action ?? "Nenhuma ação pendente"}
+                {tarefasAbertas === 0
+                  ? "Nada pendente"
+                  : `${tarefasAbertas} ${tarefasAbertas === 1 ? "tarefa pendente" : "tarefas pendentes"}`}
               </div>
-              {property?.next_action_deadline && (
-                <div className="mt-1 text-xs text-ink-soft">
-                  até {new Date(property.next_action_deadline).toLocaleDateString("pt-BR")}
-                </div>
+              {tarefasAbertas > 0 && (
+                <button
+                  onClick={() => setActiveSection("overview")}
+                  className="mt-3 inline-flex items-center gap-1 text-xs text-accent hover:underline"
+                >
+                  Ver tarefas <ArrowUpRight className="h-3 w-3" />
+                </button>
               )}
-              <button
-                onClick={() => setActiveSection("docs")}
-                className="mt-3 inline-flex items-center gap-1 text-xs text-accent hover:underline"
-              >
-                Enviar agora <ArrowUpRight className="h-3 w-3" />
-              </button>
             </div>
 
             {/* Avatar no fundo — menu */}
