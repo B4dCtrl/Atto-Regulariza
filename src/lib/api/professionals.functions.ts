@@ -32,7 +32,16 @@ export const createProfessional = createServerFn({ method: "POST" })
       email_confirm: true,
       user_metadata: { name: data.name, role: "profissional" },
     });
-    if (error || !created.user) throw new Error(error?.message ?? "Falha ao criar usuário.");
+    if (error || !created.user) {
+      // "User already registered" é a única mensagem do Supabase que ajuda quem
+      // está na tela — as outras expõem detalhe interno sem valor para o admin.
+      const jaExiste = /already/i.test(error?.message ?? "");
+      throw new Error(
+        jaExiste
+          ? "Já existe uma conta com este e-mail."
+          : "Não foi possível criar a conta do profissional.",
+      );
+    }
 
     const uid = created.user.id;
     const initials = data.name
@@ -57,7 +66,20 @@ export const createProfessional = createServerFn({ method: "POST" })
       regions: data.regions,
       specialization: `${data.council} ${data.registro}`.trim(),
     });
-    if (pErr) throw new Error(pErr.message);
+    if (pErr) {
+      // Desfaz a criação no auth.
+      //
+      // Sem isto o usuário fica pela metade: existe para autenticação, mas o
+      // perfil não gravou. O admin vê o erro, tenta de novo e leva
+      // "já existe uma conta com este e-mail" — o endereço fica queimado sem
+      // que ninguém entenda o motivo. Preferimos voltar ao estado anterior e
+      // deixar o admin repetir a operação.
+      await supabaseAdmin.auth.admin.deleteUser(uid).catch(() => {
+        // Se nem desfazer deu certo, não há o que fazer aqui — a mensagem
+        // abaixo já manda procurar suporte, e o log da Vercel guarda o resto.
+      });
+      throw new Error("Não foi possível salvar o perfil. Nenhuma conta foi criada; tente de novo.");
+    }
 
     return { id: uid };
   });
