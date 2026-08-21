@@ -767,6 +767,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      restaurar_documento: {
+        Args: {
+          _document_id: string;
+        };
+        Returns: boolean;
+      };
     };
     Enums: {
       app_role: "admin" | "cliente";

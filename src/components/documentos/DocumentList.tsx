@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FileText, History, Loader2, Trash2, Inbox } from "lucide-react";
+import { FileText, History, Loader2, Trash2, Inbox, Undo2 } from "lucide-react";
 import {
   listarDocumentos,
   listarVersoes,
   excluirDocumento,
+  restaurarDocumento,
   type DocumentoComVersao,
   type VersaoResumo,
 } from "@/lib/api/documentos";
@@ -57,6 +58,8 @@ export function DocumentList({
    * funcionar sem nenhum aviso. Falha silenciosa é pior que diálogo feio.
    */
   const [docParaExcluir, setDocParaExcluir] = useState<DocumentoComVersao | null>(null);
+  /** Id em restauração — trava o botão para não disparar duas vezes. */
+  const [restaurando, setRestaurando] = useState<string | null>(null);
   /** Último histórico pedido — descarta resposta que chega fora de ordem. */
   const historicoPedidoRef = useRef<string | null>(null);
 
@@ -108,6 +111,23 @@ export function DocumentList({
       // Sem isto a promessa rejeitava em silêncio: o documento continuava na
       // tela e o usuário não sabia se a remoção falhou ou não tinha aplicado.
       setErroAcao(e instanceof Error ? e.message : "Não foi possível remover o documento.");
+    }
+  }
+
+  async function aoRestaurar(d: DocumentoComVersao) {
+    setRestaurando(d.id);
+    setErroAcao(null);
+    try {
+      const restaurou = await restaurarDocumento(d.id);
+      // `false` significa que já não havia o que restaurar — outra pessoa
+      // desfez antes. Recarregar mostra o estado real em vez de insistir num
+      // erro que não existe mais.
+      if (!restaurou) setErroAcao("Este documento já havia sido restaurado.");
+      carregar();
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível restaurar o documento.");
+    } finally {
+      setRestaurando(null);
     }
   }
 
@@ -174,6 +194,26 @@ export function DocumentList({
                 </span>
               )}
 
+              {/* Restaurar aparece no lugar de excluir: as duas ações são a
+                  mesma coluna em estados opostos, e mostrar as duas juntas
+                  convidaria a excluir o que se acabou de recuperar. */}
+              {podeExcluir && d.deleted_at && (
+                <button
+                  type="button"
+                  disabled={restaurando === d.id}
+                  onClick={() => aoRestaurar(d)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] text-ink-soft hover:bg-surface disabled:opacity-50"
+                  title="Devolver à lista"
+                >
+                  {restaurando === d.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Undo2 className="h-3 w-3" />
+                  )}
+                  Restaurar
+                </button>
+              )}
+
               {mostrarHistorico && d.versao && d.versao.version_number > 1 && (
                 <button
                   type="button"
@@ -185,7 +225,7 @@ export function DocumentList({
                 </button>
               )}
 
-              {podeExcluir && (
+              {podeExcluir && !d.deleted_at && (
                 <button
                   type="button"
                   onClick={() => setDocParaExcluir(d)}

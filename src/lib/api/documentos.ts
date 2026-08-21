@@ -174,6 +174,24 @@ export async function marcarConferencia(documentId: string, conferido: boolean):
   if (error) throw new Error("Não foi possível registrar a conferência.");
 }
 
+/**
+ * Desfaz a exclusão lógica.
+ *
+ * Vai por RPC porque a política de UPDATE da tabela exige can_write_document,
+ * que recusa documento excluído de propósito — é ela que impede versionar o
+ * que foi removido. A checagem de papel mora dentro da função no banco.
+ *
+ * Devolve false quando não havia o que restaurar (id inexistente ou documento
+ * que não estava excluído); lança quando o usuário não pode restaurar.
+ */
+export async function restaurarDocumento(documentId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("restaurar_documento", {
+    _document_id: documentId,
+  });
+  if (error) throw new Error("Não foi possível restaurar o documento.");
+  return data === true;
+}
+
 /** Exclusão lógica: some das listagens, versões e arquivos ficam. */
 export async function excluirDocumento(documentId: string): Promise<void> {
   const { error } = await supabase
