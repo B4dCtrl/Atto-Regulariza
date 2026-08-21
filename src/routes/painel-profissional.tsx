@@ -901,6 +901,7 @@ function ProfissionalPage() {
                   tabela notifications, alimentada por gatilho. */}
               <div className="flex items-center gap-3 px-1.5 py-1">
                 <SinoNotificacoes
+                  ancoragem="inferior-esquerda"
                   onAbrirProcesso={(pid) => {
                     setMainSection("processos");
                     openProcess(pid);

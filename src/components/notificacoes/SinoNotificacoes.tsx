@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type ElementType } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ElementType } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   Bell,
@@ -42,14 +43,26 @@ function quandoFoi(iso: string): string {
  */
 export function SinoNotificacoes({
   onAbrirProcesso,
+  ancoragem = "superior-direita",
 }: {
   onAbrirProcesso?: (propertyId: string) => void;
+  /**
+   * De que canto o painel cresce.
+   *
+   * O padrão serve a sino no topo da tela, à direita. No rodapé da barra
+   * lateral os dois eixos se invertem: crescer para a esquerda joga os 320px
+   * para fora da janela, e crescer para baixo joga para fora do rodapé.
+   */
+  ancoragem?: "superior-direita" | "inferior-esquerda";
 }) {
   const [aberto, setAberto] = useState(false);
   const [itens, setItens] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
   const [carregando, setCarregando] = useState(false);
   const caixaRef = useRef<HTMLDivElement>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
+  const [posicao, setPosicao] = useState<{ top: number; left: number } | null>(null);
 
   // O canal só avisa; quem lê o estado atual é o efeito. Guardar "aberto" num
   // ref evita reassinar o canal a cada abre-e-fecha do sino.
@@ -118,11 +131,54 @@ export function SinoNotificacoes({
   useEffect(() => {
     if (!aberto) return;
     function aoClicar(e: MouseEvent) {
-      if (caixaRef.current && !caixaRef.current.contains(e.target as Node)) setAberto(false);
+      const alvo = e.target as Node;
+      // O painel é renderizado no body por portal: ele NÃO está dentro de
+      // caixaRef, então clicar nele contaria como "clique fora" e fecharia o
+      // menu antes do onClick do item rodar.
+      if (caixaRef.current?.contains(alvo)) return;
+      if (painelRef.current?.contains(alvo)) return;
+      setAberto(false);
     }
     document.addEventListener("mousedown", aoClicar);
     return () => document.removeEventListener("mousedown", aoClicar);
   }, [aberto]);
+
+  // Posição em coordenadas de viewport, medida antes da pintura para o painel
+  // não aparecer um quadro no canto errado. Reposiciona em rolagem e resize:
+  // `fixed` não acompanha o botão sozinho.
+  useLayoutEffect(() => {
+    if (!aberto) return;
+
+    function medir() {
+      const b = botaoRef.current?.getBoundingClientRect();
+      if (!b) return;
+      const largura = Math.min(320, window.innerWidth - 32);
+      const altura = painelRef.current?.offsetHeight ?? 400;
+
+      if (ancoragem === "inferior-esquerda") {
+        // Acima do botão e alinhado à esquerda dele; se não couber acima,
+        // desce, e nunca passa das bordas da janela.
+        const acima = b.top - altura - 8;
+        setPosicao({
+          top: acima >= 8 ? acima : Math.min(b.bottom + 8, window.innerHeight - altura - 8),
+          left: Math.min(b.left, window.innerWidth - largura - 8),
+        });
+      } else {
+        setPosicao({
+          top: b.bottom + 8,
+          left: Math.max(8, Math.min(b.right - largura, window.innerWidth - largura - 8)),
+        });
+      }
+    }
+
+    medir();
+    window.addEventListener("resize", medir);
+    window.addEventListener("scroll", medir, true);
+    return () => {
+      window.removeEventListener("resize", medir);
+      window.removeEventListener("scroll", medir, true);
+    };
+  }, [aberto, ancoragem, itens.length, carregando]);
 
   function alternar() {
     const novoEstado = !aberto;
@@ -151,6 +207,7 @@ export function SinoNotificacoes({
   return (
     <div ref={caixaRef} className="relative">
       <button
+        ref={botaoRef}
         type="button"
         onClick={alternar}
         aria-label={naoLidas > 0 ? `${naoLidas} notificações não lidas` : "Notificações"}
@@ -164,66 +221,84 @@ export function SinoNotificacoes({
         )}
       </button>
 
-      {aberto && (
-        <div className="absolute right-0 top-11 z-50 w-80 overflow-hidden rounded-2xl border border-border bg-background shadow-xl">
-          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-            <span className="text-sm font-medium">Notificações</span>
-            {naoLidas > 0 && (
-              <button
-                type="button"
-                onClick={lerTodas}
-                className="ml-auto text-xs text-ink-soft hover:text-foreground"
-              >
-                Marcar todas como lidas
-              </button>
-            )}
-          </div>
+      {/* Portal para o body.
+          A barra lateral do profissional tem `overflow-hidden` — necessário
+          para a animação de expandir no hover — e isso recortava o painel na
+          largura dela. Nenhum ajuste de posicionamento resolve dentro do pai:
+          o corte acontece no pai. Fora da árvore, `fixed` posiciona pela
+          janela e nada recorta. */}
+      {aberto &&
+        createPortal(
+          <div
+            ref={painelRef}
+            style={{
+              top: posicao?.top ?? -9999,
+              left: posicao?.left ?? -9999,
+              visibility: posicao ? "visible" : "hidden",
+            }}
+            className="fixed z-[60] w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-border bg-background shadow-xl"
+          >
+            <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+              <span className="text-sm font-medium">Notificações</span>
+              {naoLidas > 0 && (
+                <button
+                  type="button"
+                  onClick={lerTodas}
+                  className="ml-auto text-xs text-ink-soft hover:text-foreground"
+                >
+                  Marcar todas como lidas
+                </button>
+              )}
+            </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {carregando ? (
-              <div className="flex h-20 items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin text-ink-soft" />
-              </div>
-            ) : itens.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <Check className="mx-auto h-5 w-5 text-ink-soft" />
-                <p className="mt-2 text-xs text-ink-soft">Nenhuma novidade.</p>
-              </div>
-            ) : (
-              itens.map((n) => {
-                const Icone = ICONE[n.tipo] ?? Bell;
-                return (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => aoClicarItem(n)}
-                    className={`flex w-full gap-2.5 border-b border-border px-4 py-3 text-left transition-colors last:border-0 hover:bg-surface ${
-                      n.lida ? "" : "bg-accent/5"
-                    }`}
-                  >
-                    <Icone
-                      className={`mt-0.5 h-4 w-4 shrink-0 ${n.lida ? "text-ink-soft" : "text-accent"}`}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-sm ${n.lida ? "text-ink-soft" : "font-medium"}`}>
-                        {n.titulo}
-                      </span>
-                      {n.corpo && (
-                        <span className="mt-0.5 block truncate text-xs text-ink-soft">
-                          {n.corpo}
+            <div className="max-h-96 overflow-y-auto">
+              {carregando ? (
+                <div className="flex h-20 items-center justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-ink-soft" />
+                </div>
+              ) : itens.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <Check className="mx-auto h-5 w-5 text-ink-soft" />
+                  <p className="mt-2 text-xs text-ink-soft">Nenhuma novidade.</p>
+                </div>
+              ) : (
+                itens.map((n) => {
+                  const Icone = ICONE[n.tipo] ?? Bell;
+                  return (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => aoClicarItem(n)}
+                      className={`flex w-full gap-2.5 border-b border-border px-4 py-3 text-left transition-colors last:border-0 hover:bg-surface ${
+                        n.lida ? "" : "bg-accent/5"
+                      }`}
+                    >
+                      <Icone
+                        className={`mt-0.5 h-4 w-4 shrink-0 ${n.lida ? "text-ink-soft" : "text-accent"}`}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={`block text-sm ${n.lida ? "text-ink-soft" : "font-medium"}`}
+                        >
+                          {n.titulo}
                         </span>
-                      )}
-                      <span className="mt-0.5 block text-[11px] text-ink-soft/70">
-                        {quandoFoi(n.criada_em)}
+                        {n.corpo && (
+                          <span className="mt-0.5 block truncate text-xs text-ink-soft">
+                            {n.corpo}
+                          </span>
+                        )}
+                        <span className="mt-0.5 block text-[11px] text-ink-soft/70">
+                          {quandoFoi(n.criada_em)}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
