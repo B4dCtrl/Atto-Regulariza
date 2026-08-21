@@ -39,10 +39,22 @@
 -- ---------------------------------------------------------------
 -- 1) A política passa a delegar à função
 -- ---------------------------------------------------------------
-DROP POLICY IF EXISTS "documents_select" ON public.documents;
-CREATE POLICY "documents_select" ON public.documents
-  FOR SELECT TO authenticated
-  USING ( public.can_read_document(id) );
+-- ALTER quando já existe, CREATE quando não existe. Derrubar e recriar em dois
+-- statements separados falha se o editor rodar só um deles — e deixa a tabela
+-- sem política de leitura no intervalo.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.documents'::regclass AND polname = 'documents_select'
+  ) THEN
+    EXECUTE 'ALTER POLICY "documents_select" ON public.documents '
+         || 'USING ( public.can_read_document(id) )';
+  ELSE
+    EXECUTE 'CREATE POLICY "documents_select" ON public.documents '
+         || 'FOR SELECT TO authenticated USING ( public.can_read_document(id) )';
+  END IF;
+END $$;
 
 
 -- ---------------------------------------------------------------
