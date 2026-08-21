@@ -95,11 +95,34 @@ export function Nav() {
       <LayoutGroup id="nav">
         {/* ── Intro: só a logo centralizada, antes do 1º scroll ── */}
         {!revealed && (
-          <div className="flex justify-center pt-6">
+          <div className="relative flex justify-center pt-6">
             <Link to="/" aria-label="Ato Regulariza">
               <motion.div layoutId="ato-brand" transition={SPRING} className="flex items-center gap-3">
                 <img src="/ato-icon.png" alt="" className="h-20 w-20 object-contain" />
                 <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-14 w-auto object-contain" />
+              </motion.div>
+            </Link>
+
+            {/* Entrar antes do primeiro scroll.
+                Quem já é cliente ou profissional chega ao site para acessar o
+                painel, não para ler a página — e até aqui precisava rolar a
+                hero inteira para achar a porta.
+                O `layoutId` é o mesmo do "Entrar" dentro do menu: o framer-motion
+                trata os dois como o MESMO elemento e faz a viagem até o lugar
+                dele, igual ao logo. Por isso o de baixo perde o texto próprio e
+                passa a hospedar este. */}
+            <Link
+              to="/entrar"
+              className="absolute right-1 top-6 sm:right-4"
+              aria-label="Entrar na minha conta"
+            >
+              <motion.div
+                layoutId="ato-entrar"
+                transition={SPRING}
+                className="rounded-full px-4 py-2 text-sm font-medium text-white/90"
+                style={GLASS_DARK}
+              >
+                Entrar
               </motion.div>
             </Link>
           </div>
@@ -267,11 +290,15 @@ export function Nav() {
             }
             className="flex items-center gap-2 px-3 py-2"
           >
-            <Link
-              to="/entrar"
-              className="hidden rounded-full px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:bg-foreground/6 hover:text-foreground sm:inline-flex"
-            >
-              Entrar
+            {/* Destino do "Entrar" da intro — mesmo layoutId, ver acima. */}
+            <Link to="/entrar" className="hidden sm:inline-flex">
+              <motion.div
+                layoutId="ato-entrar"
+                transition={SPRING}
+                className="rounded-full px-3.5 py-1.5 text-sm text-ink-soft transition-colors hover:bg-foreground/6 hover:text-foreground"
+              >
+                Entrar
+              </motion.div>
             </Link>
             <Link
               to="/cadastrar"
