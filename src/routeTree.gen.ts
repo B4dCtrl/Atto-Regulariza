@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
+import { Route as RedefinirSenhaRouteImport } from './routes/redefinir-senha'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as PrecosRouteImport } from './routes/precos'
 import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cookies'
@@ -24,6 +25,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CadastroProfissionalRouteImport } from './routes/cadastro-profissional'
 import { Route as CadastrarRouteImport } from './routes/cadastrar'
 import { Route as AvisoDePrivacidadeRouteImport } from './routes/aviso-de-privacidade'
+import { Route as AnaliseCadastroRouteImport } from './routes/analise-cadastro'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CursosIndexRouteImport } from './routes/cursos/index'
@@ -39,11 +41,18 @@ import { Route as AdminCursosRouteImport } from './routes/admin/cursos'
 import { Route as AdminClientesRouteImport } from './routes/admin/clientes'
 import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/cadastro-profissional'
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
+import { Route as AdminAprovacoesProcessoRouteImport } from './routes/admin/aprovacoes-processo'
+import { Route as AdminAprovacoesRouteImport } from './routes/admin/aprovacoes'
 import { Route as AdminProjetoIdRouteImport } from './routes/admin/projeto.$id'
 
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
   id: '/termos-de-uso',
   path: '/termos-de-uso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RedefinirSenhaRoute = RedefinirSenhaRouteImport.update({
+  id: '/redefinir-senha',
+  path: '/redefinir-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfissionaisRoute = ProfissionaisRouteImport.update({
@@ -114,6 +123,11 @@ const CadastrarRoute = CadastrarRouteImport.update({
 const AvisoDePrivacidadeRoute = AvisoDePrivacidadeRouteImport.update({
   id: '/aviso-de-privacidade',
   path: '/aviso-de-privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnaliseCadastroRoute = AnaliseCadastroRouteImport.update({
+  id: '/analise-cadastro',
+  path: '/analise-cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -192,6 +206,16 @@ const AdminCadastroClienteRoute = AdminCadastroClienteRouteImport.update({
   path: '/cadastro-cliente',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAprovacoesProcessoRoute = AdminAprovacoesProcessoRouteImport.update({
+  id: '/aprovacoes-processo',
+  path: '/aprovacoes-processo',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAprovacoesRoute = AdminAprovacoesRouteImport.update({
+  id: '/aprovacoes',
+  path: '/aprovacoes',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProjetoIdRoute = AdminProjetoIdRouteImport.update({
   id: '/projeto/$id',
   path: '/projeto/$id',
@@ -201,6 +225,7 @@ const AdminProjetoIdRoute = AdminProjetoIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/analise-cadastro': typeof AnaliseCadastroRoute
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/cadastrar': typeof CadastrarRoute
   '/cadastro-profissional': typeof CadastroProfissionalRoute
@@ -215,7 +240,10 @@ export interface FileRoutesByFullPath {
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/aprovacoes': typeof AdminAprovacoesRoute
+  '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -233,6 +261,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analise-cadastro': typeof AnaliseCadastroRoute
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/cadastrar': typeof CadastrarRoute
   '/cadastro-profissional': typeof CadastroProfissionalRoute
@@ -247,7 +276,10 @@ export interface FileRoutesByTo {
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/aprovacoes': typeof AdminAprovacoesRoute
+  '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -267,6 +299,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/analise-cadastro': typeof AnaliseCadastroRoute
   '/aviso-de-privacidade': typeof AvisoDePrivacidadeRoute
   '/cadastrar': typeof CadastrarRoute
   '/cadastro-profissional': typeof CadastroProfissionalRoute
@@ -281,7 +314,10 @@ export interface FileRoutesById {
   '/politica-de-cookies': typeof PoliticaDeCookiesRoute
   '/precos': typeof PrecosRouteWithChildren
   '/profissionais': typeof ProfissionaisRoute
+  '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/aprovacoes': typeof AdminAprovacoesRoute
+  '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
   '/admin/cadastro-profissional': typeof AdminCadastroProfissionalRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -302,6 +338,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/analise-cadastro'
     | '/aviso-de-privacidade'
     | '/cadastrar'
     | '/cadastro-profissional'
@@ -316,7 +353,10 @@ export interface FileRouteTypes {
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
+    | '/redefinir-senha'
     | '/termos-de-uso'
+    | '/admin/aprovacoes'
+    | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
@@ -334,6 +374,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analise-cadastro'
     | '/aviso-de-privacidade'
     | '/cadastrar'
     | '/cadastro-profissional'
@@ -348,7 +389,10 @@ export interface FileRouteTypes {
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
+    | '/redefinir-senha'
     | '/termos-de-uso'
+    | '/admin/aprovacoes'
+    | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
@@ -367,6 +411,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/analise-cadastro'
     | '/aviso-de-privacidade'
     | '/cadastrar'
     | '/cadastro-profissional'
@@ -381,7 +426,10 @@ export interface FileRouteTypes {
     | '/politica-de-cookies'
     | '/precos'
     | '/profissionais'
+    | '/redefinir-senha'
     | '/termos-de-uso'
+    | '/admin/aprovacoes'
+    | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
     | '/admin/cadastro-profissional'
     | '/admin/clientes'
@@ -401,6 +449,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  AnaliseCadastroRoute: typeof AnaliseCadastroRoute
   AvisoDePrivacidadeRoute: typeof AvisoDePrivacidadeRoute
   CadastrarRoute: typeof CadastrarRoute
   CadastroProfissionalRoute: typeof CadastroProfissionalRoute
@@ -415,6 +464,7 @@ export interface RootRouteChildren {
   PoliticaDeCookiesRoute: typeof PoliticaDeCookiesRoute
   PrecosRoute: typeof PrecosRouteWithChildren
   ProfissionaisRoute: typeof ProfissionaisRoute
+  RedefinirSenhaRoute: typeof RedefinirSenhaRoute
   TermosDeUsoRoute: typeof TermosDeUsoRoute
   CursosSlugRoute: typeof CursosSlugRoute
   CursosIndexRoute: typeof CursosIndexRoute
@@ -427,6 +477,13 @@ declare module '@tanstack/react-router' {
       path: '/termos-de-uso'
       fullPath: '/termos-de-uso'
       preLoaderRoute: typeof TermosDeUsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/redefinir-senha': {
+      id: '/redefinir-senha'
+      path: '/redefinir-senha'
+      fullPath: '/redefinir-senha'
+      preLoaderRoute: typeof RedefinirSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profissionais': {
@@ -525,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/aviso-de-privacidade'
       fullPath: '/aviso-de-privacidade'
       preLoaderRoute: typeof AvisoDePrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analise-cadastro': {
+      id: '/analise-cadastro'
+      path: '/analise-cadastro'
+      fullPath: '/analise-cadastro'
+      preLoaderRoute: typeof AnaliseCadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -632,6 +696,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCadastroClienteRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/aprovacoes-processo': {
+      id: '/admin/aprovacoes-processo'
+      path: '/aprovacoes-processo'
+      fullPath: '/admin/aprovacoes-processo'
+      preLoaderRoute: typeof AdminAprovacoesProcessoRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/aprovacoes': {
+      id: '/admin/aprovacoes'
+      path: '/aprovacoes'
+      fullPath: '/admin/aprovacoes'
+      preLoaderRoute: typeof AdminAprovacoesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/projeto/$id': {
       id: '/admin/projeto/$id'
       path: '/projeto/$id'
@@ -643,6 +721,8 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAprovacoesRoute: typeof AdminAprovacoesRoute
+  AdminAprovacoesProcessoRoute: typeof AdminAprovacoesProcessoRoute
   AdminCadastroClienteRoute: typeof AdminCadastroClienteRoute
   AdminCadastroProfissionalRoute: typeof AdminCadastroProfissionalRoute
   AdminClientesRoute: typeof AdminClientesRoute
@@ -657,6 +737,8 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAprovacoesRoute: AdminAprovacoesRoute,
+  AdminAprovacoesProcessoRoute: AdminAprovacoesProcessoRoute,
   AdminCadastroClienteRoute: AdminCadastroClienteRoute,
   AdminCadastroProfissionalRoute: AdminCadastroProfissionalRoute,
   AdminClientesRoute: AdminClientesRoute,
@@ -686,6 +768,7 @@ const PrecosRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  AnaliseCadastroRoute: AnaliseCadastroRoute,
   AvisoDePrivacidadeRoute: AvisoDePrivacidadeRoute,
   CadastrarRoute: CadastrarRoute,
   CadastroProfissionalRoute: CadastroProfissionalRoute,
@@ -700,6 +783,7 @@ const rootRouteChildren: RootRouteChildren = {
   PoliticaDeCookiesRoute: PoliticaDeCookiesRoute,
   PrecosRoute: PrecosRouteWithChildren,
   ProfissionaisRoute: ProfissionaisRoute,
+  RedefinirSenhaRoute: RedefinirSenhaRoute,
   TermosDeUsoRoute: TermosDeUsoRoute,
   CursosSlugRoute: CursosSlugRoute,
   CursosIndexRoute: CursosIndexRoute,

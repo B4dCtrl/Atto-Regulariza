@@ -3,13 +3,37 @@ import { supabase } from "@/integrations/supabase/client";
 import React, { useState, useRef, useEffect, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
-  ChevronRight, FileText, MapPin, MessageSquare, Plus,
-  Send, Upload, User, BookOpen, StickyNote,
+  ChevronRight, FileText, MapPin, MessageSquare,
+  Send, User, BookOpen, StickyNote,
   AlertTriangle, Phone, Mail, BarChart3, Settings, LogOut, X, Sparkles, Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tables } from "@/integrations/supabase/types";
 import { chatAssistant } from "@/lib/api/assistant.functions";
+import { UploadDocumento } from "@/components/documentos/UploadDocumento";
+import { DocumentList } from "@/components/documentos/DocumentList";
+import { ChecklistDocumentos } from "@/components/documentos/ChecklistDocumentos";
+import {
+  carregarEtapas,
+  marcarEtapa,
+  etapasConcluidas,
+  carregarCampos,
+  salvarCampos,
+  carregarLeituraChat,
+  marcarChatLido,
+  type EtapaResumo,
+} from "@/lib/api/etapas";
+import {
+  listarPendencias,
+  criarPendencia,
+  resolverPendencia,
+  textoDaPendencia,
+  type Pendencia,
+} from "@/lib/api/pendencias";
+import { carregarNota, salvarNota } from "@/lib/api/notas";
+import { pedirAprovacao, listarMeusPedidos, type Aprovacao } from "@/lib/api/aprovacoes";
+import { SinoNotificacoes } from "@/components/notificacoes/SinoNotificacoes";
 
 type PropertyRow = Tables<"properties">;
 
@@ -23,25 +47,29 @@ export const Route = createFileRoute("/painel-profissional")({
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar" });
+
+    // Só profissional APROVADO entra. Antes bastava ter sessão — qualquer cliente
+    // logado abria o painel. A RLS já barra os dados, mas a rota não pode expor a
+    // interface interna nem sugerir acesso que a pessoa não tem.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, approval_status")
+      .eq("id", session.user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "profissional") throw redirect({ to: "/dashboard" });
+    if (profile.approval_status !== "aprovado") throw redirect({ to: "/analise-cadastro" });
+
     return { userId: session.user.id };
   },
   component: ProfissionalPage,
 });
 
 /* ─────────────────────────────────────────────── Types */
-type Urgency = "alta" | "media" | "baixa";
 type FieldType = "text" | "textarea" | "date" | "number" | "select" | "checklist" | "checkbox";
 type FieldVal  = string | string[] | boolean;
 type RightTab  = "docs" | "chat" | "briefing";
-type MainSection = "processos" | "stats" | "notificacoes" | "configuracoes";
-
-interface Pendency {
-  id: string;
-  stageNum: number;
-  description: string;
-  createdAt: string;
-  status: "aberta" | "resolvida";
-}
+type MainSection = "processos" | "documentos" | "stats" | "notificacoes" | "configuracoes";
 
 interface MockProcess {
   id: string;
@@ -53,7 +81,6 @@ interface MockProcess {
   state: string;
   type: string;
   area: number;
-  urgency: Urgency;
   situation: string;
 }
 
@@ -81,22 +108,17 @@ interface LocalMsg {
   ts: string;
 }
 
-interface LocalDoc {
-  id: string;
-  name: string;
-  size: string;
-  ts: string;
-  status: "Enviado" | "Em análise" | "Aprovado";
-  by: "prof" | "client";
-}
-
 const STAGE_DEFS: StageDef[] = [
   {
     num: 1, label: "Análise documental",
     desc: "Receba e confira todos os documentos do caso antes de avançar.",
     fields: [
-      { id:"docs_recebidos", label:"Documentos recebidos", type:"checklist", options:["IPTU atualizado","Escritura / matrícula","RG e CPF do proprietário","Planta do imóvel","CCIR / CAR (rural)","Habite-se (se houver)"] },
-      { id:"pendencias",    label:"Pendências ou inconsistências", type:"textarea", placeholder:"Descreva documentos ausentes, dados divergentes ou outras observações relevantes para este caso..." },
+      // "Documentos recebidos" saiu daqui: virou o ChecklistDocumentos, que
+      // confere os arquivos que existem de verdade em vez de uma lista fixa.
+      // "Pendências ou inconsistências" era um campo de texto solto, ao lado do
+      // botão "+ Pendência" que cria pendência de verdade. Dois lugares para a
+      // mesma coisa, e só um chegava ao cliente — o que ficava aqui morria no
+      // formulário. Quem precisa registrar pendência usa o botão.
       { id:"obs_inicial",   label:"Situação geral — resumo inicial", type:"text",     placeholder:"Resumo do estado da documentação ao receber o caso" },
     ],
   },
@@ -104,6 +126,12 @@ const STAGE_DEFS: StageDef[] = [
     num: 2, label: "Vistoria técnica",
     desc: "Visite o imóvel e registre o levantamento técnico.",
     fields: [
+      // Nem todo caso precisa de visita: imóvel com planta atualizada e
+      // documentação em ordem passa direto. Marcar aqui deixa o motivo
+      // registrado, em vez de a etapa ser concluída em branco e ninguém
+      // entender depois por que não houve vistoria.
+      { id:"dispensada",      label:"Esta etapa não se aplica",              type:"checkbox", checkLabel:"Dispensar a vistoria neste caso" },
+      { id:"motivo_dispensa", label:"Por que dispensou",                     type:"text",     placeholder:"ex: planta atualizada e conferida na análise documental" },
       { id:"data_vistoria",   label:"Data da vistoria",                      type:"date" },
       { id:"area_levantada",  label:"Área verificada no local (m²)",         type:"number",   placeholder:"ex: 145.00" },
       { id:"tipo_irr",        label:"Tipo de irregularidade principal",       type:"select",   options:["Construção não averbada","Área maior que escritura","Área menor que escritura","Sem habite-se","Subdivisão não registrada","Uso divergente","Outro"] },
@@ -114,10 +142,17 @@ const STAGE_DEFS: StageDef[] = [
     num: 3, label: "Projeto e ART / RRT",
     desc: "Elabore o projeto técnico e emita a ART ou RRT correspondente.",
     fields: [
+      // "Responsável técnico" saiu: é sempre quem está logado, e digitar de
+      // novo só cria divergência entre o cadastro e o que foi escrito à mão.
+      // O nome e o registro aparecem abaixo, puxados do perfil.
+      //
+      // "Link do projeto (Drive/OneDrive/Dropbox)" também saiu. Existia porque
+      // o upload não funcionava — era a única forma de entregar o arquivo.
+      // Link externo pode ser apagado ou perder permissão sem aviso, não tem
+      // versão nem checksum, e não serve de prova numa exigência de cartório.
+      // O projeto agora é documento enviado pela aba Docs, como a ART.
       { id:"tipo_servico",  label:"Tipo de serviço técnico",                      type:"select",  options:["Projeto de regularização","Projeto de averbação","Laudo técnico de vistoria","Planta de subdivisão","Projeto de desmembramento"] },
       { id:"art_numero",    label:"N° da ART / RRT",                              type:"text",    placeholder:"ex: 2026AT000123" },
-      { id:"resp_tecnico",  label:"Responsável técnico (nome + CREA/CAU/OAB)",    type:"text",    placeholder:"ex: Carla Rocha — CREA/SP 123456" },
-      { id:"link_projeto",  label:"Link do projeto (Drive / OneDrive / Dropbox)", type:"text",    placeholder:"https://..." },
     ],
   },
   {
@@ -142,28 +177,9 @@ const STAGE_DEFS: StageDef[] = [
   },
 ];
 
-/* ─────────────────────────────────────────────── Styles */
-const URGENCY_LABEL: Record<Urgency, string> = { alta:"Urgente", media:"Média", baixa:"Baixa" };
-const URGENCY_CLS: Record<Urgency, string>   = {
-  alta:  "bg-red-50 text-red-600 ring-1 ring-red-200",
-  media: "bg-yellow-50 text-yellow-700 ring-1 ring-yellow-200",
-  baixa: "bg-green-50 text-green-700 ring-1 ring-green-200",
-};
-
-/* ─────────────────────────────────────────────── Storage helpers */
-function storeGet<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; }
-  catch { return fallback; }
-}
-function storeSet(key: string, val: unknown) {
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* noop */ }
-}
-
 /* ─────────────────────────────────────────────── Component */
 /** Mapeia uma propriedade do Supabase para o formato usado pela UI do painel. */
 function propToProc(p: PropertyRow): MockProcess {
-  const urgency: Urgency =
-    p.urgencia === "urgente" ? "alta" : p.urgencia === "sem_pressa" ? "baixa" : "media";
   return {
     id: p.id,
     name: p.name,
@@ -174,7 +190,6 @@ function propToProc(p: PropertyRow): MockProcess {
     state: p.state ?? "—",
     type: p.tipo_imovel ?? p.objetivo ?? "Regularização",
     area: 0,
-    urgency,
     situation: p.situacao ?? p.notes ?? "—",
   };
 }
@@ -192,7 +207,6 @@ function ProfissionalPage() {
   const [showPendencyForm, setShowPendencyForm] = useState(false);
   const [showAvatarMenu,   setShowAvatarMenu]   = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const chatRef = useRef<HTMLDivElement>(null);
 
   /* Fecha dropdown ao clicar fora */
@@ -208,8 +222,8 @@ function ProfissionalPage() {
 
   /* ── Dados reais do Supabase ── */
   const [processes,   setProcesses]   = useState<MockProcess[]>([]);
-  const [profProfile, setProfProfile] = useState<{ name: string; initials: string }>({
-    name: "Profissional", initials: "··",
+  const [profProfile, setProfProfile] = useState<{ name: string; initials: string; registro: string }>({
+    name: "Profissional", initials: "··", registro: "",
   });
   const [notifPrefs, setNotifPrefs] = useState<{ notifEmail: boolean; notifPrazo: boolean }>({
     notifEmail: true, notifPrazo: true,
@@ -221,28 +235,57 @@ function ProfissionalPage() {
     if (userId) await supabase.from("profiles").update({ settings: next }).eq("id", userId);
   }
 
-  /* ── Estado de trabalho do profissional (localStorage, por processo real) ── */
-  const [doneStages, setDoneStages] = useState<Record<string, number[]>>(
-    () => storeGet("rz-done-stages", {})
-  );
-  const [allFields, setAllFields] = useState<Record<string, Record<number, Record<string, FieldVal>>>>(
-    () => storeGet("rz-stage-fields", {})
-  );
-  /* Chat e docs agora vêm do Supabase (em memória, por processo selecionado) */
+  /* ── Trabalho do profissional: tudo vem do banco ──
+     Antes isto morava no localStorage do navegador: limpar o navegador apagava
+     o trabalho, outro computador mostrava tudo em branco e o cliente nunca via
+     as pendências. Agora o estado local é só um espelho do que está no banco. */
+  /** Etapas do processo aberto (estado e campos) — fonte: process_stages. */
+  const [etapas, setEtapas] = useState<EtapaResumo[]>([]);
+  /** Campos técnicos da etapa em edição — fonte: process_stages.fields. */
+  const [camposEtapa, setCamposEtapa] = useState<Record<string, unknown>>({});
+  const [salvandoCampos, setSalvandoCampos] = useState(false);
+  /**
+   * Aviso flutuante de "salvo automaticamente".
+   *
+   * O salvamento acontece sozinho 600 ms após parar de digitar. Sem sinal
+   * nenhum, o profissional não sabe se pode fechar a aba — e a dúvida faz ele
+   * clicar no botão de salvar por precaução, que era o motivo do botão existir.
+   */
+  const [avisoSalvo, setAvisoSalvo] = useState(false);
+  const timerAvisoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Espera da digitação antes de gravar os campos da etapa. */
+  const timerCamposRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Sequência das gravações: só a mais recente vale, o resto é descartado. */
+  const seqCamposRef = useRef(0);
+  /** Pendências do processo aberto — fonte: tabela pendencies. */
+  const [pendencias, setPendencias] = useState<Pendencia[]>([]);
+  /** Anotação interna do processo aberto — fonte: tabela process_notes. */
+  const [nota, setNota] = useState("");
+  /** Erro do trabalho no caso aberto. Sem isto, falha de rede vira tela vazia
+      indistinguível de "ainda não há nada" — e o profissional redigita tudo. */
+  const [erroTrabalho, setErroTrabalho] = useState<string | null>(null);
+  /**
+   * Pedido de conclusão mais recente deste processo, vindo do banco.
+   *
+   * De propósito não é um booleano local "já pedi": recarregar a página apagaria
+   * o booleano, o botão "Concluir" voltaria e o profissional abriria um segundo
+   * pedido para o mesmo processo. É o mesmo erro que a lista de pendências do
+   * ChecklistDocumentos já evita lendo do banco.
+   */
+  const [pedidoConclusao, setPedidoConclusao] = useState<Aprovacao | null>(null);
+  /* Chat vem do Supabase (em memória, por processo selecionado) */
   const [allMsgs, setAllMsgs] = useState<Record<string, LocalMsg[]>>({});
-  const [allDocs, setAllDocs] = useState<Record<string, LocalDoc[]>>({});
-  const [allPendencies, setAllPendencies] = useState<Record<string, Pendency[]>>(
-    () => storeGet("rz-pendencies", {})
-  );
-  /* ── Notification tracking ── */
-  const [lastChatView, setLastChatView] = useState<Record<string, number>>(
-    () => storeGet("rz-last-chat-view", {})
-  );
-  /* ── Private notes per process ── */
-  const [privateNotes, setPrivateNotes] = useState<Record<string, string>>(
-    () => storeGet("rz-private-notes", {})
-  );
+  /* Documentos são responsabilidade do DocumentList; aqui só sinalizamos recarga. */
+  const [recargaDocs, setRecargaDocs] = useState(0);
+  /** Processo escolhido na aba lateral "Documentos" (separado do caso aberto). */
+  const [docsProcId, setDocsProcId] = useState<string | null>(null);
+  /** Quantas etapas cada processo já concluiu — para a lista e as estatísticas. */
+  const [resumoEtapas, setResumoEtapas] = useState<Record<string, number>>({});
+  /** Última leitura do chat por processo, em ms — fonte: tabela chat_reads. */
+  const [leiturasChat, setLeiturasChat] = useState<Record<string, number>>({});
   const [noteInput, setNoteInput] = useState("");
+  /** Ao abrir um caso, a etapa a mostrar só se sabe depois que as etapas chegam. */
+  const acabouDeAbrir = useRef(false);
 
   /* ── Derived ── */
   const acceptedIds   = processes.map((p) => p.id);
@@ -250,34 +293,31 @@ function ProfissionalPage() {
   const myProcs       = processes;
   const availProcs: MockProcess[] = [];
   const msgs          = selectedId ? (allMsgs[selectedId] ?? []) : [];
-  const docs          = selectedId ? (allDocs[selectedId] ?? []) : [];
   const stageDef      = STAGE_DEFS.find((s) => s.num === activeStage) ?? STAGE_DEFS[0];
 
   /* ── Carrega processos atribuídos a este profissional + seu perfil ── */
   useEffect(() => {
     if (!userId) return;
 
-    supabase.from("profiles").select("name, initials, settings").eq("id", userId).maybeSingle()
+    supabase.from("profiles").select("name, initials, settings, specialization, council, registro").eq("id", userId).maybeSingle()
       .then(async ({ data }) => {
         if (data) {
           setProfProfile({
             name: data.name ?? "Profissional",
             initials: data.initials ?? (data.name ? data.name.split(/\s+/).map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "··"),
+            // Conselho e registro vêm do cadastro. O campo "Responsável técnico"
+            // da etapa 3 saiu justamente para não existirem duas verdades.
+            registro: [data.council, data.registro].filter(Boolean).join(" ") || (data.specialization ?? ""),
           });
           const s = (data.settings ?? {}) as Record<string, boolean>;
           setNotifPrefs({ notifEmail: s.notifEmail ?? true, notifPrazo: s.notifPrazo ?? true });
           return;
         }
-        // Sem linha em profiles (signup com confirmação de e-mail) → cria agora,
-        // já autenticado, a partir dos metadados do cadastro.
-        const { data: { user } } = await supabase.auth.getUser();
-        const nome = (user?.user_metadata?.name as string) ?? "Profissional";
-        const initials = nome.split(/\s+/).filter(Boolean).map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "··";
-        await supabase.from("profiles").upsert({
-          id: userId, name: nome, email: user?.email ?? null,
-          role: "profissional", initials,
-        });
-        setProfProfile({ name: nome, initials });
+        // Chegar aqui sem linha em profiles não deve mais acontecer: o trigger
+        // trg_handle_new_user cria o perfil no próprio signup, e a guarda desta
+        // rota já exigiu role='profissional' aprovado. Fallback só de exibição —
+        // criar a linha aqui seria inútil, o papel é definido no banco.
+        setProfProfile({ name: "Profissional", initials: "··", registro: "" });
       });
 
     function loadProcs() {
@@ -295,7 +335,7 @@ function ProfissionalPage() {
     return () => { supabase.removeChannel(ch); };
   }, [userId]);
 
-  /* ── Carrega chat + docs do processo selecionado (Supabase + realtime) ── */
+  /* ── Carrega chat do processo selecionado (Supabase + realtime) ── */
   useEffect(() => {
     if (!selectedId) return;
     const pid = selectedId;
@@ -313,35 +353,137 @@ function ProfissionalPage() {
           }));
         });
     }
-    function loadDocs() {
-      supabase.from("documents").select("*").eq("property_id", pid).order("created_at")
-        .then(({ data }) => {
-          if (!data) return;
-          setAllDocs((prev) => ({
-            ...prev,
-            [pid]: data.map((d) => ({
-              id: d.id, name: d.name, size: d.size_text ?? "—",
-              ts: d.created_at,
-              status: (d.status as LocalDoc["status"]) ?? "Enviado",
-              by: d.uploaded_by === userId ? "prof" : "client",
-            })),
-          }));
-        });
-    }
     loadMsgs();
-    loadDocs();
 
     const ch = supabase
       .channel(`prof-detail-${pid}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `property_id=eq.${pid}` }, loadMsgs)
-      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${pid}` }, loadDocs)
+      // Documento enviado pelo cliente precisa aparecer sem recarregar a página.
+      // O DocumentList recarrega quando `recargaDocs` muda, então só
+      // incrementamos o contador — a lista se vira com a consulta própria dela,
+      // que já respeita a RLS.
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${pid}` },
+        () => setRecargaDocs((n) => n + 1))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [selectedId, userId]);
 
+  /* ── Documentos da aba lateral: recarrega quando o cliente envia ──
+     Assinatura própria porque essa aba tem seu próprio processo selecionado
+     (docsProcId), independente do caso aberto no painel (selectedId). */
+  useEffect(() => {
+    if (!docsProcId) return;
+    const ch = supabase
+      .channel(`prof-docs-${docsProcId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${docsProcId}` },
+        () => setRecargaDocs((n) => n + 1))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [docsProcId]);
+
+  /* ── Trabalho do caso aberto: etapas, pendências e anotação ── */
+  useEffect(() => {
+    const pid = selectedId;
+    if (!pid) return;
+    let cancelado = false;
+
+    setErroTrabalho(null);
+    setPedidoConclusao(null);
+    Promise.all([
+      carregarEtapas(pid),
+      listarPendencias(pid),
+      carregarNota(pid),
+      listarMeusPedidos(pid),
+    ])
+      .then(([es, ps, n, pedidos]) => {
+        if (cancelado) return;
+        setEtapas(es);
+        setPendencias(ps);
+        setNota(n);
+        // A lista vem do mais novo para o mais antigo: o primeiro de conclusão
+        // é o que vale.
+        setPedidoConclusao(pedidos.find((p) => p.tipo === "conclusao") ?? null);
+        // Só agora dá para saber em que etapa o caso parou.
+        if (acabouDeAbrir.current) {
+          acabouDeAbrir.current = false;
+          const feitas = etapasConcluidas(es);
+          let proxima = 5;
+          for (let i = 1; i <= 5; i++) {
+            if (!feitas.includes(i)) {
+              proxima = i;
+              break;
+            }
+          }
+          setActiveStage(proxima);
+        }
+      })
+      .catch((e: Error) => {
+        if (!cancelado) setErroTrabalho(e.message);
+      });
+
+    // Abrir o processo marca o chat como lido.
+    marcarChatLido(pid);
+    setLeiturasChat((prev) => ({ ...prev, [pid]: Date.now() }));
+
+    return () => {
+      cancelado = true;
+    };
+  }, [selectedId]);
+
+  /* ── Campos da etapa em edição ── */
+  useEffect(() => {
+    const pid = selectedId;
+    if (!pid) {
+      setCamposEtapa({});
+      return;
+    }
+    let cancelado = false;
+    carregarCampos(pid, activeStage)
+      .then((c) => {
+        if (!cancelado) setCamposEtapa(c);
+      })
+      .catch((e: Error) => {
+        if (!cancelado) setErroTrabalho(e.message);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [selectedId, activeStage]);
+
+  /* ── Resumo de todos os processos: progresso na lista e nas estatísticas ── */
+  useEffect(() => {
+    if (myProcs.length === 0) return;
+    let cancelado = false;
+    Promise.all(
+      myProcs.map((p) =>
+        Promise.all([carregarEtapas(p.id), carregarLeituraChat(p.id)]).then(
+          ([es, lido]) => [p.id, etapasConcluidas(es).length, lido] as const,
+        ),
+      ),
+    )
+      .then((linhas) => {
+        if (cancelado) return;
+        setResumoEtapas(Object.fromEntries(linhas.map(([id, n]) => [id, n])));
+        setLeiturasChat((prev) => ({
+          ...Object.fromEntries(
+            linhas.map(([id, , lido]) => [id, lido ? new Date(lido).getTime() : 0]),
+          ),
+          // O que já foi marcado como lido nesta sessão manda: é mais recente
+          // que a consulta e evita o contador "piscar" de volta.
+          ...prev,
+        }));
+      })
+      .catch(() => {
+        /* progresso é indicador; a falha real aparece ao abrir o caso */
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [myProcs]);
+
   /* ── Unread counts ── */
   const unreadCount = (pid: string) => {
-    const lastView = lastChatView[pid] ?? 0;
+    const lastView = leiturasChat[pid] ?? 0;
     return (allMsgs[pid] ?? []).filter(
       (m) => m.isClient && new Date(m.ts).getTime() > lastView
     ).length;
@@ -349,59 +491,109 @@ function ProfissionalPage() {
   const totalUnread = acceptedIds.reduce((sum, pid) => sum + unreadCount(pid), 0);
 
   const markChatRead = (pid: string) => {
-    const now = Date.now();
-    setLastChatView((prev) => {
-      const next = { ...prev, [pid]: now };
-      storeSet("rz-last-chat-view", next);
-      return next;
-    });
+    setLeiturasChat((prev) => ({ ...prev, [pid]: Date.now() }));
+    marcarChatLido(pid);
   };
 
-  const isDone     = (pid: string, n: number) => (doneStages[pid] ?? []).includes(n);
-  const isActiveStg = (pid: string, n: number) => {
-    const done = doneStages[pid] ?? [];
+  /** Etapas concluídas do processo: do caso aberto vem do estado vivo. */
+  const concluidasDe = (pid: string) =>
+    pid === selectedId ? etapasConcluidas(etapas).length : (resumoEtapas[pid] ?? 0);
+
+  const isDone = (n: number) =>
+    etapas.some((e) => e.stage_number === n && e.state === "done");
+  const isActiveStg = (n: number) => {
+    const done = etapasConcluidas(etapas);
     const maxDone = done.length > 0 ? Math.max(...done) : 0;
     return n === maxDone + 1 && !done.includes(n);
   };
-  const currentStage = (pid: string) => {
-    const done = doneStages[pid] ?? [];
-    for (let i = 1; i <= 5; i++) if (!done.includes(i)) return i;
-    return 5;
-  };
-  const progress = (pid: string) =>
-    Math.round(((doneStages[pid] ?? []).length / 5) * 100);
+  const currentStage = (pid: string) => Math.min(concluidasDe(pid) + 1, 5);
+  const progress = (pid: string) => Math.round((concluidasDe(pid) / 5) * 100);
 
   /* ── Field helpers ── */
-  const getField = (pid: string, stageNum: number, fid: string): FieldVal =>
-    allFields[pid]?.[stageNum]?.[fid] ?? "";
+  const getField = (fid: string): FieldVal => (camposEtapa[fid] as FieldVal) ?? "";
 
-  const setField = (pid: string, stageNum: number, fid: string, val: FieldVal) => {
-    setAllFields((prev) => {
-      const next = {
-        ...prev,
-        [pid]: {
-          ...prev[pid],
-          [stageNum]: { ...prev[pid]?.[stageNum], [fid]: val },
-        },
-      };
-      storeSet("rz-stage-fields", next);
-      return next;
-    });
+  /**
+   * Salva o campo no banco. O estado local muda na hora para o campo não "pular"
+   * enquanto a escrita vai e volta.
+   */
+  /**
+   * Grava os campos da etapa com espera e proteção contra resposta atrasada.
+   *
+   * Sem a espera, cada tecla virava um UPDATE: uma observação de 200 caracteres
+   * disparava 200 gravações do jsonb inteiro. Pior que o custo era a ordem —
+   * a resposta da tecla 180 podia chegar depois da 200 e regravar texto antigo
+   * por cima do novo, porque cada chamada envia o objeto completo.
+   *
+   * O contador de sequência resolve isso: só a gravação mais recente conta.
+   */
+  /** Mostra o aviso por 2,2 s. Chamada nova reinicia a contagem. */
+  const mostrarAvisoSalvo = () => {
+    setAvisoSalvo(true);
+    if (timerAvisoRef.current) clearTimeout(timerAvisoRef.current);
+    timerAvisoRef.current = setTimeout(() => setAvisoSalvo(false), 2200);
   };
 
-  const hasAnyField = (pid: string, stageNum: number) => {
-    const fields = allFields[pid]?.[stageNum] ?? {};
-    return Object.values(fields).some((v) => {
+  const setField = (stageNum: number, fid: string, val: FieldVal) => {
+    if (!selectedId) return;
+    const pid = selectedId;
+    const novos = { ...camposEtapa, [fid]: val };
+
+    // A tela responde na hora; o banco espera a digitação parar.
+    setCamposEtapa(novos);
+    setSalvandoCampos(true);
+
+    if (timerCamposRef.current) clearTimeout(timerCamposRef.current);
+    timerCamposRef.current = setTimeout(() => {
+      const seq = ++seqCamposRef.current;
+      salvarCampos(pid, stageNum, novos)
+        .then(() => {
+          if (seq !== seqCamposRef.current) return; // veio atrasada: descarta
+          setErroTrabalho(null);
+          setSalvandoCampos(false);
+          mostrarAvisoSalvo();
+        })
+        .catch((e: Error) => {
+          if (seq !== seqCamposRef.current) return;
+          setErroTrabalho(e.message);
+          setSalvandoCampos(false);
+        });
+    }, 600);
+  };
+
+  /** Grava agora o que estiver pendente — ao sair do campo ou trocar de etapa. */
+  const gravarCamposAgora = () => {
+    if (!timerCamposRef.current) return;
+    clearTimeout(timerCamposRef.current);
+    timerCamposRef.current = null;
+    if (!selectedId) return;
+    const seq = ++seqCamposRef.current;
+    salvarCampos(selectedId, activeStage, camposEtapa)
+      .then(() => {
+        if (seq !== seqCamposRef.current) return;
+        setSalvandoCampos(false);
+        mostrarAvisoSalvo();
+      })
+      .catch((e: Error) => {
+        if (seq === seqCamposRef.current) {
+          setErroTrabalho(e.message);
+          setSalvandoCampos(false);
+        }
+      });
+  };
+
+  const hasAnyField = () =>
+    Object.values(camposEtapa).some((v) => {
       if (typeof v === "string")  return v.trim().length > 0;
       if (Array.isArray(v))       return v.length > 0;
       if (typeof v === "boolean") return v;
       return false;
     });
-  };
 
-  /* Reflete o progresso do profissional na propriedade → o cliente vê em tempo real. */
-  async function syncProgressToProperty(pid: string, doneArr: number[]) {
-    const count = doneArr.length;
+  /* Reflete o progresso na propriedade → o cliente vê em tempo real.
+     As etapas em si já foram gravadas por marcarEtapa; aqui só o resumo que a
+     tela do cliente lê. Escrever process_stages de novo aqui recriaria a
+     segunda verdade que este trabalho veio eliminar. */
+  async function syncProgressToProperty(pid: string, count: number) {
     const progressPct = Math.round((count / 5) * 100);
     const status =
       count >= 5 ? "entregue"
@@ -413,60 +605,119 @@ function ProfissionalPage() {
     await supabase.from("properties")
       .update({ status, progress: progressPct, current_stage: clientStage, updated_at: new Date().toISOString() })
       .eq("id", pid);
-    // Espelha nas etapas do cliente (1..count concluídas, próxima ativa)
-    for (let i = 1; i <= 5; i++) {
-      await supabase.from("process_stages")
-        .update({
-          state: i <= count ? "done" : i === count + 1 ? "active" : "pending",
-          completed_at: i <= count ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("property_id", pid).eq("stage_number", i);
-    }
   }
 
   /* ── Actions ── */
-  const completeStage = (pid: string, n: number) => {
-    setDoneStages((prev) => {
-      const arr = [...(prev[pid] ?? []).filter((x) => x !== n), n];
-      const next = { ...prev, [pid]: arr };
-      storeSet("rz-done-stages", next);
-      syncProgressToProperty(pid, arr);
-      return next;
-    });
-    if (n < 5) setActiveStage(n + 1);
+  /** Já existe aval do admin ainda não gasto para concluir este processo. */
+  const conclusaoLiberada = pedidoConclusao?.status === "aprovado";
+
+  const completeStage = async (pid: string, n: number) => {
+    // A etapa 5 é a entrega. O banco recusa mudar o processo para 'entregue'
+    // sem aprovação, então pedimos aqui em vez de deixar o profissional bater
+    // no erro. Com o aval já dado, segue o caminho normal — e é a conclusão
+    // que consome a aprovação.
+    if (n === 5 && !conclusaoLiberada) {
+      try {
+        await pedirAprovacao({
+          propertyId: pid,
+          tipo: "conclusao",
+          justificativa: "Todas as etapas concluídas.",
+        });
+        setErroTrabalho(null);
+        // Relê do banco: o pedido recém-criado é a verdade que sobrevive ao F5.
+        setPedidoConclusao(
+          (await listarMeusPedidos(pid)).find((p) => p.tipo === "conclusao") ?? null,
+        );
+      } catch (e) {
+        setErroTrabalho(e instanceof Error ? e.message : "Não foi possível enviar o pedido.");
+      }
+      return;
+    }
+
+    try {
+      await marcarEtapa(pid, n, "done");
+      // A próxima só passa a "active" se ainda não estiver concluída — reconcluir
+      // uma etapa do meio não pode rebaixar o que já foi feito.
+      if (n < 5 && !isDone(n + 1)) await marcarEtapa(pid, n + 1, "active");
+      const es = await carregarEtapas(pid);
+      setEtapas(es);
+      const feitas = etapasConcluidas(es).length;
+      setResumoEtapas((prev) => ({ ...prev, [pid]: feitas }));
+      await syncProgressToProperty(pid, feitas);
+      setErroTrabalho(null);
+      if (n < 5) setActiveStage(n + 1);
+      // A entrega consome a aprovação: relê para o botão não voltar a oferecer
+      // um aval que já foi gasto.
+      else {
+        const pedidos = await listarMeusPedidos(pid);
+        setPedidoConclusao(pedidos.find((p) => p.tipo === "conclusao") ?? null);
+      }
+    } catch (e) {
+      // Recarrega para a tela mostrar o que o banco tem de fato, e não um
+      // otimismo que a falha desmentiu.
+      carregarEtapas(pid)
+        .then(setEtapas)
+        .catch(() => {});
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível concluir a etapa.");
+    }
   };
 
-  const undoStage = (pid: string, n: number) => {
-    setDoneStages((prev) => {
-      const arr = (prev[pid] ?? []).filter((x) => x !== n);
-      const next = { ...prev, [pid]: arr };
-      storeSet("rz-done-stages", next);
-      syncProgressToProperty(pid, arr);
-      return next;
-    });
+  const undoStage = async (pid: string, n: number) => {
+    try {
+      await marcarEtapa(pid, n, "active");
+      const es = await carregarEtapas(pid);
+      setEtapas(es);
+      const feitas = etapasConcluidas(es).length;
+      setResumoEtapas((prev) => ({ ...prev, [pid]: feitas }));
+      await syncProgressToProperty(pid, feitas);
+      setErroTrabalho(null);
+    } catch (e) {
+      carregarEtapas(pid)
+        .then(setEtapas)
+        .catch(() => {});
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível desfazer a etapa.");
+    }
   };
 
-  const openPendencies = (pid: string, stageNum: number) =>
-    (allPendencies[pid] ?? []).filter((p) => p.stageNum === stageNum && p.status === "aberta");
+  const openPendencies = (stageNum: number) =>
+    pendencias.filter((p) => p.stage_number === stageNum && p.status === "aberta");
 
-  const hasOpenPendencies = (pid: string, stageNum: number) =>
-    openPendencies(pid, stageNum).length > 0;
+  const hasOpenPendencies = (stageNum: number) => openPendencies(stageNum).length > 0;
 
-  const createPendency = (pid: string, stageNum: number, desc: string) => {
+  const createPendency = async (pid: string, stageNum: number, desc: string) => {
     if (!desc.trim()) return;
-    const p: Pendency = { id: crypto.randomUUID(), stageNum, description: desc.trim(), createdAt: new Date().toISOString(), status: "aberta" };
-    setAllPendencies((prev) => { const next = { ...prev, [pid]: [...(prev[pid] ?? []), p] }; storeSet("rz-pendencies", next); return next; });
-    setPendencyInput("");
-    setShowPendencyForm(false);
+    try {
+      await criarPendencia({ propertyId: pid, descricao: desc, stageNumber: stageNum });
+      setPendencias(await listarPendencias(pid));
+      setPendencyInput("");
+      setShowPendencyForm(false);
+      setErroTrabalho(null);
+    } catch (e) {
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível criar a pendência.");
+    }
   };
 
-  const resolvePendency = (pid: string, id: string) => {
-    setAllPendencies((prev) => {
-      const next = { ...prev, [pid]: (prev[pid] ?? []).map((p) => p.id === id ? { ...p, status: "resolvida" as const } : p) };
-      storeSet("rz-pendencies", next);
-      return next;
-    });
+  const resolvePendency = async (pid: string, id: string) => {
+    try {
+      await resolverPendencia(id);
+      setPendencias(await listarPendencias(pid));
+      setErroTrabalho(null);
+    } catch (e) {
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível resolver a pendência.");
+    }
+  };
+
+  /** Anotação interna: acrescenta ao que já existe e grava em process_notes. */
+  const salvarAnotacao = async (pid: string, texto: string) => {
+    const novo = [nota, texto.trim()].filter(Boolean).join("\n\n");
+    setNota(novo);
+    setNoteInput("");
+    try {
+      await salvarNota(pid, novo);
+      setErroTrabalho(null);
+    } catch (e) {
+      setErroTrabalho(e instanceof Error ? e.message : "Não foi possível salvar a anotação.");
+    }
   };
 
   // Admin atribui diretamente — não há mais "aceitar". Recusar devolve ao admin.
@@ -479,7 +730,9 @@ function ProfissionalPage() {
 
   const openProcess = (pid: string) => {
     setSelectedId(pid);
+    // Chute pelo resumo já carregado; o efeito corrige assim que as etapas chegam.
     setActiveStage(currentStage(pid));
+    acabouDeAbrir.current = true;
     setRightTab("briefing");
   };
 
@@ -512,25 +765,13 @@ function ProfissionalPage() {
     setAskingAI(false);
   };
 
-  const uploadDocs = async (files: FileList | null) => {
-    if (!files || !selectedId) return;
-    const pid = selectedId;
-    const rows = Array.from(files).map((f) => ({
-      property_id: pid,
-      name: f.name,
-      size_text: `${Math.max(1, Math.round(f.size / 1024))} KB`,
-      status: "Enviado",
-      uploaded_by: userId,
-    }));
-    await supabase.from("documents").insert(rows);
-    // realtime recarrega a lista
-  };
-
   /* ── Field renderer ── */
   const renderField = (field: FieldDef) => {
     if (!selectedId) return null;
-    const val = getField(selectedId, activeStage, field.id);
-    const set = (v: FieldVal) => setField(selectedId, activeStage, field.id, v);
+    const val = getField(field.id);
+    const set = (v: FieldVal) => {
+      void setField(activeStage, field.id, v);
+    };
     const base =
       "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none " +
       "focus:border-foreground/30 focus:ring-2 focus:ring-foreground/10 transition-colors " +
@@ -538,13 +779,13 @@ function ProfissionalPage() {
 
     switch (field.type) {
       case "text":
-        return <input type="text" value={val as string} onChange={(e) => set(e.target.value)} placeholder={field.placeholder} className={base} />;
+        return <input type="text" value={val as string} onChange={(e) => set(e.target.value)} onBlur={gravarCamposAgora} placeholder={field.placeholder} className={base} />;
       case "number":
-        return <input type="number" value={val as string} onChange={(e) => set(e.target.value)} placeholder={field.placeholder} className={base} />;
+        return <input type="number" value={val as string} onChange={(e) => set(e.target.value)} onBlur={gravarCamposAgora} placeholder={field.placeholder} className={base} />;
       case "date":
         return <input type="date" value={val as string} onChange={(e) => set(e.target.value)} className={base} />;
       case "textarea":
-        return <textarea value={val as string} onChange={(e) => set(e.target.value)} placeholder={field.placeholder} rows={3} className={`${base} resize-none`} />;
+        return <textarea value={val as string} onChange={(e) => set(e.target.value)} onBlur={gravarCamposAgora} placeholder={field.placeholder} rows={3} className={`${base} resize-none`} />;
       case "select":
         return (
           <select value={val as string} onChange={(e) => set(e.target.value)} className={`${base} cursor-pointer`}>
@@ -604,6 +845,7 @@ function ProfissionalPage() {
             <nav className="space-y-0.5">
               {([
                 { id: "processos", label: "Meus processos", icon: Briefcase },
+                { id: "documentos", label: "Documentos",    icon: FileText   },
                 { id: "stats",     label: "Estatísticas",   icon: BarChart3  },
                 { id: "notificacoes", label: "Notificações",icon: Bell       },
               ] as { id: MainSection; label: string; icon: React.ElementType }[]).map((item) => (
@@ -639,22 +881,23 @@ function ProfissionalPage() {
               </nav>
             </div>
             <div className="mt-auto space-y-0.5">
-              {/* Sino no sidebar */}
-              <button
-                onClick={() => {
-                  if (typeof Notification !== "undefined" && Notification.permission === "default") Notification.requestPermission();
-                  const withUnread = acceptedIds.map((pid) => ({ pid, count: unreadCount(pid) })).filter((x) => x.count > 0).sort((a, b) => b.count - a.count);
-                  if (withUnread.length > 0) { openProcess(withUnread[0].pid); setTimeout(() => { setRightTab("chat"); markChatRead(withUnread[0].pid); }, 50); }
-                  else { setMainSection("notificacoes"); setSelectedId(null); }
-                }}
-                className="relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
-              >
-                <Bell className="h-4 w-4 shrink-0" />
-                {totalUnread > 0 && <span className="absolute left-6 top-1.5 h-2 w-2 rounded-full bg-red-500" />}
-                <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  Notificações {totalUnread > 0 && <span className="ml-1 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">{totalUnread}</span>}
+              {/* Sino no sidebar.
+                  Antes o botão adivinhava: procurava o chat com mais mensagens
+                  não lidas e abria. Documento novo, pendência e pedido de
+                  aprovação não apareciam em lugar nenhum. Agora quem lista é a
+                  tabela notifications, alimentada por gatilho. */}
+              <div className="flex items-center gap-3 px-1.5 py-1">
+                <SinoNotificacoes
+                  ancoragem="inferior-esquerda"
+                  onAbrirProcesso={(pid) => {
+                    setMainSection("processos");
+                    openProcess(pid);
+                  }}
+                />
+                <span className="whitespace-nowrap text-sm text-ink-soft opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  Notificações
                 </span>
-              </button>
+              </div>
               <button
                 onClick={() => { window.location.href = "/entrar"; }}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-soft hover:bg-surface transition-colors"
@@ -734,9 +977,6 @@ function ProfissionalPage() {
                         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-foreground text-background">
                           <Building2 className="h-4 w-4" />
                         </div>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] ${URGENCY_CLS[p.urgency]}`}>
-                          {URGENCY_LABEL[p.urgency]}
-                        </span>
                       </div>
                       <div className="text-sm font-medium leading-tight">{p.name}</div>
                       <div className="mt-0.5 text-xs text-ink-soft">{p.type}</div>
@@ -766,6 +1006,76 @@ function ProfissionalPage() {
             )}
 
             {/* ── ESTATÍSTICAS ── */}
+            {mainSection === "documentos" && (
+              <motion.div key="documentos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+                <div className="mb-6">
+                  <div className="text-[10px] uppercase tracking-widest text-ink-soft">Gestão</div>
+                  <h2 className="font-serif text-2xl tracking-tight">Documentos</h2>
+                  <p className="mt-1 text-sm text-ink-soft">
+                    Escolha o cliente para ver e enviar documentos.
+                  </p>
+                </div>
+
+                {/* Seletor por CLIENTE: esta aba é geral, fora de um caso. O
+                    profissional pensa em "documentos da Maria", não em
+                    "documentos do processo Casa Teste 1" — por isso o nome do
+                    cliente vem primeiro, com o imóvel como referência abaixo. */}
+                <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {myProcs.map((p) => {
+                    const ativo = docsProcId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setDocsProcId(p.id)}
+                        className={`rounded-2xl px-4 py-3 text-left ring-1 transition-colors ${
+                          ativo
+                            ? "bg-foreground text-background ring-foreground"
+                            : "bg-background ring-border hover:ring-foreground/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className={`h-3.5 w-3.5 shrink-0 ${ativo ? "" : "text-ink-soft"}`} />
+                          <span className="truncate text-sm font-medium">{p.client}</span>
+                        </div>
+                        <div
+                          className={`mt-1 truncate text-xs ${ativo ? "text-background/60" : "text-ink-soft"}`}
+                        >
+                          {p.name}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {myProcs.length === 0 ? (
+                  <div className="rounded-3xl bg-background p-16 text-center ring-1 ring-border">
+                    <FileText className="mx-auto h-7 w-7 text-ink-soft" />
+                    <p className="mt-3 text-sm text-ink-soft">
+                      Você ainda não tem processos designados.
+                    </p>
+                  </div>
+                ) : !docsProcId ? (
+                  <div className="rounded-3xl bg-surface/50 p-12 text-center">
+                    <p className="text-sm text-ink-soft">Selecione um cliente acima.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <UploadDocumento
+                      propertyId={docsProcId}
+                      origem="profissional"
+                      onEnviado={() => setRecargaDocs((n) => n + 1)}
+                    />
+                    <DocumentList
+                      propertyId={docsProcId}
+                      mostrarHistorico
+                      podeExcluir
+                      recarregarToken={recargaDocs}
+                    />
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {mainSection === "stats" && (
               <motion.div key="stats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8">
                 <div className="mb-8">
@@ -775,9 +1085,9 @@ function ProfissionalPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {[
                     { label: "Total de casos",  value: myProcs.length,                                                                                               icon: Briefcase     },
-                    { label: "Concluídos",       value: myProcs.filter((p) => (doneStages[p.id] ?? []).length === 5).length,                                         icon: CheckCircle2  },
-                    { label: "Em progresso",     value: myProcs.filter((p) => (doneStages[p.id] ?? []).length > 0 && (doneStages[p.id] ?? []).length < 5).length,    icon: BarChart3     },
-                    { label: "Não iniciados",    value: myProcs.filter((p) => (doneStages[p.id] ?? []).length === 0).length,                                         icon: AlertTriangle },
+                    { label: "Concluídos",       value: myProcs.filter((p) => concluidasDe(p.id) === 5).length,                                                       icon: CheckCircle2  },
+                    { label: "Em progresso",     value: myProcs.filter((p) => concluidasDe(p.id) > 0 && concluidasDe(p.id) < 5).length,                              icon: BarChart3     },
+                    { label: "Não iniciados",    value: myProcs.filter((p) => concluidasDe(p.id) === 0).length,                                                      icon: AlertTriangle },
                   ].map((s, i) => (
                     <div key={i} className="rounded-2xl bg-background ring-1 ring-border p-6">
                       <div className="flex items-center justify-between mb-3">
@@ -895,7 +1205,7 @@ function ProfissionalPage() {
                   {selectedProc.name}
                 </div>
                 <div className="mt-2 flex items-center justify-between text-xs text-ink-soft">
-                  <span>{(doneStages[selectedId!] ?? []).length} / 5 etapas</span>
+                  <span>{etapasConcluidas(etapas).length} / 5 etapas</span>
                   <span>{progress(selectedId!)}%</span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface">
@@ -909,12 +1219,17 @@ function ProfissionalPage() {
 
               <nav className="flex-1 overflow-y-auto p-2 space-y-1">
                 {STAGE_DEFS.map((s) => {
-                  const done   = isDone(selectedId!, s.num);
+                  const done   = isDone(s.num);
                   const active = s.num === activeStage;
                   return (
                     <button
                       key={s.num}
-                      onClick={() => setActiveStage(s.num)}
+                      onClick={() => {
+                        // Grava o que estiver esperando antes de trocar: senão o
+                        // texto digitado nos últimos 600 ms se perderia.
+                        gravarCamposAgora();
+                        setActiveStage(s.num);
+                      }}
                       className={`flex w-full items-start gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors ${
                         active ? "bg-foreground text-background" : "hover:bg-surface"
                       }`}
@@ -929,7 +1244,7 @@ function ProfissionalPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-xs font-medium leading-tight">{s.label}</div>
                         <div className={`mt-0.5 text-[11px] ${active ? "text-background/60" : "text-ink-soft"}`}>
-                          {done ? "Concluída" : isActiveStg(selectedId!, s.num) ? "Em andamento" : "Aguardando"}
+                          {done ? "Concluída" : isActiveStg(s.num) ? "Em andamento" : "Aguardando"}
                         </div>
                       </div>
                     </button>
@@ -950,9 +1265,9 @@ function ProfissionalPage() {
                     {/* Stage header */}
                     <div className="mb-5 flex items-start gap-3">
                       <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-medium ${
-                        isDone(selectedId!, activeStage) ? "bg-accent text-accent-foreground" : "bg-foreground text-background"
+                        isDone(activeStage) ? "bg-accent text-accent-foreground" : "bg-foreground text-background"
                       }`}>
-                        {isDone(selectedId!, activeStage) ? <Check className="h-4 w-4" /> : stageDef.num}
+                        {isDone(activeStage) ? <Check className="h-4 w-4" /> : stageDef.num}
                       </div>
                       <div>
                         <div className="text-[10px] uppercase tracking-widest text-ink-soft">Etapa {stageDef.num}</div>
@@ -961,47 +1276,74 @@ function ProfissionalPage() {
                       </div>
                     </div>
 
-                    {/* Fields */}
-                    <div className="space-y-4">
-                      {stageDef.fields.map((field) => (
-                        <div key={field.id}>
-                          <label className="mb-1.5 block text-sm font-medium">{field.label}</label>
-                          {renderField(field)}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Upload area */}
-                    <div className="mt-6">
-                      <div className="mb-2 text-sm font-medium">Arquivos desta etapa</div>
-                      <div
-                        onClick={() => fileRef.current?.click()}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => { e.preventDefault(); uploadDocs(e.dataTransfer.files); }}
-                        className="cursor-pointer rounded-2xl border-2 border-dashed border-border bg-background p-5 text-center transition-colors hover:border-foreground/30 hover:bg-surface"
-                      >
-                        <Upload className="mx-auto h-6 w-6 text-ink-soft" />
-                        <div className="mt-2 text-sm text-ink-soft">
-                          Arraste ou <span className="text-foreground underline">clique para enviar</span>
-                        </div>
-                        <div className="mt-1 text-xs text-ink-soft/60">PDF, DWG, JPG, PNG, DOC — máx. 25 MB</div>
-                      </div>
-                      <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => uploadDocs(e.target.files)} />
-                    </div>
-
-                    {/* Last uploaded docs */}
-                    {docs.length > 0 && (
-                      <div className="mt-3 space-y-1.5">
-                        {docs.slice(-4).map((d) => (
-                          <div key={d.id} className="flex items-center gap-2 rounded-xl bg-background px-3 py-2 ring-1 ring-border text-sm">
-                            <FileText className="h-4 w-4 shrink-0 text-ink-soft" />
-                            <span className="flex-1 truncate text-sm">{d.name}</span>
-                            <span className="text-xs text-ink-soft">{d.size}</span>
-                            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] text-accent">{d.status}</span>
-                          </div>
-                        ))}
+                    {/* Falha de carregamento ou de gravação precisa aparecer: sem
+                        isto o profissional acha que digitou e salvou. */}
+                    {erroTrabalho && (
+                      <div role="alert" className="mb-4 flex gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-700 ring-1 ring-red-200">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        <span>{erroTrabalho}</span>
                       </div>
                     )}
+
+                    {/* Conferência dos documentos reais do cliente (etapa 1) */}
+                    {activeStage === 1 && selectedId && (
+                      <div className="mb-6">
+                        <div className="mb-2 text-sm font-medium">Documentos recebidos</div>
+                        <ChecklistDocumentos
+                          propertyId={selectedId}
+                          stageNumber={1}
+                          recarregarToken={recargaDocs}
+                          onMudou={async () => {
+                            setRecargaDocs((n) => n + 1);
+                            // A solicitação virou pendência da etapa 1: recarrega
+                            // para ela aparecer na lista e travar a conclusão.
+                            if (selectedId) setPendencias(await listarPendencias(selectedId));
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Responsável técnico da etapa 3: vem do cadastro, não é
+                        digitado. Campo à mão criaria divergência entre o
+                        registro do perfil e o que foi escrito aqui. */}
+                    {activeStage === 3 && (
+                      <div className="mb-4 rounded-xl bg-surface/60 p-3">
+                        <div className="text-[10px] uppercase tracking-widest text-ink-soft">
+                          Responsável técnico
+                        </div>
+                        <div className="mt-0.5 text-sm font-medium">{profProfile.name}</div>
+                        {profProfile.registro && (
+                          <div className="text-xs text-ink-soft">{profProfile.registro}</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Fields */}
+                    <div className="space-y-4">
+                      {stageDef.fields
+                        .filter((field) => {
+                          // Vistoria dispensada: os campos de levantamento somem,
+                          // ficam só a marcação e o motivo. Deixá-los visíveis e
+                          // vazios sugeriria trabalho por fazer que não existe.
+                          if (activeStage !== 2) return true;
+                          const dispensada = camposEtapa["dispensada"] === true;
+                          if (!dispensada) return field.id !== "motivo_dispensa";
+                          return field.id === "dispensada" || field.id === "motivo_dispensa";
+                        })
+                        .map((field) => (
+                          <div key={field.id}>
+                            <label className="mb-1.5 block text-sm font-medium">{field.label}</label>
+                            {renderField(field)}
+                          </div>
+                        ))}
+                    </div>
+
+                    {/* O bloco "Arquivos desta etapa" foi removido. Ele duplicava
+                        a aba Docs e o rótulo prometia um vínculo que o banco não
+                        tem: não existe coluna ligando documento a etapa, então
+                        enviar ali ou pela aba dava exatamente no mesmo. Dois
+                        pontos de envio na mesma tela só criavam dúvida. */}
+
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -1009,12 +1351,32 @@ function ProfissionalPage() {
               {/* Bottom bar — complete / undo */}
               <div className="border-t border-border bg-background p-4">
                 <div className="flex items-center gap-3">
-                  {isDone(selectedId!, activeStage) ? (
+                  {isDone(activeStage) ? (
                     <>
-                      <div className="flex flex-1 items-center gap-2 text-sm text-accent">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Etapa {activeStage} concluída
+                      {/* Etapa concluída também se edita. Antes não havia sinal
+                          nenhum de que a alteração tinha sido gravada — só o
+                          selo de "concluída". Agora o estado do salvamento
+                          aparece e há como forçar a gravação sem esperar. */}
+                      <div className="flex flex-1 items-center gap-2 text-sm">
+                        {salvandoCampos ? (
+                          <span className="inline-flex items-center gap-2 text-ink-soft">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando…
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 text-accent">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Etapa {activeStage} concluída
+                          </span>
+                        )}
                       </div>
+                      <button
+                        onClick={gravarCamposAgora}
+                        disabled={!salvandoCampos}
+                        title="Gravar agora as alterações desta etapa"
+                        className="rounded-full border border-border px-4 py-2 text-xs text-ink-soft hover:bg-surface hover:border-foreground/30 disabled:opacity-40 transition-colors"
+                      >
+                        Salvar alterações
+                      </button>
                       <button
                         onClick={() => undoStage(selectedId!, activeStage)}
                         className="rounded-full border border-border px-4 py-2 text-xs text-ink-soft hover:bg-surface hover:border-foreground/30 transition-colors"
@@ -1024,15 +1386,26 @@ function ProfissionalPage() {
                     </>
                   ) : (
                     <>
-                      {hasOpenPendencies(selectedId!, activeStage) ? (
+                      {hasOpenPendencies(activeStage) ? (
                         <div className="flex flex-1 items-center gap-2 text-xs text-red-500">
                           <AlertTriangle className="h-4 w-4 shrink-0" />
                           Resolva as pendências antes de concluir
                         </div>
                       ) : (
                         <p className="flex-1 text-xs text-ink-soft">
-                          {hasAnyField(selectedId!, activeStage) ? "Pronto para concluir." : "Preencha ao menos um campo."}
+                          {salvandoCampos
+                            ? "Salvando…"
+                            : hasAnyField() ? "Alterações salvas." : "Preencha ao menos um campo."}
                         </p>
+                      )}
+                      {salvandoCampos && (
+                        <button
+                          onClick={gravarCamposAgora}
+                          title="Gravar agora, sem esperar"
+                          className="rounded-full border border-border px-3 py-2 text-xs text-ink-soft hover:bg-surface transition-colors"
+                        >
+                          Salvar agora
+                        </button>
                       )}
                       <button
                         onClick={() => setShowPendencyForm(true)}
@@ -1040,23 +1413,47 @@ function ProfissionalPage() {
                       >
                         + Pendência
                       </button>
-                      <button
-                        onClick={() => completeStage(selectedId!, activeStage)}
-                        disabled={!hasAnyField(selectedId!, activeStage) || hasOpenPendencies(selectedId!, activeStage)}
-                        className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        Concluir etapa {activeStage}
-                      </button>
+                      {/* Entrega com pedido em aberto: não há botão para clicar
+                          de novo — clicar abriria um segundo pedido. */}
+                      {activeStage === 5 && pedidoConclusao?.status === "pendente" ? (
+                        <div className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs text-ink-soft">
+                          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                          Pedido enviado. A entrega será concluída após a aprovação do administrador.
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => completeStage(selectedId!, activeStage)}
+                          disabled={!hasAnyField() || hasOpenPendencies(activeStage)}
+                          className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background hover:bg-foreground/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          {activeStage === 5
+                            ? conclusaoLiberada
+                              ? "Concluir entrega"
+                              : "Pedir aprovação da entrega"
+                            : `Concluir etapa ${activeStage}`}
+                        </button>
+                      )}
                     </>
                   )}
+                  {/* Recusa: o motivo é o único jeito de o profissional saber o
+                      que corrigir antes de pedir de novo. */}
+                  {activeStage === 5 && pedidoConclusao?.status === "recusado" && (
+                    <div className="mt-2 flex w-full items-start gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700 ring-1 ring-red-200">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span className="flex-1">
+                        Entrega recusada pelo administrador
+                        {pedidoConclusao.motivo_recusa ? `: ${pedidoConclusao.motivo_recusa}` : "."}
+                      </span>
+                    </div>
+                  )}
                   {/* Pendências abertas desta etapa */}
-                  {selectedId && openPendencies(selectedId, activeStage).length > 0 && (
+                  {selectedId && openPendencies(activeStage).length > 0 && (
                     <div className="mt-2 w-full space-y-1.5">
-                      {openPendencies(selectedId, activeStage).map((p) => (
+                      {openPendencies(activeStage).map((p) => (
                         <div key={p.id} className="flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700 ring-1 ring-red-200">
                           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                          <span className="flex-1">{p.description}</span>
+                          <span className="flex-1">{textoDaPendencia(p)}</span>
                           <button onClick={() => resolvePendency(selectedId, p.id)} className="font-medium underline hover:no-underline">Resolver</button>
                         </div>
                       ))}
@@ -1078,9 +1475,6 @@ function ProfissionalPage() {
                     <div className="text-sm font-medium truncate">{selectedProc.client}</div>
                     <div className="text-xs text-ink-soft truncate">{selectedProc.clientEmail}</div>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${URGENCY_CLS[selectedProc.urgency]}`}>
-                    {URGENCY_LABEL[selectedProc.urgency]}
-                  </span>
                 </div>
                 <div className="mt-2.5 space-y-1 text-xs text-ink-soft">
                   <div className="flex items-center gap-1.5">
@@ -1109,7 +1503,7 @@ function ProfissionalPage() {
                   onClick={() => setRightTab("docs")}
                   className={`flex-1 py-2.5 text-xs transition-colors ${rightTab === "docs" ? "border-b-2 border-foreground font-medium text-foreground" : "text-ink-soft hover:text-foreground"}`}
                 >
-                  <FileText className="inline-block h-3 w-3 mr-1" />Docs ({docs.length})
+                  <FileText className="inline-block h-3 w-3 mr-1" />Docs
                 </button>
                 <button
                   onClick={() => {
@@ -1179,7 +1573,7 @@ function ProfissionalPage() {
                     <div className="mb-2 text-[10px] uppercase tracking-widest text-ink-soft">Progresso</div>
                     <div className="space-y-1.5">
                       {STAGE_DEFS.map((s) => {
-                        const done = selectedId ? isDone(selectedId!, s.num) : false;
+                        const done = isDone(s.num);
                         const active = s.num === activeStage && !done;
                         return (
                           <div key={s.num} className="flex items-center gap-2 text-xs">
@@ -1199,12 +1593,17 @@ function ProfissionalPage() {
 
                   {/* Private notes */}
                   <div className="rounded-xl bg-surface p-3">
-                    <div className="mb-2 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-soft">
+                    <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-soft">
                       <StickyNote className="h-3 w-3" /> Notas privadas
                     </div>
-                    {selectedId && privateNotes[selectedId] && (
+                    {/* O profissional precisa saber que o cliente não lê isto —
+                        sem o rótulo, dá para escrever aqui achando que avisou. */}
+                    <div className="mb-2 inline-flex items-center rounded-full bg-background px-2 py-0.5 text-[10px] text-ink-soft ring-1 ring-border">
+                      Só a equipe vê
+                    </div>
+                    {nota && (
                       <p className="mb-2 text-xs leading-relaxed text-foreground whitespace-pre-wrap">
-                        {privateNotes[selectedId]}
+                        {nota}
                       </p>
                     )}
                     <textarea
@@ -1217,16 +1616,7 @@ function ProfissionalPage() {
                     <button
                       onClick={() => {
                         if (!selectedId || !noteInput.trim()) return;
-                        const combined = [
-                          privateNotes[selectedId] ?? "",
-                          noteInput.trim(),
-                        ].filter(Boolean).join("\n\n");
-                        setPrivateNotes((prev) => {
-                          const next = { ...prev, [selectedId!]: combined };
-                          storeSet("rz-private-notes", next);
-                          return next;
-                        });
-                        setNoteInput("");
+                        void salvarAnotacao(selectedId, noteInput);
                       }}
                       disabled={!noteInput.trim()}
                       className="mt-1.5 w-full rounded-lg bg-foreground py-1.5 text-xs text-background disabled:opacity-40 hover:bg-foreground/90 transition-colors"
@@ -1238,37 +1628,19 @@ function ProfissionalPage() {
               )}
 
               {/* Tab: Docs */}
-              {rightTab === "docs" && (
-                <div className="flex-1 overflow-y-auto p-3">
-                  <button
-                    onClick={() => fileRef.current?.click()}
-                    className="mb-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-2 text-xs text-ink-soft hover:bg-surface transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Enviar documento
-                  </button>
-                  {docs.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-ink-soft">Nenhum documento ainda.</div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {docs.map((d) => (
-                        <div key={d.id} className="rounded-xl bg-surface px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-3.5 w-3.5 shrink-0 text-ink-soft" />
-                            <span className="flex-1 truncate text-xs font-medium">{d.name}</span>
-                          </div>
-                          <div className="mt-0.5 flex items-center justify-between text-[11px] text-ink-soft">
-                            <span>{d.size}</span>
-                            <span className={`rounded-full px-2 py-0.5 ${
-                              d.status === "Aprovado" ? "bg-accent/10 text-accent" : "bg-background ring-1 ring-border"
-                            }`}>
-                              {d.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              {rightTab === "docs" && selectedId && (
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  <UploadDocumento
+                    propertyId={selectedId}
+                    origem="profissional"
+                    onEnviado={() => setRecargaDocs((n) => n + 1)}
+                  />
+                  <DocumentList
+                    propertyId={selectedId}
+                    mostrarHistorico
+                    podeExcluir
+                    recarregarToken={recargaDocs}
+                  />
                 </div>
               )}
 
@@ -1353,6 +1725,27 @@ function ProfissionalPage() {
         </main>
 
       {/* ── MODAL PENDÊNCIA ── */}
+      {/* Aviso de salvamento automático — topo central, some sozinho.
+          `pointer-events-none` para não bloquear clique no que estiver atrás. */}
+      <AnimatePresence>
+        {avisoSalvo && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18 }}
+            role="status"
+            aria-live="polite"
+            className="pointer-events-none fixed left-1/2 top-5 z-[60] -translate-x-1/2"
+          >
+            <div className="flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-xs text-background shadow-lg">
+              <Check className="h-3.5 w-3.5" />
+              Salvo automaticamente
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {showPendencyForm && selectedId && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 sm:items-center" onClick={() => setShowPendencyForm(false)}>
           <div className="w-full rounded-t-3xl bg-background p-6 sm:mx-auto sm:w-[440px] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>

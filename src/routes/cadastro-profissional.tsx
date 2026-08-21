@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Loader2, AlertCircle, Eye, EyeOff, Briefcase } from "lucide-react";
+import { Check, Loader2, AlertCircle, Eye, EyeOff, Briefcase, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cadastro-profissional")({
@@ -78,17 +78,22 @@ function CadastroProfissionalPage() {
       return;
     }
 
-    // Cria/atualiza o perfil de profissional (upsert evita conflito com trigger de signup).
-    // Se a confirmação de e-mail estiver ligada, não há sessão e este upsert é bloqueado
-    // pelo RLS — nesse caso o perfil é criado no 1º acesso ao painel (self-heal).
-    await supabase.from("profiles").upsert({
-      id: uid,
-      name: nome,
-      email,
-      initials: initialsOf(nome),
-      role: "profissional",
-      specialization: registro.trim() ? `${espec} · ${registro.trim()}` : espec,
-    });
+    // O perfil já foi criado pelo trigger trg_handle_new_user no signup, com
+    // role='profissional' e approval_status='pendente'. Aqui só completamos os
+    // dados que o formulário coletou — papel e aprovação são imutáveis para o
+    // usuário (triggers no banco), então nem tentamos enviá-los.
+    // Sem sessão (confirmação de e-mail ligada) o RLS bloqueia: os dados de
+    // especialização entram no primeiro login, na tela de perfil.
+    if (authData.session) {
+      await supabase
+        .from("profiles")
+        .update({
+          name: nome,
+          initials: initialsOf(nome),
+          specialization: registro.trim() ? `${espec} · ${registro.trim()}` : espec,
+        })
+        .eq("id", uid);
+    }
 
     setLoading(false);
 
@@ -98,7 +103,9 @@ function CadastroProfissionalPage() {
       return;
     }
 
-    navigate({ to: "/painel-profissional" });
+    // Conta de profissional nasce 'pendente' (trigger no banco) e só é liberada
+    // após conferência manual da equipe — por isso vai para a tela de análise.
+    navigate({ to: "/analise-cadastro" });
   }
 
   if (confirmSent) {
@@ -116,8 +123,19 @@ function CadastroProfissionalPage() {
           <p className="text-sm text-ink-soft leading-relaxed">
             Enviamos um e-mail de confirmação para <strong className="text-foreground">{email}</strong>.
             Clique no link da mensagem da <strong className="text-foreground">Ato Regulariza</strong> para
-            ativar sua conta e acessar o painel do profissional.
+            ativar sua conta.
           </p>
+          <div className="mt-4 rounded-2xl bg-surface/60 p-4 text-left">
+            <div className="flex gap-2.5">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+              <p className="text-sm leading-relaxed text-ink-soft">
+                Depois da confirmação, seu cadastro segue para{" "}
+                <strong className="text-foreground">análise da nossa equipe</strong>. O acesso ao
+                painel é liberado quando a conferência terminar — em geral até 2 dias úteis, e
+                avisamos por e-mail.
+              </p>
+            </div>
+          </div>
           <p className="mt-4 text-xs text-ink-soft">
             Não recebeu? Verifique a caixa de spam. Já confirmou?{" "}
             <Link to="/entrar" className="underline hover:text-foreground">Entrar</Link>
@@ -148,6 +166,16 @@ function CadastroProfissionalPage() {
             <h1 className="font-serif text-2xl tracking-tight leading-none">Trabalhe conosco</h1>
             <p className="text-sm text-ink-soft mt-1">Crie sua conta de profissional.</p>
           </div>
+        </div>
+
+        <div className="mb-6 flex gap-2.5 rounded-2xl bg-surface/60 p-4">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+          <p className="text-sm leading-relaxed text-ink-soft">
+            Contas de profissional passam por{" "}
+            <strong className="text-foreground">conferência manual</strong> antes da liberação —
+            é o que protege os dados dos clientes. Você recebe o aviso por e-mail assim que a
+            análise terminar.
+          </p>
         </div>
 
         <div className="space-y-4">

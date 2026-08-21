@@ -1,5 +1,6 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Send, Bot, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -24,16 +25,26 @@ export function ChatbotPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const stream = async (next: Msg[]) => {
+    // Envia o token da SESSÃO do usuário — não a chave anônima. A função exige admin.
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) throw new Error("Sessão expirada. Entre novamente.");
+
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify({ messages: next }),
     });
+    if (resp.status === 401) throw new Error("Sessão expirada. Entre novamente.");
+    if (resp.status === 403) throw new Error("Este assistente é restrito à equipe.");
     if (resp.status === 429) throw new Error("Muitas requisições. Tente em instantes.");
-    if (resp.status === 402) throw new Error("Sem créditos de IA. Adicione saldo em Workspace → Usage.");
+    if (resp.status === 402)
+      throw new Error("Sem créditos de IA. Adicione saldo em Workspace → Usage.");
     if (!resp.ok || !resp.body) throw new Error("Falha ao iniciar chat.");
 
     const reader = resp.body.getReader();
@@ -55,7 +66,10 @@ export function ChatbotPanel() {
         if (line.endsWith("\r")) line = line.slice(0, -1);
         if (!line.startsWith("data: ")) continue;
         const json = line.slice(6).trim();
-        if (json === "[DONE]") { done = true; break; }
+        if (json === "[DONE]") {
+          done = true;
+          break;
+        }
         try {
           const parsed = JSON.parse(json);
           const delta = parsed.choices?.[0]?.delta?.content;
@@ -86,7 +100,10 @@ export function ChatbotPanel() {
     try {
       await stream(next);
     } catch (e) {
-      setMessages((m) => [...m, { role: "assistant", content: e instanceof Error ? e.message : "Erro." }]);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: e instanceof Error ? e.message : "Erro." },
+      ]);
     } finally {
       setLoading(false);
     }

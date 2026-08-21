@@ -2,15 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 /** Dados do intake do cliente (preenchidos no wizard). */
 export type IntakeData = {
-  nome:         string;
-  email:        string;
-  cidade:       string;
-  estado:       string;
-  tipo_imovel:  string;
-  situacao:     string;
-  objetivo:     string;
-  urgencia:     string;
-  nome_projeto: string;
+  nome: string;
+  email: string;
+  cidade: string;
+  estado: string;
+  tipo_imovel: string;
+  situacao: string;
+  objetivo: string;
 };
 
 /**
@@ -24,27 +22,46 @@ export type IntakeData = {
 export async function createClientIntakeBrowser(uid: string, d: IntakeData): Promise<void> {
   // Idempotência
   const { data: existing } = await supabase
-    .from("properties").select("id").eq("client_id", uid).limit(1).maybeSingle();
+    .from("properties")
+    .select("id")
+    .eq("client_id", uid)
+    .limit(1)
+    .maybeSingle();
   if (existing) return;
 
   // Perfil
   await supabase.from("profiles").upsert({
-    id: uid, name: d.nome, email: d.email, role: "cliente",
-    city: d.cidade, state: d.estado,
+    id: uid,
+    name: d.nome,
+    email: d.email,
+    role: "cliente",
+    city: d.cidade,
+    state: d.estado,
   });
 
   // Imóvel — etapa 1 (Cadastro). current_stage precisa ser >= 1 (constraint do banco).
-  const projectName = d.nome_projeto.trim() || `${d.nome} — ${d.situacao || "Regularização"}`;
+  // O cliente não batiza mais o processo: o nome sai do que ele já informou.
+  // Perguntar "como você quer chamar isto?" pedia uma decisão sem consequência
+  // e atrasava o cadastro.
+  const projectName = `${d.nome} — ${d.situacao || "Regularização"}`;
   const { data: prop, error: propErr } = await supabase
     .from("properties")
     .insert({
-      name: projectName, city: d.cidade, state: d.estado,
-      client_id: uid, client_name: d.nome, client_email: d.email,
-      tipo_imovel: d.tipo_imovel, situacao: d.situacao,
-      objetivo: d.objetivo, urgencia: d.urgencia,
-      status: "entrada", current_stage: 1, progress: 0,
+      name: projectName,
+      city: d.cidade,
+      state: d.estado,
+      client_id: uid,
+      client_name: d.nome,
+      client_email: d.email,
+      tipo_imovel: d.tipo_imovel,
+      situacao: d.situacao,
+      objetivo: d.objetivo,
+      status: "entrada",
+      current_stage: 1,
+      progress: 0,
     })
-    .select("id").single();
+    .select("id")
+    .single();
 
   // NÃO falhar em silêncio: se o RLS (ou outra coisa) bloquear, propaga o erro.
   if (propErr || !prop) {
@@ -54,7 +71,12 @@ export async function createClientIntakeBrowser(uid: string, d: IntakeData): Pro
   // Etapas
   const LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
   await supabase.from("process_stages").insert(
-    LABELS.map((label, i) => ({ property_id: prop.id, stage_number: i + 1, label, state: i === 0 ? "active" : "pending" })),
+    LABELS.map((label, i) => ({
+      property_id: prop.id,
+      stage_number: i + 1,
+      label,
+      state: i === 0 ? "active" : "pending",
+    })),
   );
 
   // Marca o lead como convertido (best-effort)

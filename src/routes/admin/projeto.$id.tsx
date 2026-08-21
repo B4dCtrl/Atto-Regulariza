@@ -1,18 +1,28 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
-  ArrowLeft, Building2, Check, Clock, FileText, Loader2,
-  MessageSquare, User, ChevronRight, AlertCircle, Send,
+  ArrowLeft,
+  Building2,
+  Check,
+  Clock,
+  FileText,
+  Loader2,
+  MessageSquare,
+  User,
+  ChevronRight,
+  AlertCircle,
+  Send,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { LOGIN_PAUSED } from "@/lib/site-config";
 import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/admin/projeto/$id")({
   head: () => ({ meta: [{ title: "Projeto — Admin Regulariza" }] }),
   beforeLoad: async ({ params }) => {
-    if (LOGIN_PAUSED) return { userId: null as string | null, propertyId: params.id };
-    const { data: { session } } = await supabase.auth.getSession();
+    // Sem desvio por LOGIN_PAUSED. O papel de admin é exigido pela rota pai (/admin).
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar" });
     return { userId: session.user.id as string | null, propertyId: params.id };
   },
@@ -20,17 +30,17 @@ export const Route = createFileRoute("/admin/projeto/$id")({
 });
 
 type PropertyRow = Tables<"properties">;
-type StageRow    = Tables<"process_stages">;
-type DocRow      = Tables<"documents">;
-type MsgRow      = Tables<"messages">;
-type ProfileRow  = Tables<"profiles">;
+type StageRow = Tables<"process_stages">;
+type DocRow = Tables<"documents">;
+type MsgRow = Tables<"messages">;
+type ProfileRow = Tables<"profiles">;
 
 const STATUS_LABEL: Record<string, string> = {
-  entrada:      "Entrada",
-  analise:      "Em análise",
+  entrada: "Entrada",
+  analise: "Em análise",
   profissional: "Com profissional",
-  prefeitura:   "Em prefeitura",
-  entregue:     "Entregue",
+  prefeitura: "Em prefeitura",
+  entregue: "Entregue",
 };
 
 const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
@@ -38,11 +48,11 @@ const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "E
 const STATUS_ORDER = ["entrada", "analise", "profissional", "prefeitura", "entregue"] as const;
 
 const STATUS_MAP: Record<string, { stage: number; progress: number }> = {
-  entrada:      { stage: 1, progress: 10  },
-  analise:      { stage: 2, progress: 30  },
-  profissional: { stage: 3, progress: 55  },
-  prefeitura:   { stage: 4, progress: 75  },
-  entregue:     { stage: 5, progress: 100 },
+  entrada: { stage: 1, progress: 10 },
+  analise: { stage: 2, progress: 30 },
+  profissional: { stage: 3, progress: 55 },
+  prefeitura: { stage: 4, progress: 75 },
+  entregue: { stage: 5, progress: 100 },
 };
 
 function ProjetoPage() {
@@ -50,16 +60,16 @@ function ProjetoPage() {
   const navigate = useNavigate();
 
   const [property, setProperty] = useState<PropertyRow | null>(null);
-  const [stages,   setStages]   = useState<StageRow[]>([]);
-  const [docs,     setDocs]     = useState<DocRow[]>([]);
-  const [msgs,     setMsgs]     = useState<MsgRow[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [msgText,  setMsgText]  = useState("");
-  const [sending,  setSending]  = useState(false);
-  const [tab,      setTab]      = useState<"info" | "docs" | "msgs">("info");
+  const [stages, setStages] = useState<StageRow[]>([]);
+  const [docs, setDocs] = useState<DocRow[]>([]);
+  const [msgs, setMsgs] = useState<MsgRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [msgText, setMsgText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [tab, setTab] = useState<"info" | "docs" | "msgs">("info");
   const [advancing, setAdvancing] = useState(false);
   const [professionals, setProfessionals] = useState<ProfileRow[]>([]);
-  const [assigning, setAssigning]         = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -72,8 +82,10 @@ function ProjetoPage() {
         loadMsgs,
       )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      supabase.removeChannel(ch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyId]);
 
   async function loadProfessionals() {
@@ -89,7 +101,11 @@ function ProjetoPage() {
     setLoading(true);
     const [{ data: p }, { data: s }, { data: d }, { data: m }] = await Promise.all([
       supabase.from("properties").select("*").eq("id", propertyId).single(),
-      supabase.from("process_stages").select("*").eq("property_id", propertyId).order("stage_number"),
+      supabase
+        .from("process_stages")
+        .select("*")
+        .eq("property_id", propertyId)
+        .order("stage_number"),
       supabase.from("documents").select("*").eq("property_id", propertyId).order("created_at"),
       supabase.from("messages").select("*").eq("property_id", propertyId).order("created_at"),
     ]);
@@ -111,14 +127,19 @@ function ProjetoPage() {
 
   async function advanceStage() {
     if (!property) return;
-    const cur = STATUS_ORDER.indexOf(property.status as typeof STATUS_ORDER[number]);
+    const cur = STATUS_ORDER.indexOf(property.status as (typeof STATUS_ORDER)[number]);
     if (cur >= STATUS_ORDER.length - 1) return;
     const next = STATUS_ORDER[cur + 1];
     const { stage, progress } = STATUS_MAP[next];
     setAdvancing(true);
     await supabase
       .from("properties")
-      .update({ status: next, current_stage: stage, progress, updated_at: new Date().toISOString() })
+      .update({
+        status: next,
+        current_stage: stage,
+        progress,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", propertyId);
     for (let i = 0; i < STAGE_LABELS.length; i++) {
       await supabase
@@ -229,7 +250,9 @@ function ProjetoPage() {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] uppercase tracking-widest text-ink-soft">Admin · Projetos</div>
+          <div className="text-[10px] uppercase tracking-widest text-ink-soft">
+            Admin · Projetos
+          </div>
           <h1 className="font-serif text-2xl tracking-tight truncate">{property.name}</h1>
         </div>
         <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium ring-1 ring-border">
@@ -252,17 +275,20 @@ function ProjetoPage() {
           <div key={label} className="flex flex-1 items-center gap-1">
             <div
               className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-medium transition-colors
-                ${i < curStageIdx
-                  ? "bg-accent text-background"
-                  : i === curStageIdx
-                    ? "bg-foreground text-background"
-                    : "bg-surface text-ink-soft ring-1 ring-border"
+                ${
+                  i < curStageIdx
+                    ? "bg-accent text-background"
+                    : i === curStageIdx
+                      ? "bg-foreground text-background"
+                      : "bg-surface text-ink-soft ring-1 ring-border"
                 }`}
             >
               {i < curStageIdx ? <Check className="h-3 w-3" /> : i + 1}
             </div>
             <span className="hidden text-[11px] text-ink-soft sm:inline truncate">{label}</span>
-            {i < STAGE_LABELS.length - 1 && <ChevronRight className="h-3 w-3 text-ink-soft/30 shrink-0" />}
+            {i < STAGE_LABELS.length - 1 && (
+              <ChevronRight className="h-3 w-3 text-ink-soft/30 shrink-0" />
+            )}
           </div>
         ))}
       </div>
@@ -279,7 +305,11 @@ function ProjetoPage() {
                 className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors
                   ${tab === t ? "bg-background shadow-sm text-foreground" : "text-ink-soft hover:text-foreground"}`}
               >
-                {t === "info" ? "Informações" : t === "docs" ? `Documentos (${docs.length})` : `Mensagens (${msgs.length})`}
+                {t === "info"
+                  ? "Informações"
+                  : t === "docs"
+                    ? `Documentos (${docs.length})`
+                    : `Mensagens (${msgs.length})`}
               </button>
             ))}
           </div>
@@ -289,15 +319,17 @@ function ProjetoPage() {
             <div className="rounded-2xl bg-background ring-1 ring-border p-5 space-y-4">
               <h3 className="font-medium text-sm">Dados do cliente</h3>
               <div className="grid gap-3 sm:grid-cols-2 text-sm">
-                <InfoField label="Nome"     value={property.client_name  ?? "—"} />
-                <InfoField label="Email"    value={property.client_email ?? "—"} />
-                <InfoField label="CPF"      value={property.client_cpf   ?? "—"} />
+                <InfoField label="Nome" value={property.client_name ?? "—"} />
+                <InfoField label="Email" value={property.client_email ?? "—"} />
+                <InfoField label="CPF" value={property.client_cpf ?? "—"} />
                 <InfoField label="Telefone" value={property.client_phone ?? "—"} />
-                <InfoField label="Cidade"   value={[property.city, property.state].filter(Boolean).join("/") || "—"} />
-                <InfoField label="Tipo"     value={property.tipo_imovel  ?? "—"} />
-                <InfoField label="Situação" value={property.situacao     ?? "—"} />
-                <InfoField label="Objetivo" value={property.objetivo     ?? "—"} />
-                <InfoField label="Urgência" value={property.urgencia     ?? "—"} />
+                <InfoField
+                  label="Cidade"
+                  value={[property.city, property.state].filter(Boolean).join("/") || "—"}
+                />
+                <InfoField label="Tipo" value={property.tipo_imovel ?? "—"} />
+                <InfoField label="Situação" value={property.situacao ?? "—"} />
+                <InfoField label="Objetivo" value={property.objetivo ?? "—"} />
               </div>
               {property.notes && (
                 <div className="rounded-xl bg-surface p-3">
@@ -323,12 +355,20 @@ function ProjetoPage() {
                       <div className="text-sm truncate">{d.name}</div>
                       <div className="text-[11px] text-ink-soft">{d.size_text ?? "—"}</div>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium
-                      ${d.status === "Aprovado"   ? "bg-green-50 text-green-700"
-                      : d.status === "Em análise" ? "bg-foreground/10 text-foreground"
-                      : d.status === "Pendente"   ? "bg-yellow-50 text-yellow-700"
-                      : "bg-surface text-ink-soft ring-1 ring-border"}`
-                    }>{d.status}</span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium
+                      ${
+                        d.status === "Aprovado"
+                          ? "bg-green-50 text-green-700"
+                          : d.status === "Em análise"
+                            ? "bg-foreground/10 text-foreground"
+                            : d.status === "Pendente"
+                              ? "bg-yellow-50 text-yellow-700"
+                              : "bg-surface text-ink-soft ring-1 ring-border"
+                      }`}
+                    >
+                      {d.status}
+                    </span>
                   </div>
                 ))
               )}
@@ -337,7 +377,10 @@ function ProjetoPage() {
 
           {/* Tab: Msgs */}
           {tab === "msgs" && (
-            <div className="rounded-2xl bg-background ring-1 ring-border overflow-hidden flex flex-col" style={{ minHeight: 340 }}>
+            <div
+              className="rounded-2xl bg-background ring-1 ring-border overflow-hidden flex flex-col"
+              style={{ minHeight: 340 }}
+            >
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {msgs.length === 0 ? (
                   <div className="flex h-24 items-center justify-center text-sm text-ink-soft">
@@ -345,8 +388,12 @@ function ProjetoPage() {
                   </div>
                 ) : (
                   msgs.map((m) => (
-                    <div key={m.id} className={`flex ${m.is_client ? "justify-start" : "justify-end"}`}>
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm
+                    <div
+                      key={m.id}
+                      className={`flex ${m.is_client ? "justify-start" : "justify-end"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm
                         ${m.is_client ? "bg-surface text-foreground" : "bg-foreground text-background"}`}
                       >
                         <div className="text-[11px] opacity-60 mb-0.5">{m.sender_name}</div>
@@ -369,7 +416,11 @@ function ProjetoPage() {
                   disabled={sending || !msgText.trim()}
                   className="grid h-9 w-9 place-items-center rounded-xl bg-foreground text-background disabled:opacity-40 transition-opacity"
                 >
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -386,10 +437,15 @@ function ProjetoPage() {
               disabled={isLast || advancing}
               className="w-full rounded-xl bg-foreground py-2.5 text-sm text-background hover:opacity-80 disabled:opacity-40 transition-opacity"
             >
-              {advancing
-                ? <span className="flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Atualizando…</span>
-                : isLast ? "Processo concluído ✓" : "Avançar para próxima etapa →"
-              }
+              {advancing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Atualizando…
+                </span>
+              ) : isLast ? (
+                "Processo concluído ✓"
+              ) : (
+                "Avançar para próxima etapa →"
+              )}
             </button>
             <div className="text-[11px] text-ink-soft text-center">
               Etapa atual: <strong>{STATUS_LABEL[property.status]}</strong>
@@ -400,7 +456,9 @@ function ProjetoPage() {
           <div className="rounded-2xl bg-background ring-1 ring-border p-5 space-y-3">
             <h3 className="font-medium text-sm">Profissional designado</h3>
             {(() => {
-              const assigned = professionals.find((p) => p.id === property.assigned_professional_id);
+              const assigned = professionals.find(
+                (p) => p.id === property.assigned_professional_id,
+              );
               if (property.assigned_professional_id) {
                 return (
                   <div className="flex items-center gap-3">
@@ -408,8 +466,12 @@ function ProjetoPage() {
                       {assigned?.initials ?? "—"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{assigned?.name ?? "Profissional"}</div>
-                      <div className="text-[11px] text-ink-soft truncate">{assigned?.specialization ?? "—"}</div>
+                      <div className="text-sm font-medium truncate">
+                        {assigned?.name ?? "Profissional"}
+                      </div>
+                      <div className="text-[11px] text-ink-soft truncate">
+                        {assigned?.specialization ?? "—"}
+                      </div>
                     </div>
                     <button
                       onClick={() => assignProfessional(null)}
@@ -432,13 +494,16 @@ function ProjetoPage() {
                     <select
                       defaultValue=""
                       disabled={assigning}
-                      onChange={(e) => { if (e.target.value) assignProfessional(e.target.value); }}
+                      onChange={(e) => {
+                        if (e.target.value) assignProfessional(e.target.value);
+                      }}
                       className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground transition-colors disabled:opacity-50"
                     >
                       <option value="">Selecionar profissional…</option>
                       {professionals.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name}{p.specialization ? ` — ${p.specialization}` : ""}
+                          {p.name}
+                          {p.specialization ? ` — ${p.specialization}` : ""}
                         </option>
                       ))}
                     </select>
@@ -473,15 +538,21 @@ function ProjetoPage() {
               <div className="space-y-2">
                 {stages.map((s) => (
                   <div key={s.id} className="flex items-center gap-3 text-sm">
-                    <div className={`h-5 w-5 shrink-0 rounded-full flex items-center justify-center
-                      ${s.state === "done"    ? "bg-accent text-background"
-                      : s.state === "active"  ? "bg-foreground text-background"
-                      : "bg-surface text-ink-soft ring-1 ring-border"}`}
+                    <div
+                      className={`h-5 w-5 shrink-0 rounded-full flex items-center justify-center
+                      ${
+                        s.state === "done"
+                          ? "bg-accent text-background"
+                          : s.state === "active"
+                            ? "bg-foreground text-background"
+                            : "bg-surface text-ink-soft ring-1 ring-border"
+                      }`}
                     >
-                      {s.state === "done"
-                        ? <Check className="h-3 w-3" />
-                        : <span className="text-[10px]">{s.stage_number}</span>
-                      }
+                      {s.state === "done" ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <span className="text-[10px]">{s.stage_number}</span>
+                      )}
                     </div>
                     <span className={s.state === "pending" ? "text-ink-soft" : ""}>{s.label}</span>
                     {s.state === "done" && s.completed_at && (
@@ -490,7 +561,9 @@ function ProjetoPage() {
                       </span>
                     )}
                     {s.state === "active" && (
-                      <span className="ml-auto text-[11px] text-accent font-medium">Em andamento</span>
+                      <span className="ml-auto text-[11px] text-accent font-medium">
+                        Em andamento
+                      </span>
                     )}
                   </div>
                 ))}
@@ -498,16 +571,15 @@ function ProjetoPage() {
             </div>
           )}
 
-          {/* Link painel cliente */}
-          <div className="rounded-2xl bg-surface ring-1 ring-border p-4 text-center">
-            <p className="text-xs text-ink-soft mb-2">Ver como o cliente vê</p>
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs hover:bg-background transition-colors"
-            >
-              <User className="h-3 w-3" /> Abrir painel do cliente
-            </Link>
-          </div>
+          {/* Removido: havia aqui um botão "Abrir painel do cliente" apontando
+              para /dashboard sem parâmetro. Como /dashboard mostra o imóvel de
+              QUEM ESTÁ LOGADO (client_id = auth.uid()), o admin caía numa tela
+              "Nenhum imóvel vinculado a esta conta" — o botão prometia uma
+              coisa e fazia outra.
+
+              Ver o painel pelos olhos do cliente exige personificação, que é
+              funcionalidade própria e com implicação de segurança. Enquanto ela
+              não existir, é melhor não ter o botão do que ter um que engana. */}
         </div>
       </div>
     </div>

@@ -100,8 +100,11 @@ function EntrarPage() {
     clearMessages();
     setLoading(true);
 
+    // Aponta para a tela que realmente troca a senha. Antes apontava para
+    // /entrar, que via a sessão de recuperação e redirecionava ao painel — o
+    // link virava um login e a senha nunca mudava.
     const { error: authError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/entrar`,
+      redirectTo: `${window.location.origin}/redefinir-senha`,
     });
 
     if (authError) {
