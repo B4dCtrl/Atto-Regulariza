@@ -149,9 +149,36 @@ export function PainelGerencial() {
             </div>
           )}
 
-          {/* Os números crus, que não dependem da IA. */}
+          {/* O que aconteceu — vem do banco, não da IA. Fica visível mesmo
+              quando a análise falha, que é quando ele mais importa. */}
           {d && (
-            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-3 text-[11px] text-ink-soft">
+            <div className="mt-4 border-t border-border pt-3">
+              <div className="text-[10px] uppercase tracking-widest text-ink-soft">
+                Últimos 7 dias
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-soft">
+                <span>{d.movimento.leadsNovos} lead(s)</span>
+                <span>
+                  {d.movimento.contasNovas.cliente + d.movimento.contasNovas.profissional} conta(s)
+                  nova(s)
+                </span>
+                <span>
+                  {d.movimento.acessos.cliente +
+                    d.movimento.acessos.profissional +
+                    d.movimento.acessos.admin}{" "}
+                  acesso(s) de {d.movimento.pessoasQueEntraram} pessoa(s)
+                </span>
+                <span>{d.movimento.processosNovos} processo(s) aberto(s)</span>
+                <span>{d.movimento.documentosEnviados} documento(s)</span>
+                <span>{d.movimento.mensagensTrocadas} mensagem(ns)</span>
+                <span>{d.movimento.etapasConcluidas} etapa(s) concluída(s)</span>
+              </div>
+            </div>
+          )}
+
+          {/* O que falta — pendências de agora. */}
+          {d && (
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-3 text-[11px] text-ink-soft">
               <span>{d.profissionaisPendentes.length} profissional(is) a liberar</span>
               <span>{d.aprovacoesPendentes.length} aprovação(ões) pendente(s)</span>
               <span>{d.processosParados.length} processo(s) parado(s)</span>

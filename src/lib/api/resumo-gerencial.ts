@@ -45,12 +45,29 @@ export type ProfissionalInativo = {
   ultimoAcesso: string | null;
 };
 
+/** O que aconteceu no período — a parte retrospectiva do resumo. */
+export type Movimento = {
+  /** Contas criadas, por papel. */
+  contasNovas: { cliente: number; profissional: number };
+  /** Entradas nos painéis, por painel. */
+  acessos: { cliente: number; profissional: number; admin: number };
+  /** Quantas pessoas distintas entraram. */
+  pessoasQueEntraram: number;
+  leadsNovos: number;
+  processosNovos: number;
+  documentosEnviados: number;
+  mensagensTrocadas: number;
+  etapasConcluidas: number;
+};
+
 export type DadosGerenciais = {
   profissionaisPendentes: ProfissionalPendente[];
   aprovacoesPendentes: AprovacaoPendente[];
   processosParados: ProcessoParado[];
   leadsSemResposta: LeadSemResposta[];
   profissionaisInativos: ProfissionalInativo[];
+  /** Últimos 7 dias. */
+  movimento: Movimento;
 };
 
 /** Dias inteiros entre uma data e agora. Nulo quando nunca aconteceu. */
@@ -74,21 +91,53 @@ function curto(id: string): string {
   return `#${id.slice(0, 8).toUpperCase()}`;
 }
 
+/** A parte retrospectiva: o que se moveu nos últimos 7 dias. */
+function linhasDeMovimento(m: Movimento): string[] {
+  const partes: string[] = [];
+
+  const contas = m.contasNovas.cliente + m.contasNovas.profissional;
+  if (contas > 0) {
+    partes.push(
+      `Contas novas: ${contas} (${m.contasNovas.cliente} cliente(s), ${m.contasNovas.profissional} profissional(is))`,
+    );
+  }
+
+  const entradas = m.acessos.cliente + m.acessos.profissional + m.acessos.admin;
+  if (entradas > 0) {
+    partes.push(
+      `Acessos ao painel: ${entradas} de ${m.pessoasQueEntraram} pessoa(s) — ` +
+        `${m.acessos.cliente} cliente, ${m.acessos.profissional} profissional, ${m.acessos.admin} admin`,
+    );
+  }
+
+  if (m.leadsNovos > 0) partes.push(`Leads recebidos: ${m.leadsNovos}`);
+  if (m.processosNovos > 0) partes.push(`Processos abertos: ${m.processosNovos}`);
+  if (m.documentosEnviados > 0) partes.push(`Documentos enviados: ${m.documentosEnviados}`);
+  if (m.mensagensTrocadas > 0) partes.push(`Mensagens trocadas: ${m.mensagensTrocadas}`);
+  if (m.etapasConcluidas > 0) partes.push(`Etapas concluídas: ${m.etapasConcluidas}`);
+
+  // Silêncio total é informação: sem esta linha, a IA não teria como saber a
+  // diferença entre "não houve movimento" e "o resumo esqueceu de contar".
+  if (partes.length === 0) return ["Movimento dos últimos 7 dias: nenhum."];
+
+  return ["Movimento dos últimos 7 dias:", ...partes.map((p) => `- ${p}`)];
+}
+
 export function montarResumo(d: DadosGerenciais, agora: Date): string {
-  const linhas: string[] = [];
+  const pendencias: string[] = [];
 
   if (d.profissionaisPendentes.length > 0) {
     const itens = d.profissionaisPendentes
       .map((p) => `${p.nome} (aguarda ${espera(p.desde, agora)})`)
       .join("; ");
-    linhas.push(`Profissionais aguardando liberação: ${itens}`);
+    pendencias.push(`Profissionais aguardando liberação: ${itens}`);
   }
 
   if (d.aprovacoesPendentes.length > 0) {
     const itens = d.aprovacoesPendentes
       .map((a) => `${a.tipo} no processo ${a.processo} (${espera(a.desde, agora)})`)
       .join("; ");
-    linhas.push(`Aprovações pendentes: ${itens}`);
+    pendencias.push(`Aprovações pendentes: ${itens}`);
   }
 
   for (const p of d.processosParados) {
@@ -96,7 +145,7 @@ export function montarResumo(d: DadosGerenciais, agora: Date): string {
       p.documentosPendentes > 0
         ? `, ${p.documentosPendentes} documento(s) pendente(s) do cliente ${p.cliente} (${espera(p.clienteUltimoAcesso, agora)})`
         : `, cliente ${p.cliente} (${espera(p.clienteUltimoAcesso, agora)})`;
-    linhas.push(
+    pendencias.push(
       `Processo parado: ${curto(p.id)} "${p.nome}" — etapa ${p.etapa}, sem movimento ${espera(p.paradoDesde, agora)}${docs}`,
     );
   }
@@ -106,17 +155,25 @@ export function montarResumo(d: DadosGerenciais, agora: Date): string {
       new Date(a.desde) < new Date(b.desde) ? a : b,
     );
     const onde = [maisAntigo.cidade, maisAntigo.uf].filter(Boolean).join("/");
-    linhas.push(
+    pendencias.push(
       `Leads sem resposta: ${d.leadsSemResposta.length}, o mais antigo ${espera(maisAntigo.desde, agora)}${onde ? ` (${onde})` : ""}`,
     );
   }
 
   for (const p of d.profissionaisInativos) {
-    linhas.push(
+    pendencias.push(
       `Profissional inativo: ${p.nome} — ${p.processos} processo(s), ${espera(p.ultimoAcesso, agora)}`,
     );
   }
 
-  if (linhas.length === 0) return "Nada pendente no momento.";
-  return linhas.join("\n");
+  // O retrospecto sempre entra; as pendências entram se houver. As duas partes
+  // são separadas porque a IA precisa distinguir o que ACONTECEU do que
+  // FALTA acontecer.
+  return [
+    ...linhasDeMovimento(d.movimento),
+    "",
+    ...(pendencias.length > 0
+      ? ["Pendências agora:", ...pendencias.map((l) => `- ${l}`)]
+      : ["Nada pendente no momento."]),
+  ].join("\n");
 }

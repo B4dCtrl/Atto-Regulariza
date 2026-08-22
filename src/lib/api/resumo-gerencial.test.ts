@@ -10,6 +10,16 @@ function dados(over: Partial<DadosGerenciais> = {}): DadosGerenciais {
     processosParados: [],
     leadsSemResposta: [],
     profissionaisInativos: [],
+    movimento: {
+      contasNovas: { cliente: 0, profissional: 0 },
+      acessos: { cliente: 0, profissional: 0, admin: 0 },
+      pessoasQueEntraram: 0,
+      leadsNovos: 0,
+      processosNovos: 0,
+      documentosEnviados: 0,
+      mensagensTrocadas: 0,
+      etapasConcluidas: 0,
+    },
     ...over,
   };
 }
@@ -31,6 +41,58 @@ describe("diasDesde", () => {
 describe("montarResumo", () => {
   it("diz que não há nada quando tudo está vazio", () => {
     expect(montarResumo(dados(), AGORA)).toContain("Nada pendente");
+  });
+
+  it("declara o silêncio em vez de omitir o movimento", () => {
+    // Sem esta linha a IA não distingue "não houve movimento" de "o resumo
+    // esqueceu de contar" — e a segunda hipótese vira invenção.
+    expect(montarResumo(dados(), AGORA)).toContain("Movimento dos últimos 7 dias: nenhum");
+  });
+
+  it("relata contas novas, acessos e leads do período", () => {
+    const texto = montarResumo(
+      dados({
+        movimento: {
+          contasNovas: { cliente: 3, profissional: 1 },
+          acessos: { cliente: 12, profissional: 4, admin: 9 },
+          pessoasQueEntraram: 6,
+          leadsNovos: 5,
+          processosNovos: 2,
+          documentosEnviados: 7,
+          mensagensTrocadas: 21,
+          etapasConcluidas: 4,
+        },
+      }),
+      AGORA,
+    );
+    expect(texto).toContain("Contas novas: 4");
+    expect(texto).toContain("Acessos ao painel: 25 de 6 pessoa(s)");
+    expect(texto).toContain("Leads recebidos: 5");
+    expect(texto).toContain("Processos abertos: 2");
+    expect(texto).toContain("Documentos enviados: 7");
+    expect(texto).toContain("Mensagens trocadas: 21");
+    expect(texto).toContain("Etapas concluídas: 4");
+  });
+
+  it("omite as linhas do que não teve movimento", () => {
+    const texto = montarResumo(
+      dados({
+        movimento: {
+          contasNovas: { cliente: 0, profissional: 0 },
+          acessos: { cliente: 0, profissional: 0, admin: 0 },
+          pessoasQueEntraram: 0,
+          leadsNovos: 2,
+          processosNovos: 0,
+          documentosEnviados: 0,
+          mensagensTrocadas: 0,
+          etapasConcluidas: 0,
+        },
+      }),
+      AGORA,
+    );
+    expect(texto).toContain("Leads recebidos: 2");
+    expect(texto).not.toContain("Contas novas");
+    expect(texto).not.toContain("Mensagens trocadas");
   });
 
   it("lista profissional aguardando liberação com a espera em dias", () => {

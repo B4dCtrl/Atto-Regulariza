@@ -12,6 +12,8 @@ const DEFAULT_MODEL = "openai/gpt-oss-120b";
 const DIAS_PARADO = 7;
 /** Profissional sem acessar o painel por mais dias que isto é sinalizado. */
 const DIAS_INATIVO = 5;
+/** Janela do retrospecto: "o que aconteceu" cobre este número de dias. */
+const DIAS_MOVIMENTO = 7;
 
 export type ItemFila = { titulo: string; motivo: string; destino: string };
 export type Briefing = {
@@ -32,6 +34,8 @@ export type Briefing = {
 
 const SYSTEM_PROMPT = `Você escreve o briefing gerencial da Ato Regulariza, plataforma de regularização imobiliária.
 Recebe um resumo com os dados JÁ APURADOS da operação e escreve para o administrador.
+O resumo tem duas partes: o MOVIMENTO dos últimos 7 dias (o que aconteceu) e as PENDÊNCIAS de agora (o que falta acontecer).
+O briefing deve cobrir as duas: primeiro o que andou, depois o que trava.
 
 REGRAS:
 - NUNCA invente número, nome, prazo ou fato que não esteja no resumo. Se algo não está lá, não existe.
@@ -117,7 +121,64 @@ async function coletarDados(): Promise<DadosGerenciais> {
     }
   }
 
+  // ---- Retrospecto: o que se moveu na janela ----
+  //
+  // `head: true` com `count: "exact"` traz só o número, sem as linhas: para
+  // contar mensagens de uma operação ativa, buscar tudo seria desperdício.
+  const desde = new Date(agora - DIAS_MOVIMENTO * 86_400_000).toISOString();
+  const contar = (tabela: "leads" | "properties" | "documents" | "messages") =>
+    supabaseAdmin
+      .from(tabela)
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", desde);
+
+  const [
+    novasContas,
+    acessosJanela,
+    leadsNovos,
+    processosNovos,
+    docsNovos,
+    msgsNovas,
+    etapasFeitas,
+  ] = await Promise.all([
+    supabaseAdmin.from("profiles").select("role").gte("created_at", desde),
+    supabaseAdmin.from("acessos").select("user_id, painel").gte("entrou_em", desde),
+    contar("leads"),
+    contar("properties"),
+    contar("documents"),
+    contar("messages"),
+    supabaseAdmin
+      .from("process_stages")
+      .select("id", { count: "exact", head: true })
+      .gte("completed_at", desde),
+  ]);
+
+  const contasNovas = { cliente: 0, profissional: 0 };
+  for (const c of novasContas.data ?? []) {
+    if (c.role === "profissional") contasNovas.profissional++;
+    else if (c.role === "cliente") contasNovas.cliente++;
+  }
+
+  const acessos = { cliente: 0, profissional: 0, admin: 0 };
+  const pessoas = new Set<string>();
+  for (const a of acessosJanela.data ?? []) {
+    if (a.painel === "cliente" || a.painel === "profissional" || a.painel === "admin") {
+      acessos[a.painel]++;
+    }
+    pessoas.add(a.user_id);
+  }
+
   return {
+    movimento: {
+      contasNovas,
+      acessos,
+      pessoasQueEntraram: pessoas.size,
+      leadsNovos: leadsNovos.count ?? 0,
+      processosNovos: processosNovos.count ?? 0,
+      documentosEnviados: docsNovos.count ?? 0,
+      mensagensTrocadas: msgsNovas.count ?? 0,
+      etapasConcluidas: etapasFeitas.count ?? 0,
+    },
     profissionaisPendentes: (profs.data ?? []).map((p) => ({
       nome: p.name ?? "Sem nome",
       desde: p.created_at,
@@ -200,18 +261,21 @@ export const gerarBriefing = createServerFn({ method: "POST" })
     const resumo = montarResumo(dados, new Date());
 
     let bruto = "";
+    const inicio = Date.now();
     try {
       const res = await fetch(NIM_URL, {
         method: "POST",
         // Prazo obrigatório: sem ele, uma chamada que não volta deixa a tela
-        // girando para sempre — o usuário não distingue "demorando" de
-        // "travado". 25s é folgado para um briefing de 900 tokens.
-        signal: AbortSignal.timeout(25_000),
+        // girando para sempre. 25s não bastou na prática — o modelo respondeu
+        // mais devagar que o esperado —, então subimos para 50s e encolhemos o
+        // pedido. O limite da Vercel é 60s, e o painel já mostra os números
+        // mesmo quando a análise falha.
+        signal: AbortSignal.timeout(50_000),
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model: process.env.NVIDIA_MODEL || DEFAULT_MODEL,
           temperature: 0.3,
-          max_tokens: 900,
+          max_tokens: 700,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: resumo },
@@ -225,11 +289,13 @@ export const gerarBriefing = createServerFn({ method: "POST" })
       }
       const json = await res.json();
       bruto = json?.choices?.[0]?.message?.content ?? "";
+      // Registrado para saber se o prazo está bem calibrado sem ter de adivinhar.
+      console.log(`[briefing] IA respondeu em ${Date.now() - inicio}ms`);
     } catch (e) {
       // O motivo vai para o log da Vercel; ao usuário chega uma frase que
       // distingue os dois casos que ele pode agir sobre.
       const nome = e instanceof Error ? e.name : "";
-      console.error("[briefing] falha ao chamar a IA:", e);
+      console.error(`[briefing] falha ao chamar a IA após ${Date.now() - inicio}ms:`, e);
       return {
         ...vazio,
         gerado_em: new Date().toISOString(),
