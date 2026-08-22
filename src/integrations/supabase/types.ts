@@ -818,6 +818,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      consume_ai_quota: {
+        Args: {
+          _limit_per_hour?: number;
+        };
+        Returns: boolean;
+      };
       registrar_acesso: {
         Args: {
           _painel: string;

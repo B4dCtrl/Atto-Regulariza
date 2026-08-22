@@ -6,6 +6,7 @@ import {
   Check, Clock, AlertCircle, ArrowUpRight,
   Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut, Sparkles,
 } from "lucide-react";
+import { PERGUNTAS_FREQUENTES, type PerguntaFrequente } from "@/lib/perguntas-frequentes";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
@@ -82,6 +83,9 @@ function DashboardContent() {
   const [chatInput, setChatInput]         = useState("");
   const [sendingMsg, setSendingMsg]       = useState(false);
   const [askingAI, setAskingAI]           = useState(false);
+  /** Resposta pronta aberta, respondida sem chamar a IA. */
+  const [faqAberta, setFaqAberta]         = useState<PerguntaFrequente | null>(null);
+  const [erroAssistente, setErroAssistente] = useState<string | null>(null);
   const [healError, setHealError]         = useState<string | null>(null);
   const chatRef   = useRef<HTMLDivElement>(null);
 
@@ -321,7 +325,9 @@ function DashboardContent() {
     try {
       await chatAssistant({ data: { propertyId }, headers: await cabecalhoAuth() });
     } catch (err) {
-      alert(`Assistente IA indisponível: ${(err as Error).message}`);
+      // Sem alert(): o Chrome deixa desativar diálogos, e a partir daí a
+      // mensagem some sem deixar rastro. O erro fica na tela, no chat.
+      setErroAssistente(err instanceof Error ? err.message : "Assistente indisponível.");
     }
     setAskingAI(false);
   };
@@ -772,6 +778,55 @@ function DashboardContent() {
                         </div>
                       </div>
                     )}
+
+                    {/* Resposta pronta. Não passa pela IA nem entra na conversa:
+                        é a mesma dúvida de sempre, com a resposta certa escrita
+                        à mão — instantânea, de graça e sem risco de invenção. */}
+                    {faqAberta && (
+                      <div className="flex justify-start">
+                        <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-3 text-sm leading-relaxed ring-1 ring-border">
+                          <div className="mb-1.5 text-[11px] uppercase tracking-widest text-ink-soft">
+                            {faqAberta.pergunta}
+                          </div>
+                          {faqAberta.resposta}
+                          <button
+                            type="button"
+                            onClick={() => setFaqAberta(null)}
+                            className="mt-2 block text-[11px] text-ink-soft underline"
+                          >
+                            fechar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {erroAssistente && (
+                      <div className="flex justify-start">
+                        <div
+                          role="alert"
+                          className="max-w-[85%] rounded-2xl rounded-bl-md bg-red-50 px-4 py-2.5 text-xs text-red-700"
+                        >
+                          {erroAssistente}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Perguntas prontas: a primeira parada antes da IA. */}
+                  <div className="flex flex-wrap gap-1.5 border-t border-border px-4 pt-3">
+                    {PERGUNTAS_FREQUENTES.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setFaqAberta(p);
+                          setErroAssistente(null);
+                        }}
+                        className="rounded-full bg-surface px-3 py-1.5 text-[11px] text-ink-soft transition-colors hover:bg-border"
+                      >
+                        {p.pergunta}
+                      </button>
+                    ))}
                   </div>
 
                   {/* Input */}

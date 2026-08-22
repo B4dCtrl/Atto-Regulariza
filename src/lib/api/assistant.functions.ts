@@ -23,6 +23,25 @@ export const chatAssistant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ propertyId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
+    // Cota antes de gastar.
+    //
+    // A função existe desde a auditoria de segurança e só o upload a usava — o
+    // chat podia ser chamado à vontade. Como agora cada pergunta custa dinheiro
+    // de verdade, um cliente sozinho poderia consumir o saldo do mês numa
+    // tarde.
+    //
+    // Vai pelo cliente do MIDDLEWARE, não pelo supabaseAdmin: a função lê
+    // `auth.uid()`, que é nulo sob service_role e devolveria false sempre.
+    const { data: dentroDaCota } = await context.supabase.rpc("consume_ai_quota", {
+      _limit_per_hour: 10,
+    });
+    if (dentroDaCota !== true) {
+      throw new Error(
+        "Você já fez várias perguntas à assistente nesta hora. " +
+          "Tente de novo mais tarde, ou escreva direto para o profissional responsável.",
+      );
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("IA não configurada no servidor.");
 
