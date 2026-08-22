@@ -15,6 +15,11 @@ export const WHATSAPP = {
   ),
   parceriaInstitucional: wa("Olá! Sou de uma imobiliária/construtora e quero avaliar parceria."),
   consultor: wa("Olá! Gostaria de falar com um consultor sobre planos institucionais."),
+  /** Profissional aguardando liberação do cadastro. */
+  cadastroEmAnalise: wa(
+    "Olá! Sou profissional e me cadastrei na Ato Regulariza. Meu cadastro está em análise e gostaria de saber o andamento.",
+    ATENDIMENTO_PHONE,
+  ),
 } as const;
 
 export const HERO_VIDEO_LOCAL = "/flutuando-reg.mp4";

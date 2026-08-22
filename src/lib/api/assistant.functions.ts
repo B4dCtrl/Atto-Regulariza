@@ -6,12 +6,23 @@ import { MODELO_IA, aceitaEsforco } from "@/lib/api/modelo-ia";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const SYSTEM_PROMPT = `Você é a assistente virtual da Ato Regulariza, plataforma brasileira de regularização imobiliária.
-Ajude de forma clara, objetiva e acolhedora, sempre em português do Brasil.
-Explique etapas, documentos necessários e próximos passos do processo.
-NUNCA prometa prazos garantidos nem dê parecer jurídico definitivo — deixe claro que o profissional responsável valida cada caso.
-Se não souber algo específico do caso, diga que vai encaminhar ao especialista responsável.
-Responda em no máximo 2 parágrafos curtos.`;
+const SYSTEM_PROMPT = `Você é a assistente virtual da Ato Regulariza, plataforma brasileira de regularização imobiliária. Fala com o CLIENTE sobre o processo dele.
+
+FORMATO — o chat mostra texto puro, sem formatação:
+- NUNCA use markdown. Nada de #, **, listas com - ou *. Escreva em frases corridas.
+- NUNCA use emoji.
+- No máximo 2 parágrafos curtos. Sem saudação repetida se a conversa já começou.
+
+CONTEÚDO:
+- Use os dados do processo que estão no contexto. Se o contexto diz a etapa, cite a etapa; se lista pendências, cite as pendências pelo nome.
+- NUNCA invente documento, prazo, valor ou etapa que não esteja no contexto.
+- NUNCA prometa prazo garantido: prefeitura e cartório não dependem da Ato.
+- NUNCA dê parecer jurídico. Quem valida cada caso é o profissional responsável.
+
+ENCAMINHAMENTO — o mais importante:
+- Quando a pergunta for específica do caso (o que exatamente falta, se um documento serve, o que o cartório vai exigir), diga que quem responde isso é o profissional responsável, CITANDO O NOME dele que está no contexto, e convide a pessoa a escrever aqui mesmo — ele lê esta conversa.
+- Se o contexto disser que ainda não há profissional designado, explique que a equipe está escolhendo e que a pessoa será avisada.
+- Nunca prometa que você mesma vai encaminhar, abrir chamado ou tomar providência: você não faz nada além de responder.`;
 
 /**
  * Assistente de IA do chat (Claude, pela API da Anthropic).
@@ -68,6 +79,17 @@ export const chatAssistant = createServerFn({ method: "POST" })
       throw new Error("Sem acesso a este processo.");
     }
 
+    // 1b) Quem cuida do caso — a IA precisa do nome para encaminhar.
+    let profissional: { name: string | null; specialization: string | null } | null = null;
+    if (prop.assigned_professional_id) {
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("name, specialization")
+        .eq("id", prop.assigned_professional_id)
+        .maybeSingle();
+      profissional = data ?? null;
+    }
+
     // 2) Últimas mensagens (contexto da conversa)
     const { data: recent } = await supabaseAdmin
       .from("messages")
@@ -80,12 +102,31 @@ export const chatAssistant = createServerFn({ method: "POST" })
       .map((m) => `${m.is_client ? "Cliente" : m.sender_name}: ${m.content}`)
       .join("\n");
 
-    const contexto =
-      `Contexto do imóvel: ${prop.name}` +
-      (prop.tipo_imovel ? ` · tipo: ${prop.tipo_imovel}` : "") +
-      (prop.situacao ? ` · situação: ${prop.situacao}` : "") +
-      ` · etapa: ${prop.status} (${prop.progress}%)` +
-      (prop.objetivo ? ` · objetivo do cliente: ${prop.objetivo}` : "");
+    // Pendências abertas: é o que o cliente mais pergunta e o que a IA mais
+    // erraria se tivesse de adivinhar.
+    const { data: pendencias } = await supabaseAdmin
+      .from("pendencies")
+      .select("descricao")
+      .eq("property_id", data.propertyId)
+      .eq("status", "aberta")
+      .limit(5);
+
+    const contexto = [
+      `Imóvel: ${prop.name}`,
+      prop.tipo_imovel ? `Tipo: ${prop.tipo_imovel}` : null,
+      prop.situacao ? `Situação: ${prop.situacao}` : null,
+      `Etapa atual: ${prop.status} (${prop.progress}% concluído)`,
+      prop.objetivo ? `Objetivo do cliente: ${prop.objetivo}` : null,
+      profissional?.name
+        ? `Profissional responsável: ${profissional.name}` +
+          (profissional.specialization ? ` (${profissional.specialization})` : "")
+        : "Profissional responsável: ainda não designado — a equipe está escolhendo.",
+      (pendencias ?? []).length > 0
+        ? `Pendências abertas com o cliente: ${(pendencias ?? []).map((p) => p.descricao).join("; ")}`
+        : "Pendências abertas com o cliente: nenhuma.",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     // 3) Chamada ao Claude
     let reply = "";

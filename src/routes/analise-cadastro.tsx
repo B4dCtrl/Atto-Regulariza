@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Clock, ShieldCheck, XCircle, LogOut, Mail } from "lucide-react";
+import { WHATSAPP } from "@/lib/brand";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/analise-cadastro")({
@@ -126,8 +127,13 @@ function AnaliseCadastroPage() {
         )}
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
+          {/* WhatsApp, não e-mail: quem está esperando liberação quer resposta
+              agora, e a mensagem já vai escrita — a pessoa não precisa explicar
+              de novo por que está falando. */}
           <a
-            href="mailto:contato@atoregulariza.com.br"
+            href={WHATSAPP.cadastroEmAnalise}
+            target="_blank"
+            rel="noreferrer"
             className="rounded-full bg-foreground px-5 py-2.5 text-sm text-background transition-opacity hover:opacity-90"
           >
             Falar com a equipe
