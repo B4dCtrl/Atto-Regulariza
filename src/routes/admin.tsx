@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin")({
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session) throw redirect({ to: "/entrar" });
+    if (!session) throw redirect({ to: "/entrar", search: { de: "painel" } });
     const { data: roles } = await supabase
       .from("user_roles")
       .select("role")

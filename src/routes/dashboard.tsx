@@ -59,7 +59,7 @@ export const Route = createFileRoute("/dashboard")({
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (!session) throw redirect({ to: "/entrar" });
+    if (!session) throw redirect({ to: "/entrar", search: { de: "painel" } });
     // Admin/profissional podem abrir o painel do cliente (ex.: prévia pela StaffBar).
     // Sem imóvel, cai no estado vazio — sem redirecionar para fora.
     return { userId: session.user.id };
@@ -423,7 +423,33 @@ function DashboardContent() {
     if (!propertyId || askingAI) return;
     setAskingAI(true);
     try {
-      await chatAssistant({ data: { propertyId }, headers: await cabecalhoAuth() });
+      const r = await chatAssistant({ data: { propertyId }, headers: await cabecalhoAuth() });
+
+      // Mostra na hora, sem depender do realtime.
+      //
+      // A função grava a resposta em `messages` e o canal deveria entregá-la —
+      // mas depender disso significa o cliente ver "digitando…" sumir e nada
+      // aparecer, que foi o que aconteceu. O canal ainda entrega; filtramos por
+      // conteúdo e horário para não duplicar na tela.
+      if (r?.content) {
+        setMsgs((m) =>
+          m.some((x) => x.content === r.content && !x.is_client)
+            ? m
+            : [
+                ...m,
+                {
+                  id: `ia-${Date.now()}`,
+                  property_id: propertyId,
+                  sender_id: null,
+                  sender_name: "Assistente IA",
+                  content: r.content,
+                  is_client: false,
+                  created_at: new Date().toISOString(),
+                } as MessageRow,
+              ],
+        );
+        setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
+      }
     } catch (err) {
       // Sem alert(): o Chrome deixa desativar diálogos, e a partir daí a
       // mensagem some sem deixar rastro. O erro fica na tela, no chat.
@@ -1007,21 +1033,21 @@ function DashboardContent() {
                     {/* Oferta de ajuda enquanto a equipe não responde.
                       Some sozinha quando alguém da equipe entra na conversa —
                       oferecer ajuda por cima de quem está respondendo é ruído. */}
-                  {!equipeRespondeuAgora && (
-                    <OfertaAssistente
-                      nomeProfissional={professional?.name ?? null}
-                      aoEscolher={(p) => {
-                        setFaqAberta(p);
-                        setErroAssistente(null);
-                        setTimeout(
-                          () => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }),
-                          50,
-                        );
-                      }}
-                    />
-                  )}
+                    {!equipeRespondeuAgora && (
+                      <OfertaAssistente
+                        nomeProfissional={professional?.name ?? null}
+                        aoEscolher={(p) => {
+                          setFaqAberta(p);
+                          setErroAssistente(null);
+                          setTimeout(
+                            () => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }),
+                            50,
+                          );
+                        }}
+                      />
+                    )}
 
-                  {/* Perguntas prontas: a primeira parada antes da IA. */}
+                    {/* Perguntas prontas: a primeira parada antes da IA. */}
                     <div className="flex flex-wrap gap-1.5 border-t border-border px-4 pt-3">
                       {PERGUNTAS_FREQUENTES.map((p) => (
                         <button

@@ -1,7 +1,18 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, type FormEvent } from "react";
-import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, X, Building2, Briefcase } from "lucide-react";
+import {
+  ArrowUpRight,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle,
+  X,
+  Building2,
+  Briefcase,
+} from "lucide-react";
 import { SessaoEmAberto } from "@/components/conta/SessaoEmAberto";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLandingPath } from "@/lib/auth-routing";
@@ -28,6 +39,11 @@ export const Route = createFileRoute("/entrar")({
       },
     ],
   }),
+  // Aceita ?de=painel — a marca que a rota protegida deixa ao desviar para cá.
+  // A chave é OPCIONAL: declarada como `de: "painel" | undefined`, o roteador
+  // passa a exigi-la em todo <Link to="/entrar"> do site.
+  validateSearch: (busca: Record<string, unknown>): { de?: "painel" } =>
+    busca.de === "painel" ? { de: "painel" } : {},
   // Sessão ativa NÃO entra sozinha.
   //
   // Antes esta rota redirecionava direto ao painel de quem estivesse conectado.
@@ -37,11 +53,23 @@ export const Route = createFileRoute("/entrar")({
   //
   // O subdomínio de cursos continua com o desvio: lá o destino não depende de
   // quem é a pessoa.
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     const host = await getRequestHost();
-    if (isCursoHost(host)) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) throw redirect({ to: "/cursos" });
+    if (isCursoHost(host) && session) throw redirect({ to: "/cursos" });
+
+    // Desvio transitório: a rota protegida rodou a checagem antes de a sessão
+    // ser restaurada do localStorage e mandou para cá. Quem tem sessão válida
+    // volta na hora — sem isto, atualizar a página com F5 parecia deslogar.
+    //
+    // Só vale com a marca `?de=painel`. Quem digita /entrar direto continua
+    // vendo quem está conectado e escolhendo, que é a proteção de computador
+    // compartilhado.
+    if (search.de === "painel" && session) {
+      throw redirect({ to: await resolveLandingPath(session.user.id) });
     }
   },
   component: EntrarPage,
@@ -51,13 +79,13 @@ type Mode = "login" | "forgot";
 
 function EntrarPage() {
   const navigate = useNavigate();
-  const [mode, setMode]           = useState<Mode>("login");
-  const [email, setEmail]         = useState("");
-  const [password, setPassword]   = useState("");
-  const [showPass, setShowPass]   = useState(false);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const [success, setSuccess]     = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
   /** Há sessão de outra visita neste navegador? */
   const [temSessao, setTemSessao] = useState(false);
@@ -74,8 +102,8 @@ function EntrarPage() {
 
   // Carrossel do mini-status (mock ilustrativo) — troca sozinho a cada 2.6s
   const STATUS_STEPS = [
-    { label: "Com profissional",   pct: 35,  done: "2 de 6 etapas · ~10 dias" },
-    { label: "Em prefeitura",      pct: 70,  done: "4 de 6 etapas · ~5 dias" },
+    { label: "Com profissional", pct: 35, done: "2 de 6 etapas · ~10 dias" },
+    { label: "Em prefeitura", pct: 70, done: "4 de 6 etapas · ~5 dias" },
     { label: "Matrícula averbada", pct: 100, done: "6 de 6 etapas · concluído" },
   ];
   const [statusStep, setStatusStep] = useState(0);
@@ -168,18 +196,18 @@ function EntrarPage() {
     return "Algo deu errado. Tente novamente em instantes.";
   }
 
-  const isLogin  = mode === "login";
+  const isLogin = mode === "login";
   const isForgot = mode === "forgot";
 
   const onSubmit = isForgot ? handleForgot : handleEmailLogin;
 
   const titles = {
-    login:  "Bem-vindo de volta.",
+    login: "Bem-vindo de volta.",
     forgot: "Redefinir senha.",
   };
 
   const subs = {
-    login:  "Acesse seu painel e veja onde está sua regularização.",
+    login: "Acesse seu painel e veja onde está sua regularização.",
     forgot: "Enviaremos um link para redefinir sua senha.",
   };
 
@@ -202,7 +230,7 @@ function EntrarPage() {
           className="pointer-events-none absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: "radial-gradient(oklch(1 0 0) 1px, transparent 1px)",
-            backgroundSize:  "3px 3px",
+            backgroundSize: "3px 3px",
           }}
         />
 
@@ -279,9 +307,7 @@ function EntrarPage() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.22 }}
             >
-              <h1 className="font-serif text-4xl leading-tight tracking-tight">
-                {titles[mode]}
-              </h1>
+              <h1 className="font-serif text-4xl leading-tight tracking-tight">{titles[mode]}</h1>
               <p className="mt-2 text-sm text-ink-soft">{subs[mode]}</p>
             </motion.div>
           </AnimatePresence>
@@ -341,7 +367,10 @@ function EntrarPage() {
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => { setEmail(e.target.value); clearMessages(); }}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    clearMessages();
+                  }}
                   placeholder="voce@email.com"
                   className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft/60"
                 />
@@ -359,7 +388,10 @@ function EntrarPage() {
                     required
                     minLength={6}
                     value={password}
-                    onChange={(e) => { setPassword(e.target.value); clearMessages(); }}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      clearMessages();
+                    }}
                     placeholder="••••••••"
                     className="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-soft/60"
                   />
@@ -377,7 +409,10 @@ function EntrarPage() {
                   <div className="mt-1.5 text-right">
                     <button
                       type="button"
-                      onClick={() => { setMode("forgot"); clearMessages(); }}
+                      onClick={() => {
+                        setMode("forgot");
+                        clearMessages();
+                      }}
                       className="text-xs text-ink-soft hover:text-foreground transition-colors"
                     >
                       Esqueci minha senha
@@ -422,10 +457,22 @@ function EntrarPage() {
                            disabled:opacity-60"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.07 5.07 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.99.66-2.26 1.05-3.72 1.05-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A11 11 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.07l3.66 2.83C6.71 7.3 9.14 5.38 12 5.38z"/>
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.07 5.07 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.99.66-2.26 1.05-3.72 1.05-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A11 11 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.07l3.66 2.83C6.71 7.3 9.14 5.38 12 5.38z"
+                  />
                 </svg>
                 Entrar com Google
               </button>
@@ -439,7 +486,10 @@ function EntrarPage() {
                 Lembrou a senha?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("login"); clearMessages(); }}
+                  onClick={() => {
+                    setMode("login");
+                    clearMessages();
+                  }}
                   className="text-foreground underline-offset-4 hover:underline"
                 >
                   Entrar
@@ -450,7 +500,10 @@ function EntrarPage() {
                 Ainda não tem conta?{" "}
                 <button
                   type="button"
-                  onClick={() => { setShowRoleModal(true); clearMessages(); }}
+                  onClick={() => {
+                    setShowRoleModal(true);
+                    clearMessages();
+                  }}
                   className="text-foreground underline-offset-4 hover:underline"
                 >
                   Criar conta grátis
@@ -458,7 +511,6 @@ function EntrarPage() {
               </>
             )}
           </p>
-
         </motion.div>
       </div>
 
@@ -506,9 +558,7 @@ function EntrarPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">Sou cliente</div>
-                    <div className="text-xs text-ink-soft mt-0.5">
-                      Quero regularizar meu imóvel
-                    </div>
+                    <div className="text-xs text-ink-soft mt-0.5">Quero regularizar meu imóvel</div>
                   </div>
                   <ArrowUpRight className="h-4 w-4 text-ink-soft opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>

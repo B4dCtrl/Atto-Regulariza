@@ -49,7 +49,7 @@ export const Route = createFileRoute("/painel-profissional")({
   }),
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw redirect({ to: "/entrar" });
+    if (!session) throw redirect({ to: "/entrar", search: { de: "painel" } });
 
     // Só profissional APROVADO entra. Antes bastava ter sessão — qualquer cliente
     // logado abria o painel. A RLS já barra os dados, mas a rota não pode expor a
