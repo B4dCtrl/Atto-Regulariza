@@ -24,7 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { OfertaAssistente } from "@/components/cliente/OfertaAssistente";
-import { PERGUNTAS_FREQUENTES, type PerguntaFrequente } from "@/lib/perguntas-frequentes";
+import { type PerguntaFrequente } from "@/lib/perguntas-frequentes";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
@@ -360,10 +360,20 @@ function DashboardContent() {
     window.location.href = "/entrar";
   }
 
-  /* ── Scroll chat on msgs change ── */
+  /* ── Mostra sempre a mensagem mais recente ──
+     Depende de `activeSection` além de `msgs`: ao abrir a aba Mensagens as
+     mensagens já estavam carregadas, então o efeito não disparava e a conversa
+     ficava no topo — era preciso arrastar até o fim para ler o que chegou.
+
+     O quadro de espera existe porque o container acabou de aparecer e ainda
+     não tem altura: rolar antes disso não move nada. */
   useEffect(() => {
-    chatRef.current?.scrollTo({ top: 9e9 });
-  }, [msgs]);
+    if (activeSection !== "messages") return;
+    const id = requestAnimationFrame(() => {
+      chatRef.current?.scrollTo({ top: 9e9 });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [msgs, activeSection]);
 
   /* ── Send message ── */
   const sendMessage = async (e: FormEvent) => {
@@ -1075,23 +1085,6 @@ function DashboardContent() {
                         }}
                       />
                     )}
-
-                    {/* Perguntas prontas: a primeira parada antes da IA. */}
-                    <div className="flex flex-wrap gap-1.5 border-t border-border px-4 pt-3">
-                      {PERGUNTAS_FREQUENTES.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setFaqAberta(p);
-                            setErroAssistente(null);
-                          }}
-                          className="rounded-full bg-surface px-3 py-1.5 text-[11px] text-ink-soft transition-colors hover:bg-border"
-                        >
-                          {p.pergunta}
-                        </button>
-                      ))}
-                    </div>
 
                     {/* Input */}
                     <form
