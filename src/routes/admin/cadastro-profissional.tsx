@@ -152,7 +152,7 @@ function CadastroProfissionalPage() {
     }
     const tempPwd = Math.random().toString(36).slice(-10) + "A1";
     try {
-      await createProfessional({
+      const criado = await createProfessional({
         data: {
           name: form.nome,
           email: form.email,

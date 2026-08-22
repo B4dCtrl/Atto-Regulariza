@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { enviarEmail, htmlBoasVindasProfissional } from "@/lib/api/email.server";
 
 export const createProfessional = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -85,7 +86,22 @@ export const createProfessional = createServerFn({ method: "POST" })
       throw new Error("Não foi possível salvar o perfil. Nenhuma conta foi criada; tente de novo.");
     }
 
-    return { id: uid };
+    // Boas-vindas. Não leva a senha: e-mail e senha no mesmo canal significa que
+    // quem interceptar a mensagem entra na conta.
+    //
+    // O envio NÃO derruba a criação. A conta já existe e o admin tem a senha
+    // provisória na tela; se o e-mail falhar, ele repassa e a pessoa entra do
+    // mesmo jeito. Devolvemos o aviso para a tela dizer a verdade.
+    const envio = await enviarEmail({
+      para: data.email,
+      assunto: "Sua conta na Ato Regulariza",
+      html: htmlBoasVindasProfissional({
+        nome: data.name,
+        urlEntrar: "https://www.atoregulariza.com.br/entrar",
+      }),
+    });
+
+    return { id: uid, emailEnviado: envio.ok, motivoEmail: envio.ok ? null : envio.motivo };
   });
 
 /**
