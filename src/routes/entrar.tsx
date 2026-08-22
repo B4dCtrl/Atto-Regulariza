@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-ro
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, type FormEvent } from "react";
 import { ArrowUpRight, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, X, Building2, Briefcase } from "lucide-react";
+import { SessaoEmAberto } from "@/components/conta/SessaoEmAberto";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLandingPath } from "@/lib/auth-routing";
 import { getRequestHost } from "@/lib/request-host.server";
@@ -27,13 +28,21 @@ export const Route = createFileRoute("/entrar")({
       },
     ],
   }),
-  // Se já houver sessão ativa, vai direto ao painel — não exige login de novo.
+  // Sessão ativa NÃO entra sozinha.
+  //
+  // Antes esta rota redirecionava direto ao painel de quem estivesse conectado.
+  // Resultado: quem confirmava um cadastro novo e clicava em "Entrar" caía na
+  // conta de outra pessoa — a última a usar aquele navegador. A tela agora
+  // mostra quem está e deixa escolher.
+  //
+  // O subdomínio de cursos continua com o desvio: lá o destino não depende de
+  // quem é a pessoa.
   beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
     const host = await getRequestHost();
-    if (isCursoHost(host)) throw redirect({ to: "/cursos" });
-    throw redirect({ to: await resolveLandingPath(session.user.id) });
+    if (isCursoHost(host)) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) throw redirect({ to: "/cursos" });
+    }
   },
   component: EntrarPage,
 });
@@ -50,6 +59,18 @@ function EntrarPage() {
   const [error, setError]         = useState<string | null>(null);
   const [success, setSuccess]     = useState<string | null>(null);
   const [showRoleModal, setShowRoleModal] = useState(false);
+  /** Há sessão de outra visita neste navegador? */
+  const [temSessao, setTemSessao] = useState(false);
+
+  useEffect(() => {
+    let ativo = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (ativo) setTemSessao(!!session);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   // Carrossel do mini-status (mock ilustrativo) — troca sozinho a cada 2.6s
   const STATUS_STEPS = [
@@ -298,6 +319,16 @@ function EntrarPage() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Sessão de outra visita neste navegador.
+              Fica ACIMA do formulário, não no lugar dele: quem quer entrar
+              como outra pessoa não precisa de um clique extra para chegar aos
+              campos. */}
+          {temSessao && (
+            <div className="mt-8">
+              <SessaoEmAberto aoTrocar={() => setTemSessao(false)} />
+            </div>
+          )}
 
           {/* Formulário */}
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
