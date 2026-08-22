@@ -84,7 +84,6 @@ export const createProfessional = createServerFn({ method: "POST" })
     return { id: uid };
   });
 
-
 /**
  * Apaga a conta de um profissional.
  *
