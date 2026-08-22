@@ -44,13 +44,12 @@ export const chatAssistant = createServerFn({ method: "POST" })
     // Vai pelo cliente do MIDDLEWARE, não pelo supabaseAdmin: a função lê
     // `auth.uid()`, que é nulo sob service_role e devolveria false sempre.
     const { data: dentroDaCota } = await context.supabase.rpc("consume_ai_quota", {
-      _limit_per_hour: 10,
+      _limit_per_hour: 30,
     });
     if (dentroDaCota !== true) {
-      throw new Error(
-        "Você já fez várias perguntas à assistente nesta hora. " +
-          "Tente de novo mais tarde, ou escreva direto para o profissional responsável.",
-      );
+      // Marcado para a tela distinguir cota de falha de verdade: quando a
+      // resposta era automática, atingir a cota não merece aviso nenhum.
+      throw new Error("COTA");
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;

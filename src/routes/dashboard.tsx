@@ -399,7 +399,17 @@ function DashboardContent() {
     //
     // A cota de 10 por hora continua valendo: se estourar, o erro aparece no
     // chat e a pessoa segue conversando com a equipe normalmente.
-    if (!equipeRespondeuAgora) void askAI();
+    // Uma resposta por minuto, no máximo.
+    //
+    // Sem isto, três mensagens seguidas viram três chamadas — e "oi", "oi",
+    // "cadê o responsável?" gastavam a cota inteira sem entregar nada de útil.
+    const UM_MINUTO = 60 * 1000;
+    const iaRespondeuAgora = msgs.some(
+      (m) =>
+        m.sender_name === "Assistente IA" &&
+        Date.now() - new Date(m.created_at).getTime() < UM_MINUTO,
+    );
+    if (!equipeRespondeuAgora && !iaRespondeuAgora) void askAI(true);
   };
 
   /**
@@ -419,7 +429,7 @@ function DashboardContent() {
   /* ── Pergunta à IA (resposta entra no chat via realtime) ──
      Chamada pelo botão de estrela e, automaticamente, quando o cliente
      escreve e não há ninguém da equipe na conversa. ── */
-  const askAI = async () => {
+  const askAI = async (automatico = false) => {
     if (!propertyId || askingAI) return;
     setAskingAI(true);
     try {
@@ -451,9 +461,23 @@ function DashboardContent() {
         setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
       }
     } catch (err) {
-      // Sem alert(): o Chrome deixa desativar diálogos, e a partir daí a
-      // mensagem some sem deixar rastro. O erro fica na tela, no chat.
-      setErroAssistente(err instanceof Error ? err.message : "Assistente indisponível.");
+      const motivo = err instanceof Error ? err.message : "";
+
+      // Falha de resposta automática é silenciosa. O cliente escreveu para a
+      // equipe, não para a assistente — encher a tela de aviso vermelho por
+      // uma cortesia que não saiu é pior que não oferecer a cortesia.
+      //
+      // Sem alert() também: o Chrome deixa desativar diálogos, e a partir daí
+      // a mensagem sumiria sem rastro.
+      if (automatico) {
+        console.warn("[assistente] resposta automática não saiu:", motivo);
+      } else {
+        setErroAssistente(
+          motivo === "COTA"
+            ? "Você já fez várias perguntas nesta hora. Escreva para o profissional responsável — ele lê esta conversa."
+            : motivo || "Assistente indisponível.",
+        );
+      }
     }
     setAskingAI(false);
   };
@@ -1071,7 +1095,7 @@ function DashboardContent() {
                     >
                       <button
                         type="button"
-                        onClick={askAI}
+                        onClick={() => askAI(false)}
                         disabled={askingAI}
                         title="Perguntar à Assistente IA"
                         className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20 hover:bg-accent/20 disabled:opacity-40 transition-colors"
