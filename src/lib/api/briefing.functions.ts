@@ -296,6 +296,28 @@ export const gerarBriefing = createServerFn({ method: "POST" })
       // distingue os dois casos que ele pode agir sobre.
       const nome = e instanceof Error ? e.name : "";
       console.error(`[briefing] falha ao chamar a IA após ${Date.now() - inicio}ms:`, e);
+
+      // Diagnóstico: o mesmo host, num pedido trivial, com prazo curto.
+      //
+      // Separa duas causas que se parecem no log mas pedem consertos opostos:
+      // se ISTO responde, a rota até a NVIDIA está de pé e quem trava é o
+      // endpoint de completions; se ISTO também pendura, a saída de rede da
+      // região da função não alcança o host, e a correção é mudar a região.
+      const t0 = Date.now();
+      try {
+        const teste = await fetch("https://integrate.api.nvidia.com/v1/models", {
+          signal: AbortSignal.timeout(6_000),
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        console.error(
+          `[briefing] diagnostico: /v1/models respondeu ${teste.status} em ${Date.now() - t0}ms`,
+        );
+      } catch (e2) {
+        console.error(
+          `[briefing] diagnostico: /v1/models tambem falhou em ${Date.now() - t0}ms:`,
+          e2,
+        );
+      }
       return {
         ...vazio,
         gerado_em: new Date().toISOString(),

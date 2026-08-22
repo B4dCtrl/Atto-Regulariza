@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { Kanban } from "@/components/admin/Kanban";
 import { PainelGerencial } from "@/components/admin/PainelGerencial";
-import { UploadZone } from "@/components/admin/UploadZone";
 import { Search, Bell, Plus, Loader2, User, Settings, LogOut, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -234,7 +233,6 @@ function AdminHome() {
           <PainelGerencial />
         </div>
         <div className="space-y-6">
-          <UploadZone />
           <div className="rounded-2xl bg-foreground p-5 text-background">
             <div className="text-[10px] uppercase tracking-widest text-background/60">
               Próximas ações

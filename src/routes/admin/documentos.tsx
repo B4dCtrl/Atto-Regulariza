@@ -1,10 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import {
-  FileText, Loader2, Search, Upload, Check,
-  Clock, AlertCircle, Download, Trash2,
+  FileText,
+  Loader2,
+  Search,
+  Upload,
+  Check,
+  Clock,
+  AlertCircle,
+  Download,
+  Trash2,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  enviarDocumento,
+  excluirDocumento,
+  listarVersoes,
+  urlDoDocumento,
+} from "@/lib/api/documentos";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -13,31 +26,40 @@ export const Route = createFileRoute("/admin/documentos")({
   component: DocumentosPage,
 });
 
-type DocRow  = Tables<"documents">;
+type DocRow = Tables<"documents">;
 type PropRow = Tables<"properties">;
 
 const STATUS_STYLE: Record<string, string> = {
-  Aprovado:     "bg-green-50 text-green-700",
+  Aprovado: "bg-green-50 text-green-700",
   "Em análise": "bg-foreground text-background",
-  Enviado:      "bg-surface text-ink-soft ring-1 ring-border",
-  Pendente:     "bg-yellow-50 text-yellow-700",
+  Enviado: "bg-surface text-ink-soft ring-1 ring-border",
+  Pendente: "bg-yellow-50 text-yellow-700",
 };
 const STATUS_ICON: Record<string, React.ElementType> = {
-  Aprovado:     Check,
+  Aprovado: Check,
   "Em análise": Clock,
-  Enviado:      FileText,
-  Pendente:     AlertCircle,
+  Enviado: FileText,
+  Pendente: AlertCircle,
 };
 
 function DocumentosPage() {
-  const [docs,       setDocs]       = useState<DocRow[]>([]);
-  const [props,      setProps]      = useState<PropRow[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [search,     setSearch]     = useState("");
+  const [docs, setDocs] = useState<DocRow[]>([]);
+  const [props, setProps] = useState<PropRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [filterProp, setFilterProp] = useState("all");
   const [filterStat, setFilterStat] = useState("all");
   const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading]   = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [erroUpload, setErroUpload] = useState<string | null>(null);
+
+  const recarregar = async () => {
+    const { data } = await supabase
+      .from("documents")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setDocs(data);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -51,17 +73,23 @@ function DocumentosPage() {
 
     const ch = supabase
       .channel("docs-all")
-      .on("postgres_changes", { event: "*", schema: "public", table: "documents" }, ({ eventType, new: next, old: prev }) => {
-        setDocs((cur) => {
-          if (eventType === "DELETE") return cur.filter((d) => d.id !== (prev as DocRow).id);
-          const row = next as DocRow;
-          if (eventType === "INSERT") return [row, ...cur];
-          return cur.map((d) => d.id === row.id ? row : d);
-        });
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "documents" },
+        ({ eventType, new: next, old: prev }) => {
+          setDocs((cur) => {
+            if (eventType === "DELETE") return cur.filter((d) => d.id !== (prev as DocRow).id);
+            const row = next as DocRow;
+            if (eventType === "INSERT") return [row, ...cur];
+            return cur.map((d) => (d.id === row.id ? row : d));
+          });
+        },
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   const filtered = docs.filter((d) => {
@@ -73,29 +101,88 @@ function DocumentosPage() {
   });
 
   const approve = (id: string) =>
-    supabase.from("documents").update({ status: "Aprovado", updated_at: new Date().toISOString() }).eq("id", id);
+    supabase
+      .from("documents")
+      .update({ status: "Aprovado", updated_at: new Date().toISOString() })
+      .eq("id", id);
 
   const analyze = (id: string) =>
-    supabase.from("documents").update({ status: "Em análise", updated_at: new Date().toISOString() }).eq("id", id);
+    supabase
+      .from("documents")
+      .update({ status: "Em análise", updated_at: new Date().toISOString() })
+      .eq("id", id);
 
   const remove = async (id: string) => {
     if (!confirm("Remover este documento?")) return;
-    await supabase.from("documents").delete().eq("id", id);
+    // Exclusão lógica, não física: o histórico existe para proteger a equipe
+    // numa exigência de cartório, e há gatilho exigindo aprovação do admin.
+    await excluirDocumento(id);
   };
 
+  /**
+   * Envia de verdade.
+   *
+   * Antes esta função gravava só o NOME do arquivo em `documents` e descartava
+   * os bytes — o documento aparecia na lista e não abria, porque não existia
+   * arquivo nenhum. É o mesmo defeito que a frente 1 corrigiu nos painéis do
+   * cliente e do profissional e que sobreviveu aqui.
+   *
+   * Agora passa pela mesma edge function de todo o resto: ela valida tipo,
+   * tamanho e a assinatura real do conteúdo antes de gravar.
+   */
   const uploadFiles = async (files: FileList | null) => {
-    if (!files || !props.length) return;
-    const propId = filterProp !== "all" ? filterProp : props[0].id;
+    if (!files || files.length === 0) return;
+
+    // Sem processo escolhido não dá para enviar: mandar para o primeiro da
+    // lista, como fazia antes, é anexar documento no imóvel de outra pessoa.
+    if (filterProp === "all") {
+      setErroUpload("Escolha um processo no filtro antes de enviar.");
+      return;
+    }
+
     setUploading(true);
-    await supabase.from("documents").insert(
-      Array.from(files).map((f) => ({
-        property_id: propId,
-        name: f.name,
-        size_text: `${Math.max(1, Math.round(f.size / 1024))} KB`,
-        status: "Enviado",
-      }))
-    );
-    setUploading(false);
+    setErroUpload(null);
+    try {
+      for (const arquivo of Array.from(files)) {
+        await enviarDocumento({
+          arquivo,
+          propertyId: filterProp,
+          kind: "outro",
+          origem: "profissional",
+        });
+      }
+      await recarregar();
+    } catch (e) {
+      setErroUpload(e instanceof Error ? e.message : "Não foi possível enviar.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  /** Abre o arquivo por URL assinada de curta duração. */
+  const abrir = async (documentId: string) => {
+    setErroUpload(null);
+    try {
+      const versoes = await listarVersoes(documentId);
+      if (versoes.length === 0) {
+        setErroUpload(
+          "Este registro não tem arquivo. Foi criado antes da correção de envio — " +
+            "reenvie o documento.",
+        );
+        return;
+      }
+      const url = await urlDoDocumento(versoes[0].id);
+      // Blob em vez de abrir a URL assinada direto: assim ela não entra no
+      // histórico do navegador nem no Referer.
+      const resposta = await fetch(url);
+      const blob = await resposta.blob();
+      const objeto = URL.createObjectURL(blob);
+      window.open(objeto, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(objeto), 60_000);
+    } catch (e) {
+      setErroUpload(e instanceof Error ? e.message : "Não foi possível abrir o documento.");
+    }
   };
 
   const propName = (id: string) => props.find((p) => p.id === id)?.name ?? "—";
@@ -108,18 +195,36 @@ function DocumentosPage() {
         <div>
           <div className="text-[10px] uppercase tracking-widest text-ink-soft">Gestão</div>
           <h1 className="font-serif text-3xl tracking-tight">Central de documentos</h1>
-          <p className="mt-1 text-sm text-ink-soft">{docs.length} documentos · todos os processos</p>
+          <p className="mt-1 text-sm text-ink-soft">
+            {docs.length} documentos · todos os processos
+          </p>
         </div>
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading || !props.length}
           className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm text-background hover:bg-foreground/90 disabled:opacity-50 transition-colors"
         >
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
           Enviar documento
         </button>
-        <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => uploadFiles(e.target.files)} />
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => uploadFiles(e.target.files)}
+        />
       </div>
+
+      {erroUpload && (
+        <div role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          {erroUpload}
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -139,7 +244,11 @@ function DocumentosPage() {
           className="rounded-full border border-border bg-background px-4 py-2 text-sm text-ink-soft outline-none cursor-pointer"
         >
           <option value="all">Todos os imóveis</option>
-          {props.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {props.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
         </select>
 
         <select
@@ -148,10 +257,16 @@ function DocumentosPage() {
           className="rounded-full border border-border bg-background px-4 py-2 text-sm text-ink-soft outline-none cursor-pointer"
         >
           <option value="all">Todos os status</option>
-          {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
+          {statuses.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
         </select>
 
-        <span className="ml-auto text-xs text-ink-soft">{filtered.length} documento{filtered.length !== 1 ? "s" : ""}</span>
+        <span className="ml-auto text-xs text-ink-soft">
+          {filtered.length} documento{filtered.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       {/* Status tabs */}
@@ -163,7 +278,9 @@ function DocumentosPage() {
               key={s}
               onClick={() => setFilterStat(s)}
               className={`rounded-full px-3 py-1.5 text-xs transition-colors ${
-                filterStat === s ? "bg-foreground text-background" : "border border-border text-ink-soft hover:border-foreground/30"
+                filterStat === s
+                  ? "bg-foreground text-background"
+                  : "border border-border text-ink-soft hover:border-foreground/30"
               }`}
             >
               {s === "all" ? "Todos" : s} <span className="ml-1 opacity-60">{count}</span>
@@ -206,10 +323,17 @@ function DocumentosPage() {
                     <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-surface ring-1 ring-border">
                       <FileText className="h-4 w-4 text-ink-soft" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{d.name}</div>
-                      <div className="text-xs text-ink-soft">{d.size_text ?? "—"} · {new Date(d.created_at).toLocaleDateString("pt-BR")}</div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => abrir(d.id)}
+                      className="min-w-0 text-left"
+                      title="Abrir documento"
+                    >
+                      <div className="truncate text-sm font-medium hover:underline">{d.name}</div>
+                      <div className="text-xs text-ink-soft">
+                        {d.size_text ?? "—"} · {new Date(d.created_at).toLocaleDateString("pt-BR")}
+                      </div>
+                    </button>
                   </div>
 
                   {/* Imóvel */}
@@ -217,7 +341,9 @@ function DocumentosPage() {
 
                   {/* Status */}
                   <div>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${STATUS_STYLE[d.status] ?? "bg-surface text-ink-soft"}`}>
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${STATUS_STYLE[d.status] ?? "bg-surface text-ink-soft"}`}
+                    >
                       <Icon className="h-3 w-3" />
                       {d.status}
                     </span>
@@ -226,24 +352,34 @@ function DocumentosPage() {
                   {/* Ações */}
                   <div className="flex items-center gap-2">
                     {d.status === "Enviado" && (
-                      <button onClick={() => analyze(d.id)}
-                        className="rounded-full border border-border px-3 py-1 text-[11px] text-ink-soft hover:bg-surface transition-colors">
+                      <button
+                        onClick={() => analyze(d.id)}
+                        className="rounded-full border border-border px-3 py-1 text-[11px] text-ink-soft hover:bg-surface transition-colors"
+                      >
                         Analisar
                       </button>
                     )}
                     {(d.status === "Enviado" || d.status === "Em análise") && (
-                      <button onClick={() => approve(d.id)}
-                        className="rounded-full bg-accent/10 px-3 py-1 text-[11px] text-accent hover:bg-accent hover:text-accent-foreground transition-colors">
+                      <button
+                        onClick={() => approve(d.id)}
+                        className="rounded-full bg-accent/10 px-3 py-1 text-[11px] text-accent hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
                         Aprovar
                       </button>
                     )}
-                    <button onClick={() => remove(d.id)}
-                      className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface hover:text-foreground transition-colors">
+                    <button
+                      onClick={() => remove(d.id)}
+                      className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface hover:text-foreground transition-colors"
+                    >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                     {d.file_path && (
-                      <a href={d.file_path} target="_blank" rel="noreferrer"
-                        className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors">
+                      <a
+                        href={d.file_path}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors"
+                      >
                         <Download className="h-3.5 w-3.5" />
                       </a>
                     )}
