@@ -101,6 +101,19 @@ em algo que renderiza no servidor, **reinicie o servidor** — sem isso o erro p
 descartar o culpado certo, que foi o que aconteceu aqui na primeira tentativa.
 **Confirmado:** console limpo em `/entrar` e `/cadastrar`, e os cliques voltaram a responder.
 
+### 17. 🔵 Briefing da IA esgotando o tempo
+A chamada ao NVIDIA NIM não respondeu em 25s. Prazo subiu para 50s (limite da Vercel é 60s),
+pedido caiu de 900 para 700 tokens, e a duração passou a ser registrada.
+**Como diagnosticar:** Vercel › Logs, procurar `[briefing]`. Vai dizer `IA respondeu em Nms`
+ou `falha ao chamar a IA após Nms`.
+**Hipótese não descartada:** o modelo `openai/gpt-oss-120b` pode não existir mais no catálogo
+da NVIDIA — esse nome veio do `chatAssistant`, que nunca havia sido testado em produção.
+
+### 18. ⬜ Visitante anônimo (subprojeto adiado)
+Quantas pessoas abrem o site, de onde vêm, que páginas veem. Exige instalar medição, abrir a
+CSP para o domínio dela e resolver consentimento de cookie numa plataforma que trata CPF e
+matrícula. Os "acessos" que o painel mostra hoje são de gente logada, não de visitante.
+
 ### 14. ⬜ Assistente de IA duplicado no horizonte
 Hoje o site usa NVIDIA NIM (`gpt-oss-120b`) em `assistant.functions.ts`, com o system prompt
 e as travas certas. Se o atendimento do WhatsApp nascer separado, serão duas personalidades
@@ -117,7 +130,11 @@ ver o próprio histórico — o ramo de `DocumentList` que trata `deleted_at` er
 **Migração:** `supabase/migrations/20260821_restaurar_documento.sql`.
 *Falta conferir na tela: excluir um documento e restaurá-lo.*
 
-### 12. 🔵 Server functions — CORRIGIDAS, FALTA RETESTAR
+### 12. ✅ Server functions — CONCLUÍDO
+Nunca funcionaram: faltava o cabeçalho `Authorization` nas chamadas. Confirmado em produção
+em 2026-08-22, com o cadastro pelo painel admin funcionando de ponta a ponta.
+*(Texto antigo abaixo, mantido pelo diagnóstico.)*
+### 12b. Diagnóstico original
 Nunca funcionaram, e não era variável de ambiente: as três chamadas passavam só `data`, sem
 `Authorization`. O token do Supabase mora no `localStorage`, não em cookie, então o navegador
 não anexa nada — o middleware recusava com "No authorization header provided".
