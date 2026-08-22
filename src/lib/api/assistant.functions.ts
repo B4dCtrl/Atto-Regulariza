@@ -156,6 +156,19 @@ export const chatAssistant = createServerFn({ method: "POST" })
         .map((b) => b.text)
         .join("")
         .trim();
+
+      // Cinto e suspensório contra markdown.
+      //
+      // O prompt proíbe, mas modelo escorrega — e o chat mostra texto puro, então
+      // "**Sobre o prazo:**" chega assim mesmo ao cliente. Limpar aqui é
+      // determinístico; confiar só na instrução, não.
+      reply = reply
+        .replace(/^#{1,6}\s+/gm, "") // títulos
+        .replace(/\*\*(.+?)\*\*/g, "$1") // negrito
+        .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "$1") // itálico
+        .replace(/^[-*]\s+/gm, "") // marcadores de lista
+        .replace(/`([^`]+)`/g, "$1") // código
+        .trim();
     } catch (e) {
       console.error("[assistente] falha ao consultar a IA:", e);
       throw new Error("Não foi possível consultar a IA agora.");

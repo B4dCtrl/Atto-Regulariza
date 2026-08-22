@@ -2,9 +2,26 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import {
-  Home, FileText, MessageSquare, User, History, Bell, Search,
-  Check, Clock, AlertCircle, ArrowUpRight,
-  Building2, Calendar, TrendingUp, Send, X, Loader2, Settings, LogOut, Sparkles,
+  Home,
+  FileText,
+  MessageSquare,
+  User,
+  History,
+  Bell,
+  Search,
+  Check,
+  Clock,
+  AlertCircle,
+  ArrowUpRight,
+  Building2,
+  Calendar,
+  TrendingUp,
+  Send,
+  X,
+  Loader2,
+  Settings,
+  LogOut,
+  Sparkles,
 } from "lucide-react";
 import { PERGUNTAS_FREQUENTES, type PerguntaFrequente } from "@/lib/perguntas-frequentes";
 import { registrarAcesso } from "@/lib/api/acessos";
@@ -30,11 +47,17 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Painel — Regulariza" },
-      { name: "description", content: "Acompanhe sua regularização em tempo real, envie documentos e converse com seu especialista." },
+      {
+        name: "description",
+        content:
+          "Acompanhe sua regularização em tempo real, envie documentos e converse com seu especialista.",
+      },
     ],
   }),
   beforeLoad: async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar" });
     // Admin/profissional podem abrir o painel do cliente (ex.: prévia pela StaffBar).
     // Sem imóvel, cai no estado vazio — sem redirecionar para fora.
@@ -43,51 +66,54 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
-type PropertyRow    = Tables<"properties">;
-type StageRow       = Tables<"process_stages">;
-type MessageRow     = Tables<"messages">;
-type ProfileRow     = Tables<"profiles">;
+type PropertyRow = Tables<"properties">;
+type StageRow = Tables<"process_stages">;
+type MessageRow = Tables<"messages">;
+type ProfileRow = Tables<"profiles">;
 
 /** Iniciais a partir de um nome ("Maria Silva" → "MS"). */
 function initialsOf(name?: string | null): string {
   if (!name) return "—";
   const parts = name.trim().split(/\s+/);
-  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() || "—";
+  return (
+    ((parts[0]?.[0] ?? "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase() ||
+    "—"
+  );
 }
 
 const navItems = [
-  { icon: Home,          label: "Visão geral",  id: "overview"   },
-  { icon: FileText,      label: "Documentos",   id: "docs"        },
-  { icon: MessageSquare, label: "Mensagens",    id: "messages"    },
-  { icon: User,          label: "Profissional", id: "professional"},
-  { icon: History,       label: "Histórico",    id: "history"     },
+  { icon: Home, label: "Visão geral", id: "overview" },
+  { icon: FileText, label: "Documentos", id: "docs" },
+  { icon: MessageSquare, label: "Mensagens", id: "messages" },
+  { icon: User, label: "Profissional", id: "professional" },
+  { icon: History, label: "Histórico", id: "history" },
 ];
 
 function DashboardContent() {
   const { userId } = Route.useRouteContext();
   const [showTourDialog, setShowTourDialog] = useState(true);
-  const [showTutorial, setShowTutorial]     = useState(false);
-  const [showSearching, setShowSearching]   = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showSearching, setShowSearching] = useState(false);
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
-  const [professional, setProfessional]     = useState<ProfileRow | null>(null);
+  const [professional, setProfessional] = useState<ProfileRow | null>(null);
   const [activeSection, setActiveSection] = useState<string>("overview");
-  const [propertyId, setPropertyId]       = useState<string | null>(null);
-  const [property, setProperty]           = useState<PropertyRow | null>(null);
-  const [stages,   setStages]             = useState<StageRow[]>([]);
-  const [msgs,     setMsgs]               = useState<MessageRow[]>([]);
-  const [loading,  setLoading]            = useState(true);
+  const [propertyId, setPropertyId] = useState<string | null>(null);
+  const [property, setProperty] = useState<PropertyRow | null>(null);
+  const [stages, setStages] = useState<StageRow[]>([]);
+  const [msgs, setMsgs] = useState<MessageRow[]>([]);
+  const [loading, setLoading] = useState(true);
   /** Incrementa a cada envio para o `DocumentList` recarregar do servidor. */
-  const [recargaDocs, setRecargaDocs]     = useState(0);
+  const [recargaDocs, setRecargaDocs] = useState(0);
   const [tarefasAbertas, setTarefasAbertas] = useState(0);
-  const [chatInput, setChatInput]         = useState("");
-  const [sendingMsg, setSendingMsg]       = useState(false);
-  const [askingAI, setAskingAI]           = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const [askingAI, setAskingAI] = useState(false);
   /** Resposta pronta aberta, respondida sem chamar a IA. */
-  const [faqAberta, setFaqAberta]         = useState<PerguntaFrequente | null>(null);
+  const [faqAberta, setFaqAberta] = useState<PerguntaFrequente | null>(null);
   const [erroAssistente, setErroAssistente] = useState<string | null>(null);
-  const [healError, setHealError]         = useState<string | null>(null);
-  const chatRef   = useRef<HTMLDivElement>(null);
+  const [healError, setHealError] = useState<string | null>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
 
   /* ── Busca imóvel do cliente logado ── */
   useEffect(() => {
@@ -95,30 +121,38 @@ function DashboardContent() {
 
     async function load() {
       // 1. Encontra o imóvel deste cliente
-      let propData = (await supabase
-        .from("properties")
-        .select("*")
-        .eq("client_id", userId)
-        .limit(1)
-        .maybeSingle()).data;
+      let propData = (
+        await supabase.from("properties").select("*").eq("client_id", userId).limit(1).maybeSingle()
+      ).data;
 
       // 1b. Self-heal: sem imóvel mas com intake nos metadados (cadastro com
       // confirmação de e-mail) → monta o processo agora, no navegador.
       if (!cancelled && !propData) {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         const intake = user?.user_metadata?.intake as IntakeData | undefined;
         if (intake) {
           try {
             await createClientIntakeBrowser(userId, intake);
-            propData = (await supabase
-              .from("properties").select("*").eq("client_id", userId).limit(1).maybeSingle()).data;
+            propData = (
+              await supabase
+                .from("properties")
+                .select("*")
+                .eq("client_id", userId)
+                .limit(1)
+                .maybeSingle()
+            ).data;
           } catch (e) {
             if (!cancelled) setHealError((e as Error).message);
           }
         }
       }
 
-      if (cancelled || !propData) { setLoading(false); return; }
+      if (cancelled || !propData) {
+        setLoading(false);
+        return;
+      }
 
       const pid = propData.id;
       setPropertyId(pid);
@@ -126,14 +160,13 @@ function DashboardContent() {
 
       // 2. Carrega etapas e mensagens em paralelo.
       //    Os documentos são carregados pelo próprio `DocumentList`.
-      const [{ data: stagesData }, { data: msgsData }] =
-        await Promise.all([
-          supabase.from("process_stages").select("*").eq("property_id", pid).order("stage_number"),
-          supabase.from("messages").select("*").eq("property_id", pid).order("created_at"),
-        ]);
+      const [{ data: stagesData }, { data: msgsData }] = await Promise.all([
+        supabase.from("process_stages").select("*").eq("property_id", pid).order("stage_number"),
+        supabase.from("messages").select("*").eq("property_id", pid).order("created_at"),
+      ]);
       if (cancelled) return;
       if (stagesData) setStages(stagesData);
-      if (msgsData)   setMsgs(msgsData);
+      if (msgsData) setMsgs(msgsData);
 
       // 3. Carrega o profissional designado (se houver)
       if (propData.assigned_professional_id) {
@@ -149,13 +182,14 @@ function DashboardContent() {
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
   /* Registra a entrada uma vez por montagem da tela. */
   useEffect(() => {
     registrarAcesso("cliente");
   }, []);
-
 
   /* ── Realtime subscriptions ── */
   useEffect(() => {
@@ -172,29 +206,45 @@ function DashboardContent() {
           setProperty(np);
           // Profissional acabou de ser designado → carrega o perfil para exibir na hora
           if (np.assigned_professional_id) {
-            supabase.from("profiles").select("*").eq("id", np.assigned_professional_id).single()
-              .then(({ data }) => { if (data) setProfessional(data); });
+            supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", np.assigned_professional_id)
+              .single()
+              .then(({ data }) => {
+                if (data) setProfessional(data);
+              });
           } else {
             setProfessional(null);
           }
-        }
+        },
       )
       /* stage changes → timeline atualiza */
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "process_stages", filter: `property_id=eq.${propertyId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "process_stages",
+          filter: `property_id=eq.${propertyId}`,
+        },
         ({ eventType, new: next, old: prev }) => {
           setStages((cur) => {
             if (eventType === "DELETE") return cur.filter((s) => s.id !== (prev as StageRow).id);
             const without = cur.filter((s) => s.id !== (next as StageRow).id);
             return [...without, next as StageRow].sort((a, b) => a.stage_number - b.stage_number);
           });
-        }
+        },
       )
       /* new messages */
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `property_id=eq.${propertyId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `property_id=eq.${propertyId}`,
+        },
         ({ new: next }) => {
           if (next) {
             // Filtra por id: a própria mensagem do cliente já foi acrescentada
@@ -203,12 +253,17 @@ function DashboardContent() {
             setMsgs((m) => (m.some((x) => x.id === msg.id) ? m : [...m, msg]));
             setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
           }
-        }
+        },
       )
       /* documentos → a lista recarrega sozinha */
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "documents", filter: `property_id=eq.${propertyId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "documents",
+          filter: `property_id=eq.${propertyId}`,
+        },
         // O DocumentList refaz a consulta quando `recargaDocs` muda, e essa
         // consulta respeita a RLS — então o cliente só passa a ver peça técnica
         // do profissional quando a regra permitir, não porque o canal avisou.
@@ -217,14 +272,21 @@ function DashboardContent() {
       /* pendências → a lista de tarefas recarrega sozinha */
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "pendencies", filter: `property_id=eq.${propertyId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "pendencies",
+          filter: `property_id=eq.${propertyId}`,
+        },
         // O canal só avisa; quem busca é o TarefasDoCliente, cuja consulta
         // passa pela RLS.
         () => setRecargaDocs((n) => n + 1),
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // ATENÇÃO: as dependências precisam incluir propertyId.
     //
     // Estava `[]`, e o efeito começa com `if (!propertyId) return`. Como o id é
@@ -263,18 +325,28 @@ function DashboardContent() {
      tabela properties era texto solto e podia dizer "nenhuma ação pendente"
      com três tarefas abertas na tela ao lado. */
   useEffect(() => {
-    if (!propertyId) { setTarefasAbertas(0); return; }
+    if (!propertyId) {
+      setTarefasAbertas(0);
+      return;
+    }
     let ativo = true;
     listarPendencias(propertyId, true)
-      .then((ps) => { if (ativo) setTarefasAbertas(ps.length); })
-      .catch(() => { if (ativo) setTarefasAbertas(0); });
-    return () => { ativo = false; };
+      .then((ps) => {
+        if (ativo) setTarefasAbertas(ps.length);
+      })
+      .catch(() => {
+        if (ativo) setTarefasAbertas(0);
+      });
+    return () => {
+      ativo = false;
+    };
   }, [propertyId, recargaDocs]);
 
   /* ── Fecha o menu do avatar ao clicar fora ── */
   useEffect(() => {
     function onOut(e: MouseEvent) {
-      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) setShowAvatarMenu(false);
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node))
+        setShowAvatarMenu(false);
     }
     document.addEventListener("mousedown", onOut);
     return () => document.removeEventListener("mousedown", onOut);
@@ -316,9 +388,29 @@ function DashboardContent() {
       setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
     }
     setSendingMsg(false);
+
+    // Resposta automática, mas só quando não há gente conversando.
+    //
+    // A assistente existe para o cliente não ficar no vazio. Quando o
+    // profissional está ali respondendo, ela atrapalha: duas vozes na mesma
+    // conversa, e a dela sem autoridade nenhuma sobre o caso. Por isso ela se
+    // cala se alguém da equipe escreveu nos últimos 15 minutos.
+    //
+    // A cota de 10 por hora continua valendo: se estourar, o erro aparece no
+    // chat e a pessoa segue conversando com a equipe normalmente.
+    const QUINZE_MIN = 15 * 60 * 1000;
+    const equipeAtiva = msgs.some(
+      (m) =>
+        !m.is_client &&
+        m.sender_name !== "Assistente IA" &&
+        Date.now() - new Date(m.created_at).getTime() < QUINZE_MIN,
+    );
+    if (!equipeAtiva) void askAI();
   };
 
-  /* ── Pergunta sob demanda à IA (resposta entra no chat via realtime) ── */
+  /* ── Pergunta à IA (resposta entra no chat via realtime) ──
+     Chamada pelo botão de estrela e, automaticamente, quando o cliente
+     escreve e não há ninguém da equipe na conversa. ── */
   const askAI = async () => {
     if (!propertyId || askingAI) return;
     setAskingAI(true);
@@ -332,13 +424,13 @@ function DashboardContent() {
     setAskingAI(false);
   };
 
-  const progress     = property?.progress      ?? 0;
+  const progress = property?.progress ?? 0;
   const currentStage = property?.current_stage ?? 0;
-  const propStatus   = property?.status        ?? "entrada";
+  const propStatus = property?.status ?? "entrada";
 
   const hasProfessional = !!professional;
-  const clientName      = property?.client_name ?? "Cliente";
-  const clientInitials  = initialsOf(clientName);
+  const clientName = property?.client_name ?? "Cliente";
+  const clientInitials = initialsOf(clientName);
   /** Processo ainda sem diagnóstico: aguardando equipe analisar o cadastro. */
   const awaitingDiagnosis = !property?.assigned_professional_id && progress === 0;
 
@@ -358,10 +450,15 @@ function DashboardContent() {
         {healError && (
           <p className="max-w-md text-xs text-red-500">Erro ao montar seu processo: {healError}</p>
         )}
-        <Link to="/cadastrar" className="rounded-full bg-foreground px-5 py-2.5 text-sm text-background hover:opacity-80 transition-opacity">
+        <Link
+          to="/cadastrar"
+          className="rounded-full bg-foreground px-5 py-2.5 text-sm text-background hover:opacity-80 transition-opacity"
+        >
           Cadastrar um imóvel
         </Link>
-        <Link to="/" className="text-xs text-ink-soft underline hover:text-foreground">Voltar ao site</Link>
+        <Link to="/" className="text-xs text-ink-soft underline hover:text-foreground">
+          Voltar ao site
+        </Link>
       </div>
     );
   }
@@ -371,12 +468,13 @@ function DashboardContent() {
       <AnimatePresence>
         {showTutorial && (
           <FirstTimeTutorial
-            onDone={() => { setShowTutorial(false); setShowSearching(true); }}
+            onDone={() => {
+              setShowTutorial(false);
+              setShowSearching(true);
+            }}
           />
         )}
-        {showSearching && (
-          <SearchingProfessionalsModal onDone={() => setShowSearching(false)} />
-        )}
+        {showSearching && <SearchingProfessionalsModal onDone={() => setShowSearching(false)} />}
       </AnimatePresence>
       <div className="flex h-screen overflow-hidden">
         {/* ═══ SIDEBAR ═══ */}
@@ -387,8 +485,15 @@ function DashboardContent() {
                        group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]"
           >
             {/* Logo */}
-            <Link to="/dashboard" className="mb-5 flex shrink-0 items-center px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              <img src="/ato-wordmark.png" alt="Ato Regulariza" className="h-6 w-auto object-contain" />
+            <Link
+              to="/dashboard"
+              className="mb-5 flex shrink-0 items-center px-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+            >
+              <img
+                src="/ato-wordmark.png"
+                alt="Ato Regulariza"
+                className="h-6 w-auto object-contain"
+              />
             </Link>
 
             <nav className="space-y-1">
@@ -397,7 +502,9 @@ function DashboardContent() {
                   key={it.id}
                   onClick={() => setActiveSection(it.id)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                    activeSection === it.id ? "bg-foreground text-background" : "text-ink-soft hover:bg-surface"
+                    activeSection === it.id
+                      ? "bg-foreground text-background"
+                      : "text-ink-soft hover:bg-surface"
                   }`}
                 >
                   <it.icon className="h-4 w-4 shrink-0" />
@@ -459,7 +566,10 @@ function DashboardContent() {
                     </Link>
                     <div className="my-1 h-px bg-border" />
                     <button
-                      onClick={() => { setShowAvatarMenu(false); handleLogout(); }}
+                      onClick={() => {
+                        setShowAvatarMenu(false);
+                        handleLogout();
+                      }}
                       className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
                     >
                       <LogOut className="h-4 w-4" /> Sair
@@ -473,121 +583,289 @@ function DashboardContent() {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-6xl mx-auto w-full">
-
           {/* ── VISÃO GERAL ── */}
           <AnimatePresence mode="wait">
-          {activeSection === "overview" && (
-            <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              {/* Property header */}
-              <section id={TOUR_TOPICS.PROPERTY_FORM} className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="grid h-16 w-16 place-items-center rounded-2xl bg-foreground text-background">
-                      <Building2 className="h-7 w-7" />
-                    </div>
-                    <div>
-                      <div className="text-xs text-ink-soft">Imóvel em regularização</div>
-                      <h1 className="font-serif text-3xl tracking-tight">{property?.name}</h1>
-                      <div className="mt-1 text-sm text-ink-soft">
-                        {property?.address} · {property?.city} · {property?.state}
+            {activeSection === "overview" && (
+              <motion.div
+                key="overview"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {/* Property header */}
+                <section
+                  id={TOUR_TOPICS.PROPERTY_FORM}
+                  className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-foreground text-background">
+                        <Building2 className="h-7 w-7" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-ink-soft">Imóvel em regularização</div>
+                        <h1 className="font-serif text-3xl tracking-tight">{property?.name}</h1>
+                        <div className="mt-1 text-sm text-ink-soft">
+                          {property?.address} · {property?.city} · {property?.state}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-full bg-foreground text-background px-3 py-1.5 text-xs">
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-                    {propStatus === "prefeitura" ? "Em tramitação na Prefeitura"
-                      : propStatus === "analise"      ? "Em análise"
-                      : propStatus === "profissional" ? "Com o profissional"
-                      : propStatus === "entregue"     ? "Entregue ✓"
-                      : "Aguardando diagnóstico"}
-                  </div>
-                </div>
-
-                <div className="mt-6" id={TOUR_TOPICS.PROGRESS_BAR}>
-                  <div className="flex items-center justify-between text-xs text-ink-soft mb-2">
-                    <span>Progresso geral</span>
-                    <span>{awaitingDiagnosis ? "Aguardando início" : `${progress}% concluído`}</span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
-                    <motion.div
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-                      className="h-full rounded-full bg-accent"
-                    />
-                  </div>
-                </div>
-
-                {awaitingDiagnosis && (
-                  <div className="mt-5 flex items-start gap-3 rounded-2xl bg-surface p-4">
-                    <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
-                      <Clock className="h-4 w-4" />
-                    </span>
-                    <div className="text-sm">
-                      <div className="font-medium">Recebemos seu cadastro</div>
-                      <div className="text-ink-soft mt-0.5">
-                        Nossa equipe está analisando as informações do seu imóvel para fazer o
-                        diagnóstico inicial e designar o especialista do seu caso. O andamento
-                        começa assim que isso acontecer.
-                      </div>
+                    <div className="flex items-center gap-2 rounded-full bg-foreground text-background px-3 py-1.5 text-xs">
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+                      {propStatus === "prefeitura"
+                        ? "Em tramitação na Prefeitura"
+                        : propStatus === "analise"
+                          ? "Em análise"
+                          : propStatus === "profissional"
+                            ? "Com o profissional"
+                            : propStatus === "entregue"
+                              ? "Entregue ✓"
+                              : "Aguardando diagnóstico"}
                     </div>
                   </div>
-                )}
-              </section>
 
-              {/* Timeline */}
-              <section id={TOUR_TOPICS.TIMELINE} className="mt-6 rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                <div className="mb-6 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-ink-soft">Etapas</div>
-                    <h2 className="font-serif text-2xl tracking-tight">Onde sua regularização está</h2>
+                  <div className="mt-6" id={TOUR_TOPICS.PROGRESS_BAR}>
+                    <div className="flex items-center justify-between text-xs text-ink-soft mb-2">
+                      <span>Progresso geral</span>
+                      <span>
+                        {awaitingDiagnosis ? "Aguardando início" : `${progress}% concluído`}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
+                      <motion.div
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                        className="h-full rounded-full bg-accent"
+                      />
+                    </div>
                   </div>
-                  {property?.next_action_deadline && (
-                    <div className="hidden sm:flex items-center gap-1 text-xs text-ink-soft">
-                      <Clock className="h-3.5 w-3.5" />
-                      Próximo prazo: {new Date(property.next_action_deadline).toLocaleDateString("pt-BR")}
+
+                  {awaitingDiagnosis && (
+                    <div className="mt-5 flex items-start gap-3 rounded-2xl bg-surface p-4">
+                      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent/15 text-accent">
+                        <Clock className="h-4 w-4" />
+                      </span>
+                      <div className="text-sm">
+                        <div className="font-medium">Recebemos seu cadastro</div>
+                        <div className="text-ink-soft mt-0.5">
+                          Nossa equipe está analisando as informações do seu imóvel para fazer o
+                          diagnóstico inicial e designar o especialista do seu caso. O andamento
+                          começa assim que isso acontecer.
+                        </div>
+                      </div>
                     </div>
                   )}
-                </div>
+                </section>
 
-                <div className="relative grid gap-6 md:grid-cols-5">
-                  <div className="pointer-events-none absolute left-0 right-0 top-5 hidden h-px bg-border md:block" />
-                  {stages.map((s, i) => {
-                    const isDone   = s.state === "done";
-                    const isActive = s.state === "active";
-                    return (
-                      <motion.div
-                        key={s.id}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: i * 0.06 }}
-                        className="relative"
-                      >
-                        <div
-                          className={`grid h-10 w-10 place-items-center rounded-full ring-1 ring-border ${
-                            isDone   ? "bg-foreground text-background"
-                            : isActive ? "bg-accent text-accent-foreground shadow-[0_0_0_6px_oklch(0.66_0.18_38_/_0.15)]"
-                            : "bg-background text-ink-soft"
-                          }`}
+                {/* Timeline */}
+                <section
+                  id={TOUR_TOPICS.TIMELINE}
+                  className="mt-6 rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8"
+                >
+                  <div className="mb-6 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-ink-soft">Etapas</div>
+                      <h2 className="font-serif text-2xl tracking-tight">
+                        Onde sua regularização está
+                      </h2>
+                    </div>
+                    {property?.next_action_deadline && (
+                      <div className="hidden sm:flex items-center gap-1 text-xs text-ink-soft">
+                        <Clock className="h-3.5 w-3.5" />
+                        Próximo prazo:{" "}
+                        {new Date(property.next_action_deadline).toLocaleDateString("pt-BR")}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative grid gap-6 md:grid-cols-5">
+                    <div className="pointer-events-none absolute left-0 right-0 top-5 hidden h-px bg-border md:block" />
+                    {stages.map((s, i) => {
+                      const isDone = s.state === "done";
+                      const isActive = s.state === "active";
+                      return (
+                        <motion.div
+                          key={s.id}
+                          initial={{ opacity: 0, y: 12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5, delay: i * 0.06 }}
+                          className="relative"
                         >
-                          {isDone ? <Check className="h-4 w-4" /> : <span className="font-serif text-sm">{s.stage_number}</span>}
-                        </div>
-                        <div className="mt-3 text-sm font-medium">{s.label}</div>
-                        <div className="text-xs text-ink-soft mt-0.5">
-                          {isDone ? "Concluído" : isActive ? "Em andamento" : "Aguardando"}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </section>
+                          <div
+                            className={`grid h-10 w-10 place-items-center rounded-full ring-1 ring-border ${
+                              isDone
+                                ? "bg-foreground text-background"
+                                : isActive
+                                  ? "bg-accent text-accent-foreground shadow-[0_0_0_6px_oklch(0.66_0.18_38_/_0.15)]"
+                                  : "bg-background text-ink-soft"
+                            }`}
+                          >
+                            {isDone ? (
+                              <Check className="h-4 w-4" />
+                            ) : (
+                              <span className="font-serif text-sm">{s.stage_number}</span>
+                            )}
+                          </div>
+                          <div className="mt-3 text-sm font-medium">{s.label}</div>
+                          <div className="text-xs text-ink-soft mt-0.5">
+                            {isDone ? "Concluído" : isActive ? "Em andamento" : "Aguardando"}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </section>
 
-              {/* Grid: Upload + Next action + Metrics + Chat */}
-              <div className="mt-6 grid gap-6 lg:grid-cols-3">
-                {/* Upload card */}
-                <section id={TOUR_TOPICS.DOCUMENTS} className="lg:col-span-2 rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
+                {/* Grid: Upload + Next action + Metrics + Chat */}
+                <div className="mt-6 grid gap-6 lg:grid-cols-3">
+                  {/* Upload card */}
+                  <section
+                    id={TOUR_TOPICS.DOCUMENTS}
+                    className="lg:col-span-2 rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8"
+                  >
+                    <div className="mb-5">
+                      <div className="text-xs text-ink-soft">Documentos</div>
+                      <h2 className="font-serif text-2xl tracking-tight">Envie seus documentos</h2>
+                    </div>
+
+                    <div className="space-y-4">
+                      <UploadDocumento
+                        propertyId={property.id}
+                        origem="cliente"
+                        onEnviado={() => setRecargaDocs((n) => n + 1)}
+                      />
+                      <DocumentList propertyId={property.id} recarregarToken={recargaDocs} />
+                    </div>
+                  </section>
+
+                  {/* Side column */}
+                  <div className="space-y-6">
+                    {/* Next action */}
+                    <section className="rounded-3xl bg-foreground text-background p-6">
+                      <div className="flex items-center gap-2 text-xs text-background/60">
+                        <AlertCircle className="h-3.5 w-3.5" /> O que falta de você
+                      </div>
+                      {/* Pendências primeiro: são pedidos concretos da equipe, com o
+                        envio ali. O next_action do processo é genérico e só aparece
+                        quando não há tarefa. */}
+                      {propertyId && (
+                        <div className="mt-3">
+                          <TarefasDoCliente
+                            propertyId={propertyId}
+                            recarregarToken={recargaDocs}
+                            onMudou={() => setRecargaDocs((n) => n + 1)}
+                          />
+                        </div>
+                      )}
+                    </section>
+
+                    {/* Metrics */}
+                    <section className="rounded-3xl bg-background ring-1 ring-border p-6">
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          {
+                            icon: Calendar,
+                            l: "Dias",
+                            v: String(
+                              Math.floor(
+                                (Date.now() -
+                                  new Date(property?.created_at ?? Date.now()).getTime()) /
+                                  86400000,
+                              ),
+                            ),
+                          },
+                          { icon: TrendingUp, l: "Concluído", v: `${progress}%` },
+                          {
+                            icon: Clock,
+                            l: "Etapa",
+                            v: awaitingDiagnosis ? "—" : String(currentStage),
+                          },
+                        ].map((m) => (
+                          <div key={m.l} className="rounded-2xl bg-surface p-3">
+                            <m.icon className="h-3.5 w-3.5 text-ink-soft" />
+                            <div className="mt-2 font-serif text-2xl leading-none">{m.v}</div>
+                            <div className="text-[11px] text-ink-soft mt-1">{m.l}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    {/* Chat preview */}
+                    <section
+                      id={TOUR_TOPICS.CHAT}
+                      className="rounded-3xl bg-background ring-1 ring-border p-6"
+                    >
+                      {hasProfessional ? (
+                        <>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs">
+                                {professional?.initials ?? initialsOf(professional?.name)}
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium">
+                                  {professional?.name ?? "Especialista"}
+                                </div>
+                                <div className="text-xs text-ink-soft">
+                                  {professional?.specialization ?? "Sua especialista"}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="h-2 w-2 rounded-full bg-accent" />
+                          </div>
+                          <div className="space-y-2 max-h-32 overflow-hidden">
+                            {msgs.slice(-2).map((m) => (
+                              <div
+                                key={m.id}
+                                className={`rounded-2xl px-3 py-2 text-sm ${
+                                  m.is_client
+                                    ? "rounded-br-md bg-accent text-accent-foreground ml-auto max-w-[85%]"
+                                    : "rounded-bl-md bg-surface text-foreground"
+                                }`}
+                              >
+                                {m.content}
+                              </div>
+                            ))}
+                            {msgs.length === 0 && (
+                              <p className="text-xs text-ink-soft">Nenhuma mensagem ainda.</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setActiveSection("messages")}
+                            className="mt-4 w-full rounded-full border border-border bg-surface-elevated py-2 text-xs text-ink-soft hover:border-foreground/30"
+                          >
+                            Abrir conversa
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <SearchingProfessionalMini />
+                          <p className="mt-4 text-xs text-ink-soft leading-relaxed">
+                            Assim que seu especialista assumir o caso, a conversa será liberada
+                            aqui.
+                          </p>
+                        </>
+                      )}
+                    </section>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── DOCUMENTOS (full view) ── */}
+            {activeSection === "docs" && (
+              <motion.div
+                key="docs"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
                   <div className="mb-5">
-                    <div className="text-xs text-ink-soft">Documentos</div>
-                    <h2 className="font-serif text-2xl tracking-tight">Envie seus documentos</h2>
+                    <div className="text-xs text-ink-soft">Central de documentos</div>
+                    <h2 className="font-serif text-2xl tracking-tight">Todos os documentos</h2>
                   </div>
 
                   <div className="space-y-4">
@@ -599,329 +877,265 @@ function DashboardContent() {
                     <DocumentList propertyId={property.id} recarregarToken={recargaDocs} />
                   </div>
                 </section>
+              </motion.div>
+            )}
 
-                {/* Side column */}
-                <div className="space-y-6">
-                  {/* Next action */}
-                  <section className="rounded-3xl bg-foreground text-background p-6">
-                    <div className="flex items-center gap-2 text-xs text-background/60">
-                      <AlertCircle className="h-3.5 w-3.5" /> O que falta de você
-                    </div>
-                    {/* Pendências primeiro: são pedidos concretos da equipe, com o
-                        envio ali. O next_action do processo é genérico e só aparece
-                        quando não há tarefa. */}
-                    {propertyId && (
-                      <div className="mt-3">
-                        <TarefasDoCliente
-                          propertyId={propertyId}
-                          recarregarToken={recargaDocs}
-                          onMudou={() => setRecargaDocs((n) => n + 1)}
-                        />
+            {/* ── MENSAGENS ── */}
+            {activeSection === "messages" && (
+              <motion.div
+                key="messages"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <section
+                  className="rounded-3xl bg-background ring-1 ring-border overflow-hidden"
+                  style={{ height: "calc(100vh - 10rem)" }}
+                >
+                  <div className="flex h-full flex-col">
+                    {/* Header */}
+                    <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+                      <div className="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background text-sm">
+                        {hasProfessional
+                          ? (professional?.initials ?? initialsOf(professional?.name))
+                          : "…"}
                       </div>
-                    )}
-                  </section>
-
-                  {/* Metrics */}
-                  <section className="rounded-3xl bg-background ring-1 ring-border p-6">
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { icon: Calendar,    l: "Dias",      v: String(Math.floor((Date.now() - new Date(property?.created_at ?? Date.now()).getTime()) / 86400000)) },
-                        { icon: TrendingUp,  l: "Concluído", v: `${progress}%` },
-                        { icon: Clock,       l: "Etapa",     v: awaitingDiagnosis ? "—" : String(currentStage) },
-                      ].map((m) => (
-                        <div key={m.l} className="rounded-2xl bg-surface p-3">
-                          <m.icon className="h-3.5 w-3.5 text-ink-soft" />
-                          <div className="mt-2 font-serif text-2xl leading-none">{m.v}</div>
-                          <div className="text-[11px] text-ink-soft mt-1">{m.l}</div>
+                      <div>
+                        <div className="font-medium">
+                          {hasProfessional ? professional?.name : "Especialista sendo designado"}
                         </div>
-                      ))}
+                        <div className="text-xs text-ink-soft">
+                          {hasProfessional
+                            ? (professional?.specialization ?? "Sua especialista")
+                            : "Você será avisado quando ele assumir"}
+                        </div>
+                      </div>
+                      {hasProfessional && (
+                        <span className="ml-auto h-2 w-2 rounded-full bg-accent" />
+                      )}
                     </div>
-                  </section>
 
-                  {/* Chat preview */}
-                  <section id={TOUR_TOPICS.CHAT} className="rounded-3xl bg-background ring-1 ring-border p-6">
-                    {hasProfessional ? (
-                      <>
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs">
-                              {professional?.initials ?? initialsOf(professional?.name)}
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">{professional?.name ?? "Especialista"}</div>
-                              <div className="text-xs text-ink-soft">
-                                {professional?.specialization ?? "Sua especialista"}
+                    {/* Messages */}
+                    <div ref={chatRef} className="flex-1 overflow-y-auto p-6 space-y-3">
+                      {msgs.map((m) => {
+                        const isAI = m.sender_name === "Assistente IA";
+                        if (isAI) {
+                          return (
+                            <div key={m.id} className="flex justify-start">
+                              <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm leading-relaxed ring-1 ring-accent/20">
+                                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-accent">
+                                  <Sparkles className="h-3 w-3" /> Assistente IA
+                                </div>
+                                {m.content}
                               </div>
                             </div>
-                          </div>
-                          <span className="h-2 w-2 rounded-full bg-accent" />
-                        </div>
-                        <div className="space-y-2 max-h-32 overflow-hidden">
-                          {msgs.slice(-2).map((m) => (
+                          );
+                        }
+                        return (
+                          <div
+                            key={m.id}
+                            className={`flex ${m.is_client ? "justify-end" : "justify-start"}`}
+                          >
                             <div
-                              key={m.id}
-                              className={`rounded-2xl px-3 py-2 text-sm ${
+                              className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                                 m.is_client
-                                  ? "rounded-br-md bg-accent text-accent-foreground ml-auto max-w-[85%]"
+                                  ? "rounded-br-md bg-accent text-accent-foreground"
                                   : "rounded-bl-md bg-surface text-foreground"
                               }`}
                             >
-                              {m.content}
-                            </div>
-                          ))}
-                          {msgs.length === 0 && (
-                            <p className="text-xs text-ink-soft">Nenhuma mensagem ainda.</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => setActiveSection("messages")}
-                          className="mt-4 w-full rounded-full border border-border bg-surface-elevated py-2 text-xs text-ink-soft hover:border-foreground/30"
-                        >
-                          Abrir conversa
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <SearchingProfessionalMini />
-                        <p className="mt-4 text-xs text-ink-soft leading-relaxed">
-                          Assim que seu especialista assumir o caso, a conversa será liberada aqui.
-                        </p>
-                      </>
-                    )}
-                  </section>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── DOCUMENTOS (full view) ── */}
-          {activeSection === "docs" && (
-            <motion.div key="docs" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                <div className="mb-5">
-                  <div className="text-xs text-ink-soft">Central de documentos</div>
-                  <h2 className="font-serif text-2xl tracking-tight">Todos os documentos</h2>
-                </div>
-
-                <div className="space-y-4">
-                  <UploadDocumento
-                    propertyId={property.id}
-                    origem="cliente"
-                    onEnviado={() => setRecargaDocs((n) => n + 1)}
-                  />
-                  <DocumentList propertyId={property.id} recarregarToken={recargaDocs} />
-                </div>
-              </section>
-            </motion.div>
-          )}
-
-          {/* ── MENSAGENS ── */}
-          {activeSection === "messages" && (
-            <motion.div key="messages" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              <section className="rounded-3xl bg-background ring-1 ring-border overflow-hidden" style={{ height: "calc(100vh - 10rem)" }}>
-                <div className="flex h-full flex-col">
-                  {/* Header */}
-                  <div className="flex items-center gap-3 border-b border-border px-6 py-4">
-                    <div className="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background text-sm">
-                      {hasProfessional ? (professional?.initials ?? initialsOf(professional?.name)) : "…"}
-                    </div>
-                    <div>
-                      <div className="font-medium">
-                        {hasProfessional ? professional?.name : "Especialista sendo designado"}
-                      </div>
-                      <div className="text-xs text-ink-soft">
-                        {hasProfessional
-                          ? (professional?.specialization ?? "Sua especialista")
-                          : "Você será avisado quando ele assumir"}
-                      </div>
-                    </div>
-                    {hasProfessional && <span className="ml-auto h-2 w-2 rounded-full bg-accent" />}
-                  </div>
-
-                  {/* Messages */}
-                  <div ref={chatRef} className="flex-1 overflow-y-auto p-6 space-y-3">
-                    {msgs.map((m) => {
-                      const isAI = m.sender_name === "Assistente IA";
-                      if (isAI) {
-                        return (
-                          <div key={m.id} className="flex justify-start">
-                            <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm leading-relaxed ring-1 ring-accent/20">
-                              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-accent">
-                                <Sparkles className="h-3 w-3" /> Assistente IA
-                              </div>
+                              {!m.is_client && (
+                                <div className="mb-1 text-[11px] font-medium opacity-70">
+                                  {m.sender_name}
+                                </div>
+                              )}
                               {m.content}
                             </div>
                           </div>
                         );
-                      }
-                      return (
-                        <div key={m.id} className={`flex ${m.is_client ? "justify-end" : "justify-start"}`}>
-                          <div
-                            className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                              m.is_client
-                                ? "rounded-br-md bg-accent text-accent-foreground"
-                                : "rounded-bl-md bg-surface text-foreground"
-                            }`}
-                          >
-                            {!m.is_client && (
-                              <div className="mb-1 text-[11px] font-medium opacity-70">{m.sender_name}</div>
-                            )}
-                            {m.content}
+                      })}
+                      {askingAI && (
+                        <div className="flex justify-start">
+                          <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm text-accent ring-1 ring-accent/20">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Assistente IA está
+                            digitando…
                           </div>
                         </div>
-                      );
-                    })}
-                    {askingAI && (
-                      <div className="flex justify-start">
-                        <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm text-accent ring-1 ring-accent/20">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Assistente IA está digitando…
-                        </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Resposta pronta. Não passa pela IA nem entra na conversa:
+                      {/* Resposta pronta. Não passa pela IA nem entra na conversa:
                         é a mesma dúvida de sempre, com a resposta certa escrita
                         à mão — instantânea, de graça e sem risco de invenção. */}
-                    {faqAberta && (
-                      <div className="flex justify-start">
-                        <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-3 text-sm leading-relaxed ring-1 ring-border">
-                          <div className="mb-1.5 text-[11px] uppercase tracking-widest text-ink-soft">
-                            {faqAberta.pergunta}
+                      {faqAberta && (
+                        <div className="flex justify-start">
+                          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-3 text-sm leading-relaxed ring-1 ring-border">
+                            <div className="mb-1.5 text-[11px] uppercase tracking-widest text-ink-soft">
+                              {faqAberta.pergunta}
+                            </div>
+                            {faqAberta.resposta}
+                            <button
+                              type="button"
+                              onClick={() => setFaqAberta(null)}
+                              className="mt-2 block text-[11px] text-ink-soft underline"
+                            >
+                              fechar
+                            </button>
                           </div>
-                          {faqAberta.resposta}
-                          <button
-                            type="button"
-                            onClick={() => setFaqAberta(null)}
-                            className="mt-2 block text-[11px] text-ink-soft underline"
+                        </div>
+                      )}
+
+                      {erroAssistente && (
+                        <div className="flex justify-start">
+                          <div
+                            role="alert"
+                            className="max-w-[85%] rounded-2xl rounded-bl-md bg-red-50 px-4 py-2.5 text-xs text-red-700"
                           >
-                            fechar
-                          </button>
+                            {erroAssistente}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
-                    {erroAssistente && (
-                      <div className="flex justify-start">
-                        <div
-                          role="alert"
-                          className="max-w-[85%] rounded-2xl rounded-bl-md bg-red-50 px-4 py-2.5 text-xs text-red-700"
+                    {/* Perguntas prontas: a primeira parada antes da IA. */}
+                    <div className="flex flex-wrap gap-1.5 border-t border-border px-4 pt-3">
+                      {PERGUNTAS_FREQUENTES.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setFaqAberta(p);
+                            setErroAssistente(null);
+                          }}
+                          className="rounded-full bg-surface px-3 py-1.5 text-[11px] text-ink-soft transition-colors hover:bg-border"
                         >
-                          {erroAssistente}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                          {p.pergunta}
+                        </button>
+                      ))}
+                    </div>
 
-                  {/* Perguntas prontas: a primeira parada antes da IA. */}
-                  <div className="flex flex-wrap gap-1.5 border-t border-border px-4 pt-3">
-                    {PERGUNTAS_FREQUENTES.map((p) => (
+                    {/* Input */}
+                    <form
+                      onSubmit={sendMessage}
+                      className="flex items-center gap-2 border-t border-border p-4"
+                    >
                       <button
-                        key={p.id}
                         type="button"
-                        onClick={() => {
-                          setFaqAberta(p);
-                          setErroAssistente(null);
-                        }}
-                        className="rounded-full bg-surface px-3 py-1.5 text-[11px] text-ink-soft transition-colors hover:bg-border"
+                        onClick={askAI}
+                        disabled={askingAI}
+                        title="Perguntar à Assistente IA"
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20 hover:bg-accent/20 disabled:opacity-40 transition-colors"
                       >
-                        {p.pergunta}
+                        {askingAI ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-4 w-4" />
+                        )}
                       </button>
-                    ))}
+                      <input
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder="Escreva uma mensagem…"
+                        className="flex-1 rounded-full bg-surface px-5 py-2.5 text-sm outline-none placeholder:text-ink-soft/60"
+                        disabled={sendingMsg}
+                      />
+                      <button
+                        type="submit"
+                        disabled={sendingMsg || !chatInput.trim()}
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
+                      >
+                        {sendingMsg ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </button>
+                    </form>
                   </div>
-
-                  {/* Input */}
-                  <form onSubmit={sendMessage} className="flex items-center gap-2 border-t border-border p-4">
-                    <button
-                      type="button"
-                      onClick={askAI}
-                      disabled={askingAI}
-                      title="Perguntar à Assistente IA"
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20 hover:bg-accent/20 disabled:opacity-40 transition-colors"
-                    >
-                      {askingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    </button>
-                    <input
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Escreva uma mensagem…"
-                      className="flex-1 rounded-full bg-surface px-5 py-2.5 text-sm outline-none placeholder:text-ink-soft/60"
-                      disabled={sendingMsg}
-                    />
-                    <button
-                      type="submit"
-                      disabled={sendingMsg || !chatInput.trim()}
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
-                    >
-                      {sendingMsg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </button>
-                  </form>
-                </div>
-              </section>
-            </motion.div>
-          )}
-
-          {/* ── PROFISSIONAL ── */}
-          {activeSection === "professional" && (
-            <motion.div key="professional" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              {hasProfessional ? (
-                <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                  <div className="text-xs text-ink-soft mb-1">Responsável pelo processo</div>
-                  <h2 className="font-serif text-2xl tracking-tight mb-6">Seu especialista</h2>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="grid h-16 w-16 place-items-center rounded-full bg-foreground text-background text-xl">
-                      {professional?.initials ?? initialsOf(professional?.name)}
-                    </div>
-                    <div>
-                      <div className="text-lg font-medium">{professional?.name}</div>
-                      <div className="text-sm text-ink-soft">{professional?.specialization ?? "Especialista em regularização"}</div>
-                      <div className="mt-1 text-xs text-accent">● Designado ao seu caso</div>
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-surface-elevated p-4 text-sm text-ink-soft">
-                    Dúvidas sobre o andamento do seu processo? Use a aba de mensagens para falar
-                    diretamente com seu especialista.
-                  </div>
-                  <button
-                    onClick={() => setActiveSection("messages")}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm"
-                  >
-                    <MessageSquare className="h-4 w-4" /> Enviar mensagem
-                  </button>
                 </section>
-              ) : (
-                <SearchingProfessionalCard />
-              )}
-            </motion.div>
-          )}
+              </motion.div>
+            )}
 
-          {/* ── HISTÓRICO ── */}
-          {activeSection === "history" && (
-            <motion.div key="history" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                <div className="text-xs text-ink-soft mb-1">Linha do tempo</div>
-                <h2 className="font-serif text-2xl tracking-tight mb-6">Histórico do processo</h2>
-                <ol className="relative border-l border-border ml-3 space-y-6">
-                  {stages.filter((s) => s.state !== "pending").map((s) => (
-                    <li key={s.id} className="ml-6">
-                      <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background ring-4 ring-background">
-                        <Check className="h-3 w-3" />
-                      </span>
-                      <div className="font-medium">{s.label}</div>
-                      <div className="text-xs text-ink-soft mt-0.5">
-                        {s.state === "done" ? "Concluído" : "Em andamento"}
-                        {s.completed_at && ` · ${new Date(s.completed_at).toLocaleDateString("pt-BR")}`}
+            {/* ── PROFISSIONAL ── */}
+            {activeSection === "professional" && (
+              <motion.div
+                key="professional"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {hasProfessional ? (
+                  <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
+                    <div className="text-xs text-ink-soft mb-1">Responsável pelo processo</div>
+                    <h2 className="font-serif text-2xl tracking-tight mb-6">Seu especialista</h2>
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="grid h-16 w-16 place-items-center rounded-full bg-foreground text-background text-xl">
+                        {professional?.initials ?? initialsOf(professional?.name)}
                       </div>
-                      {s.notes && <div className="mt-1 text-sm text-ink-soft">{s.notes}</div>}
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            </motion.div>
-          )}
+                      <div>
+                        <div className="text-lg font-medium">{professional?.name}</div>
+                        <div className="text-sm text-ink-soft">
+                          {professional?.specialization ?? "Especialista em regularização"}
+                        </div>
+                        <div className="mt-1 text-xs text-accent">● Designado ao seu caso</div>
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-surface-elevated p-4 text-sm text-ink-soft">
+                      Dúvidas sobre o andamento do seu processo? Use a aba de mensagens para falar
+                      diretamente com seu especialista.
+                    </div>
+                    <button
+                      onClick={() => setActiveSection("messages")}
+                      className="mt-4 inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm"
+                    >
+                      <MessageSquare className="h-4 w-4" /> Enviar mensagem
+                    </button>
+                  </section>
+                ) : (
+                  <SearchingProfessionalCard />
+                )}
+              </motion.div>
+            )}
+
+            {/* ── HISTÓRICO ── */}
+            {activeSection === "history" && (
+              <motion.div
+                key="history"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
+                  <div className="text-xs text-ink-soft mb-1">Linha do tempo</div>
+                  <h2 className="font-serif text-2xl tracking-tight mb-6">Histórico do processo</h2>
+                  <ol className="relative border-l border-border ml-3 space-y-6">
+                    {stages
+                      .filter((s) => s.state !== "pending")
+                      .map((s) => (
+                        <li key={s.id} className="ml-6">
+                          <span className="absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background ring-4 ring-background">
+                            <Check className="h-3 w-3" />
+                          </span>
+                          <div className="font-medium">{s.label}</div>
+                          <div className="text-xs text-ink-soft mt-0.5">
+                            {s.state === "done" ? "Concluído" : "Em andamento"}
+                            {s.completed_at &&
+                              ` · ${new Date(s.completed_at).toLocaleDateString("pt-BR")}`}
+                          </div>
+                          {s.notes && <div className="mt-1 text-sm text-ink-soft">{s.notes}</div>}
+                        </li>
+                      ))}
+                  </ol>
+                </section>
+              </motion.div>
+            )}
           </AnimatePresence>
 
           <div className="mt-8 flex items-center justify-end text-xs text-ink-soft">
-            <Link to="/" className="hover:text-foreground">Voltar para o site</Link>
+            <Link to="/" className="hover:text-foreground">
+              Voltar para o site
+            </Link>
           </div>
         </main>
       </div>
