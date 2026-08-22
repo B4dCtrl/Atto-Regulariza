@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import process from "node:process";
 import Anthropic from "@anthropic-ai/sdk";
+import { MODELO_IA, aceitaEsforco } from "@/lib/api/modelo-ia";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -24,7 +25,6 @@ export const chatAssistant = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("IA não configurada no servidor.");
-    const modelo = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 
     // 1) Carrega o processo e valida acesso do solicitante
     const { data: prop } = await supabaseAdmin
@@ -74,11 +74,11 @@ export const chatAssistant = createServerFn({ method: "POST" })
       const cliente = new Anthropic({ apiKey });
       const resposta = await cliente.messages.create(
         {
-          model: modelo,
+          model: MODELO_IA,
           max_tokens: 1000,
-          // Resposta curta de atendimento: esforço baixo entrega o mesmo texto
-          // por uma fração do tempo, e o cliente está esperando na tela.
-          output_config: { effort: "low" },
+          // Esforço baixo quando o modelo aceita: é resposta curta e o cliente
+          // está esperando na tela. No Haiku 4.5 o campo é recusado.
+          ...(aceitaEsforco() ? { output_config: { effort: "low" as const } } : {}),
           system: SYSTEM_PROMPT,
           messages: [
             {

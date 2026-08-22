@@ -7,13 +7,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import { montarResumo, type DadosGerenciais } from "@/lib/api/resumo-gerencial";
 
-/**
- * O modelo do briefing.
- *
- * Uma chamada por dia: o custo é irrelevante e a qualidade do texto é o que o
- * admin lê. Configurável por ambiente para trocar sem mexer em código.
- */
-const MODELO = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+import { MODELO_IA, aceitaEsforco } from "@/lib/api/modelo-ia";
 
 /**
  * Formato exigido da resposta.
@@ -314,11 +308,16 @@ export const gerarBriefing = createServerFn({ method: "POST" })
       const cliente = new Anthropic({ apiKey });
       const resposta = await cliente.messages.parse(
         {
-          model: MODELO,
+          model: MODELO_IA,
           max_tokens: 4000,
           // O briefing é curto e a entrada é um resumo pequeno. Esforço baixo
           // entrega o mesmo texto por uma fração do tempo e do custo.
-          output_config: { effort: "low", format: jsonSchemaOutputFormat(FORMATO_BRIEFING) },
+          output_config: {
+            // `effort` só vai quando o modelo aceita: no Haiku 4.5 ele é
+            // recusado e a chamada inteira falha.
+            ...(aceitaEsforco() ? { effort: "low" as const } : {}),
+            format: jsonSchemaOutputFormat(FORMATO_BRIEFING),
+          },
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: resumo }],
         },
