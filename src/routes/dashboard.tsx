@@ -115,6 +115,8 @@ function DashboardContent() {
   const [erroAssistente, setErroAssistente] = useState<string | null>(null);
   const [healError, setHealError] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  /** Espera antes de a IA responder — reiniciada a cada mensagem enviada. */
+  const timerIaRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Busca imóvel do cliente logado ── */
   useEffect(() => {
@@ -399,17 +401,20 @@ function DashboardContent() {
     //
     // A cota de 10 por hora continua valendo: se estourar, o erro aparece no
     // chat e a pessoa segue conversando com a equipe normalmente.
-    // Uma resposta por minuto, no máximo.
+    // Espera a pessoa terminar de escrever antes de responder.
     //
-    // Sem isto, três mensagens seguidas viram três chamadas — e "oi", "oi",
-    // "cadê o responsável?" gastavam a cota inteira sem entregar nada de útil.
-    const UM_MINUTO = 60 * 1000;
-    const iaRespondeuAgora = msgs.some(
-      (m) =>
-        m.sender_name === "Assistente IA" &&
-        Date.now() - new Date(m.created_at).getTime() < UM_MINUTO,
-    );
-    if (!equipeRespondeuAgora && !iaRespondeuAgora) void askAI(true);
+    // O primeiro freio que tentei bloqueava a IA por um minuto após cada
+    // resposta — e aí uma pergunta nova, feita logo depois, ficava sem
+    // resposta. Errado: o problema nunca foi a frequência, era responder
+    // "oi", "oi", "cadê o responsável?" separadamente.
+    //
+    // Agora cada mensagem reinicia a contagem. Rajada de três vira UMA
+    // resposta, quatro segundos depois da última — e ela chega com as três já
+    // no histórico, então cobre todas.
+    if (timerIaRef.current) clearTimeout(timerIaRef.current);
+    if (!equipeRespondeuAgora) {
+      timerIaRef.current = setTimeout(() => void askAI(true), 4000);
+    }
   };
 
   /**
