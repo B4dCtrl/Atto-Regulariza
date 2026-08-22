@@ -178,9 +178,10 @@ function CadastroClientePage() {
     });
   };
 
-  const validate = (): boolean => {
+  /** Erros de um passo específico, sem mexer no estado. */
+  const errosDoPasso = (n: number): Record<string, string> => {
     const e: Record<string, string> = {};
-    if (step === 1) {
+    if (n === 1) {
       if (!form.nome.trim()) e.nome = "Nome obrigatório";
       if (!form.email.trim()) e.email = "Email obrigatório";
       else if (!validarEmail(form.email)) e.email = "E-mail inválido";
@@ -189,13 +190,43 @@ function CadastroClientePage() {
       if (form.telefone.trim() && !validarTelefone(form.telefone))
         e.telefone = "Telefone inválido";
     }
-    if (step === 2) {
+    if (n === 2) {
       if (!form.tipo_imovel) e.tipo_imovel = "Selecione o tipo do imóvel";
       if (!form.situacao) e.situacao = "Selecione a situação";
       if (!form.objetivo) e.objetivo = "Selecione o objetivo";
     }
+    return e;
+  };
+
+  const validate = (): boolean => {
+    const e = errosDoPasso(step);
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  /**
+   * Revalida TUDO antes de gravar, e leva ao passo com problema.
+   *
+   * O `submit` não chamava validação nenhuma: bastava chegar ao último passo
+   * para gravar CPF e e-mail inválidos direto no banco.
+   */
+  const validarTudo = (): boolean => {
+    for (const n of [1, 2]) {
+      const e = errosDoPasso(n);
+      if (Object.keys(e).length > 0) {
+        setErrors(e);
+        setStep(n);
+        return false;
+      }
+    }
+    setErrors({});
+    return true;
+  };
+
+  /** Confere um campo ao sair dele, para o aviso não esperar o "Próximo". */
+  const conferirCampo = (campo: "cpf" | "email" | "telefone") => {
+    const e = errosDoPasso(1);
+    setErrors((atuais) => ({ ...atuais, [campo]: e[campo] ?? "" }));
   };
 
   const next = () => {
@@ -204,6 +235,7 @@ function CadastroClientePage() {
   const back = () => setStep((s) => Math.max(s - 1, 1));
 
   const submit = async () => {
+    if (!validarTudo()) return;
     setSaving(true);
     setSaveError(null);
 
@@ -449,6 +481,7 @@ function CadastroClientePage() {
                   <input
                     value={form.cpf}
                     onChange={(e) => set("cpf", formatarCPF(e.target.value))}
+                    onBlur={() => conferirCampo("cpf")}
                     inputMode="numeric"
                     placeholder="000.000.000-00"
                     className={inp(errors.cpf)}
@@ -459,6 +492,7 @@ function CadastroClientePage() {
                     type="email"
                     value={form.email}
                     onChange={(e) => set("email", e.target.value)}
+                    onBlur={() => conferirCampo("email")}
                     placeholder="maria@email.com"
                     className={inp(errors.email)}
                   />
@@ -467,6 +501,7 @@ function CadastroClientePage() {
                   <input
                     value={form.telefone}
                     onChange={(e) => set("telefone", formatarTelefone(e.target.value))}
+                    onBlur={() => conferirCampo("telefone")}
                     inputMode="tel"
                     placeholder="(11) 99999-9999"
                     className={inp(errors.telefone)}

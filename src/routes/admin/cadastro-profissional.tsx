@@ -198,9 +198,10 @@ function CadastroProfissionalPage() {
       form.formacoes.filter((_, i) => i !== idx),
     );
 
-  const validate = (): boolean => {
+  /** Erros de um passo específico, sem mexer no estado. */
+  const errosDoPasso = (n: number): Record<string, string> => {
     const e: Record<string, string> = {};
-    if (step === 1) {
+    if (n === 1) {
       if (!form.nome.trim()) e.nome = "Nome obrigatório";
       if (!form.email.trim()) e.email = "Email obrigatório";
       else if (!validarEmail(form.email)) e.email = "E-mail inválido";
@@ -209,12 +210,43 @@ function CadastroProfissionalPage() {
       // Telefone é opcional, mas se vier tem que estar certo.
       if (form.telefone.trim() && !validarTelefone(form.telefone)) e.telefone = "Telefone inválido";
     }
-    if (step === 2) {
+    if (n === 2) {
       if (!form.categoria) e.categoria = "Selecione uma categoria";
       if (form.areas.length === 0) e.areas = "Selecione ao menos uma área";
     }
+    return e;
+  };
+
+  const validate = (): boolean => {
+    const e = errosDoPasso(step);
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  /**
+   * Revalida TUDO antes de gravar, e leva o usuário ao passo com problema.
+   *
+   * O botão de cadastrar vive no passo 4, onde `validate()` não tinha nenhuma
+   * regra para aplicar — devolvia `true` sempre. Quem voltasse para editar e
+   * avançasse por outro caminho gravava dado inválido sem ver aviso nenhum.
+   */
+  const validarTudo = (): boolean => {
+    for (const n of [1, 2]) {
+      const e = errosDoPasso(n);
+      if (Object.keys(e).length > 0) {
+        setErrors(e);
+        setStep(n);
+        return false;
+      }
+    }
+    setErrors({});
+    return true;
+  };
+
+  /** Confere um campo ao sair dele, para o aviso não esperar o "Próximo". */
+  const conferirCampo = (campo: "cpf" | "email" | "telefone") => {
+    const e = errosDoPasso(1);
+    setErrors((atuais) => ({ ...atuais, [campo]: e[campo] ?? "" }));
   };
 
   const next = () => {
@@ -613,6 +645,7 @@ function CadastroProfissionalPage() {
                   <input
                     value={form.cpf}
                     onChange={(e) => set("cpf", formatarCPF(e.target.value))}
+                    onBlur={() => conferirCampo("cpf")}
                     inputMode="numeric"
                     placeholder="000.000.000-00"
                     className={input(errors.cpf)}
@@ -623,6 +656,7 @@ function CadastroProfissionalPage() {
                     type="email"
                     value={form.email}
                     onChange={(e) => set("email", e.target.value)}
+                    onBlur={() => conferirCampo("email")}
                     placeholder="ana@email.com"
                     className={input(errors.email)}
                   />
@@ -631,6 +665,7 @@ function CadastroProfissionalPage() {
                   <input
                     value={form.telefone}
                     onChange={(e) => set("telefone", formatarTelefone(e.target.value))}
+                    onBlur={() => conferirCampo("telefone")}
                     inputMode="tel"
                     placeholder="(11) 99999-9999"
                     className={input(errors.telefone)}
