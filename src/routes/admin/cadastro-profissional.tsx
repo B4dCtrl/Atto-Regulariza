@@ -2,13 +2,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   UserPlus, ChevronRight, ChevronLeft, Check,
-  Trash2, Plus, Briefcase, GraduationCap,
+  Trash2, Power, Plus, Briefcase, GraduationCap,
   MapPin, ClipboardList, User, Star, X, Mail, FolderOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { validarCPF, formatarCPF, validarEmail, validarTelefone, formatarTelefone } from "@/lib/validacao-br";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { supabase } from "@/integrations/supabase/client";
-import { createProfessional } from "@/lib/api/professionals.functions";
+import { createProfessional, deleteProfessional } from "@/lib/api/professionals.functions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/admin/cadastro-profissional")({
   head: () => ({ meta: [{ title: "Cadastro de Profissional — Gestão Regulariza" }] }),
@@ -71,6 +82,9 @@ function CadastroProfissionalPage() {
   const [view,   setView]   = useState<"list" | "new">("list");
   const [detail,      setDetail]      = useState<Pro | null>(null);
   const [detailCases, setDetailCases] = useState<number | null>(null);
+  /** Profissional aguardando confirmação de exclusão. */
+  const [paraExcluir,  setParaExcluir]  = useState<Pro | null>(null);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
 
   async function openDetail(p: Pro) {
     setDetail(p);
@@ -113,7 +127,12 @@ function CadastroProfissionalPage() {
     if (step === 1) {
       if (!form.nome.trim())  e.nome  = "Nome obrigatório";
       if (!form.email.trim()) e.email = "Email obrigatório";
+      else if (!validarEmail(form.email)) e.email = "E-mail inválido";
       if (!form.cpf.trim())   e.cpf   = "CPF obrigatório";
+      else if (!validarCPF(form.cpf))     e.cpf   = "CPF inválido — confira os números";
+      // Telefone é opcional, mas se vier tem que estar certo.
+      if (form.telefone.trim() && !validarTelefone(form.telefone))
+        e.telefone = "Telefone inválido";
     }
     if (step === 2) {
       if (!form.categoria)         e.categoria    = "Selecione uma categoria";
@@ -156,6 +175,22 @@ function CadastroProfissionalPage() {
       }, 1800);
     } catch (e) {
       alert(`Erro ao criar profissional: ${(e as Error).message}`);
+    }
+  }
+
+  async function confirmarExclusao() {
+    const alvo = paraExcluir;
+    if (!alvo) return;
+    setParaExcluir(null);
+    setErroExclusao(null);
+    try {
+      await deleteProfessional({ data: { id: alvo.id }, headers: await cabecalhoAuth() });
+      setDetail(null);
+      await loadPros();
+    } catch (e) {
+      // A mensagem vem escrita para humano do servidor: ela explica, por
+      // exemplo, que a pessoa ainda tem processos e precisa de reatribuição.
+      setErroExclusao(e instanceof Error ? e.message : "Não foi possível excluir.");
     }
   }
 
@@ -225,13 +260,27 @@ function CadastroProfissionalPage() {
                       <div className="text-xs text-ink-soft">{p.specialization ?? ""}</div>
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleActive(p.id, p.active); }}
-                    className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors"
-                    title={p.active ? "Desativar" : "Ativar"}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    {/* A lixeira aqui SEMPRE foi o desativar disfarçado: ícone de
+                        apagar para uma ação reversível. Agora cada ação tem o
+                        seu ícone, e excluir é vermelho porque não volta. */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleActive(p.id, p.active); }}
+                      className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors"
+                      title={p.active ? "Desativar" : "Ativar"}
+                      aria-label={p.active ? "Desativar" : "Ativar"}
+                    >
+                      <Power className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setParaExcluir(p); }}
+                      className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition-colors hover:bg-red-50 hover:text-red-600"
+                      title="Excluir"
+                      aria-label="Excluir"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <dl className="space-y-1.5 text-sm text-ink-soft">
@@ -310,6 +359,12 @@ function CadastroProfissionalPage() {
                     {detail.active ? "Desativar" : "Ativar"}
                   </button>
                   <button
+                    onClick={() => setParaExcluir(detail)}
+                    className="flex-1 rounded-xl border border-red-200 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50"
+                  >
+                    Excluir
+                  </button>
+                  <button
                     onClick={() => setDetail(null)}
                     className="flex-1 rounded-xl bg-foreground py-2.5 text-sm text-background hover:bg-foreground/90 transition-colors"
                   >
@@ -320,6 +375,51 @@ function CadastroProfissionalPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Confirmação de exclusão.
+            AlertDialog em vez de window.confirm(): no Chrome o usuário pode
+            marcar "não exibir mais diálogos", e a partir daí confirm() devolve
+            false para sempre — o botão pararia de funcionar sem aviso. */}
+        <AlertDialog open={!!paraExcluir} onOpenChange={(o) => !o && setParaExcluir(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir {paraExcluir?.name ?? "profissional"}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                A conta é apagada e não há como desfazer. As anotações e pendências que essa
+                pessoa criou permanecem no histórico, sem o nome dela.
+                <br />
+                <br />
+                Para tirá-la de circulação sem perder o rastro, use <strong>Desativar</strong>.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmarExclusao}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Fica fora do diálogo: o motivo mais comum da recusa é "ainda tem
+            processos", e a pessoa precisa ler isso com o diálogo já fechado. */}
+        {erroExclusao && (
+          <div
+            role="alert"
+            className="fixed bottom-6 left-1/2 z-50 max-w-md -translate-x-1/2 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700 shadow-xl ring-1 ring-red-200"
+          >
+            {erroExclusao}
+            <button
+              onClick={() => setErroExclusao(null)}
+              className="ml-3 text-xs underline"
+            >
+              fechar
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -369,13 +469,13 @@ function CadastroProfissionalPage() {
                   <input value={form.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ana Lima" className={input(errors.nome)} />
                 </Field>
                 <Field label="CPF *" error={errors.cpf}>
-                  <input value={form.cpf} onChange={(e) => set("cpf", e.target.value)} placeholder="000.000.000-00" className={input(errors.cpf)} />
+                  <input value={form.cpf} onChange={(e) => set("cpf", formatarCPF(e.target.value))} inputMode="numeric" placeholder="000.000.000-00" className={input(errors.cpf)} />
                 </Field>
                 <Field label="Email *" error={errors.email}>
                   <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="ana@email.com" className={input(errors.email)} />
                 </Field>
-                <Field label="Telefone">
-                  <input value={form.telefone} onChange={(e) => set("telefone", e.target.value)} placeholder="(11) 99999-9999" className={input()} />
+                <Field label="Telefone" error={errors.telefone}>
+                  <input value={form.telefone} onChange={(e) => set("telefone", formatarTelefone(e.target.value))} inputMode="tel" placeholder="(11) 99999-9999" className={input(errors.telefone)} />
                 </Field>
               </div>
             </motion.div>

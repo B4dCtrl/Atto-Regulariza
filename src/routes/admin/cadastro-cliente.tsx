@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { validarCPF, formatarCPF, validarEmail, validarTelefone, formatarTelefone } from "@/lib/validacao-br";
 import { SeletorLocalidade } from "@/components/forms/SeletorLocalidade";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -182,7 +183,11 @@ function CadastroClientePage() {
     if (step === 1) {
       if (!form.nome.trim()) e.nome = "Nome obrigatório";
       if (!form.email.trim()) e.email = "Email obrigatório";
+      else if (!validarEmail(form.email)) e.email = "E-mail inválido";
       if (!form.cpf.trim()) e.cpf = "CPF obrigatório";
+      else if (!validarCPF(form.cpf)) e.cpf = "CPF inválido — confira os números";
+      if (form.telefone.trim() && !validarTelefone(form.telefone))
+        e.telefone = "Telefone inválido";
     }
     if (step === 2) {
       if (!form.tipo_imovel) e.tipo_imovel = "Selecione o tipo do imóvel";
@@ -443,7 +448,8 @@ function CadastroClientePage() {
                 <Field label="CPF *" error={errors.cpf}>
                   <input
                     value={form.cpf}
-                    onChange={(e) => set("cpf", e.target.value)}
+                    onChange={(e) => set("cpf", formatarCPF(e.target.value))}
+                    inputMode="numeric"
                     placeholder="000.000.000-00"
                     className={inp(errors.cpf)}
                   />
@@ -457,12 +463,13 @@ function CadastroClientePage() {
                     className={inp(errors.email)}
                   />
                 </Field>
-                <Field label="Telefone">
+                <Field label="Telefone" error={errors.telefone}>
                   <input
                     value={form.telefone}
-                    onChange={(e) => set("telefone", e.target.value)}
+                    onChange={(e) => set("telefone", formatarTelefone(e.target.value))}
+                    inputMode="tel"
                     placeholder="(11) 99999-9999"
-                    className={inp()}
+                    className={inp(errors.telefone)}
                   />
                 </Field>
               </div>

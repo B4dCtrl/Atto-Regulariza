@@ -83,3 +83,63 @@ export const createProfessional = createServerFn({ method: "POST" })
 
     return { id: uid };
   });
+
+
+/**
+ * Apaga a conta de um profissional.
+ *
+ * Recusa quem ainda tem processo atribuído, e não por precaução vaga:
+ * `properties.assigned_professional_id` referencia `auth.users(id)` SEM
+ * `ON DELETE`, então o banco recusaria a exclusão com um erro de chave
+ * estrangeira que não diz nada a quem clicou. Melhor explicar antes.
+ *
+ * O que fica: `pendencies.criada_por` e `process_notes.autor_id` são
+ * `ON DELETE SET NULL` — o histórico do trabalho permanece, só perde o nome do
+ * autor. `profiles` cai em cascata junto com o usuário.
+ *
+ * Para tirar alguém de circulação sem perder o rastro, o caminho é desativar,
+ * não excluir.
+ */
+export const deleteProfessional = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data, context }) => {
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (!roles?.some((r) => r.role === "admin")) {
+      throw new Error("Apenas administradores podem excluir profissionais.");
+    }
+
+    // Um admin apagando a própria conta se tranca para fora do back office.
+    if (data.id === context.userId) {
+      throw new Error("Você não pode excluir a própria conta.");
+    }
+
+    const { data: perfil } = await supabaseAdmin
+      .from("profiles")
+      .select("role")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!perfil) throw new Error("Profissional não encontrado.");
+    if (perfil.role !== "profissional") {
+      throw new Error("Esta conta não é de profissional.");
+    }
+
+    const { count } = await supabaseAdmin
+      .from("properties")
+      .select("id", { count: "exact", head: true })
+      .eq("assigned_professional_id", data.id);
+
+    if ((count ?? 0) > 0) {
+      throw new Error(
+        `Este profissional está em ${count} processo(s). Reatribua os processos antes de excluir, ou apenas desative a conta.`,
+      );
+    }
+
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.id);
+    if (error) throw new Error("Não foi possível excluir a conta.");
+
+    return { ok: true };
+  });
