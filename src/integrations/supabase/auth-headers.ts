@@ -18,9 +18,16 @@ export async function cabecalhoAuth(): Promise<Record<string, string>> {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // Sem sessão, devolvemos o objeto vazio em vez de lançar: quem decide o que
-  // dizer ao usuário é a tela, e o servidor recusa de qualquer forma.
-  if (!session?.access_token) return {};
+  // Sem sessão, lançamos aqui em vez de mandar a chamada sem cabeçalho.
+  //
+  // Devolver `{}` fazia o servidor responder "No authorization header
+  // provided" — texto que não diz nada a quem está na tela e manda procurar o
+  // problema no lugar errado. A causa real costuma ser mundana: o projeto
+  // desloga por inatividade após 10 minutos, e um formulário longo preenchido
+  // devagar cabe nesse tempo.
+  if (!session?.access_token) {
+    throw new Error("Sua sessão expirou. Entre novamente para continuar.");
+  }
 
   return { Authorization: `Bearer ${session.access_token}` };
 }
