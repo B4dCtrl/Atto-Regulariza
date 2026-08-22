@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
+import { TrocarSenhaObrigatoria } from "@/components/conta/TrocarSenhaObrigatoria";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,7 +65,7 @@ export const Route = createFileRoute("/painel-profissional")({
 
     return { userId: session.user.id };
   },
-  component: ProfissionalPage,
+  component: PaginaProfissional,
 });
 
 /* ─────────────────────────────────────────────── Types */
@@ -194,6 +195,20 @@ function propToProc(p: PropertyRow): MockProcess {
     area: 0,
     situation: p.situacao ?? p.notes ?? "—",
   };
+}
+
+/**
+ * Trava a senha provisória antes de montar o painel.
+ *
+ * Envolver por fora (e não checar dentro) é de propósito: assim nenhuma
+ * consulta do painel chega a ser disparada por quem ainda não trocou a senha.
+ */
+function PaginaProfissional() {
+  return (
+    <TrocarSenhaObrigatoria>
+      <ProfissionalPage />
+    </TrocarSenhaObrigatoria>
+  );
 }
 
 function ProfissionalPage() {

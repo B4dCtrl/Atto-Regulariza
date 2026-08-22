@@ -60,6 +60,10 @@ export const createProfessional = createServerFn({ method: "POST" })
       initials,
       role: "profissional",
       approval_status: "aprovado",
+      // A senha foi gerada aqui e repassada por fora do sistema. Até ser
+      // trocada, ela é conhecida por mais de uma pessoa — o painel exige a
+      // troca antes de qualquer outra coisa.
+      senha_provisoria: true,
       council: data.council,
       registro: data.registro,
       specialties: data.specialties,

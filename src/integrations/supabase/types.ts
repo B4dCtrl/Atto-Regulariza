@@ -725,6 +725,7 @@ export type Database = {
           initials: string | null;
           role: string;
           ultimo_acesso_em: string | null;
+          senha_provisoria: boolean;
           specialization: string | null;
           email: string | null;
           phone: string | null;
@@ -753,6 +754,7 @@ export type Database = {
           initials?: string | null;
           role?: string;
           ultimo_acesso_em?: string | null;
+          senha_provisoria?: boolean;
           approval_status?: "pendente" | "aprovado" | "recusado";
           approval_note?: string | null;
           specialization?: string | null;
@@ -779,6 +781,7 @@ export type Database = {
           initials?: string | null;
           role?: string;
           ultimo_acesso_em?: string | null;
+          senha_provisoria?: boolean;
           specialization?: string | null;
           email?: string | null;
           phone?: string | null;
