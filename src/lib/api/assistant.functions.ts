@@ -1,11 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import process from "node:process";
+import Anthropic from "@anthropic-ai/sdk";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-const NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
 
 const SYSTEM_PROMPT = `Você é a assistente virtual da Ato Regulariza, plataforma brasileira de regularização imobiliária.
 Ajude de forma clara, objetiva e acolhedora, sempre em português do Brasil.
@@ -15,8 +13,8 @@ Se não souber algo específico do caso, diga que vai encaminhar ao especialista
 Responda em no máximo 2 parágrafos curtos.`;
 
 /**
- * Assistente de IA do chat (NVIDIA NIM, API compatível com OpenAI).
- * Roda só no servidor: a chave (NVIDIA_API_KEY) nunca chega ao navegador.
+ * Assistente de IA do chat (Claude, pela API da Anthropic).
+ * Roda só no servidor: a chave (ANTHROPIC_API_KEY) nunca chega ao navegador.
  * Sob demanda — gera UMA resposta para a conversa do processo e a grava em
  * `messages` (sender "Assistente IA"), aparecendo para cliente e profissional.
  */
@@ -24,22 +22,30 @@ export const chatAssistant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ propertyId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
-    const apiKey = process.env.NVIDIA_API_KEY;
-    if (!apiKey) throw new Error("IA não configurada (NVIDIA_API_KEY ausente no servidor).");
-    const model = process.env.NVIDIA_MODEL || DEFAULT_MODEL;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("IA não configurada no servidor.");
+    const modelo = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 
     // 1) Carrega o processo e valida acesso do solicitante
     const { data: prop } = await supabaseAdmin
       .from("properties")
-      .select("client_id, assigned_professional_id, name, tipo_imovel, situacao, status, progress, objetivo")
+      .select(
+        "client_id, assigned_professional_id, name, tipo_imovel, situacao, status, progress, objetivo",
+      )
       .eq("id", data.propertyId)
       .single();
     if (!prop) throw new Error("Processo não encontrado.");
 
     const { data: roles } = await supabaseAdmin
-      .from("user_roles").select("role").eq("user_id", context.userId);
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
     const isAdmin = roles?.some((r) => r.role === "admin");
-    if (prop.client_id !== context.userId && prop.assigned_professional_id !== context.userId && !isAdmin) {
+    if (
+      prop.client_id !== context.userId &&
+      prop.assigned_professional_id !== context.userId &&
+      !isAdmin
+    ) {
       throw new Error("Sem acesso a este processo.");
     }
 
@@ -62,30 +68,37 @@ export const chatAssistant = createServerFn({ method: "POST" })
       ` · etapa: ${prop.status} (${prop.progress}%)` +
       (prop.objetivo ? ` · objetivo do cliente: ${prop.objetivo}` : "");
 
-    // 3) Chamada ao NVIDIA NIM (OpenAI-compatible)
+    // 3) Chamada ao Claude
     let reply = "";
     try {
-      const res = await fetch(NIM_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model,
-          temperature: 0.5,
-          max_tokens: 600,
+      const cliente = new Anthropic({ apiKey });
+      const resposta = await cliente.messages.create(
+        {
+          model: modelo,
+          max_tokens: 1000,
+          // Resposta curta de atendimento: esforço baixo entrega o mesmo texto
+          // por uma fração do tempo, e o cliente está esperando na tela.
+          output_config: { effort: "low" },
+          system: SYSTEM_PROMPT,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: `${contexto}\n\nConversa recente:\n${transcript || "(sem mensagens ainda)"}\n\nResponda de forma útil como Assistente da Ato Regulariza.` },
+            {
+              role: "user",
+              content: `${contexto}\n\nConversa recente:\n${transcript || "(sem mensagens ainda)"}\n\nResponda de forma útil como Assistente da Ato Regulariza.`,
+            },
           ],
-        }),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`NIM ${res.status}: ${errText.slice(0, 300)}`);
-      }
-      const json = await res.json();
-      reply = (json?.choices?.[0]?.message?.content ?? "").trim();
+        },
+        { timeout: 45_000 },
+      );
+
+      // `content` é uma união discriminada: só o bloco de texto interessa.
+      reply = resposta.content
+        .filter((b) => b.type === "text")
+        .map((b) => b.text)
+        .join("")
+        .trim();
     } catch (e) {
-      throw new Error(`Falha ao consultar a IA: ${(e as Error).message}`);
+      console.error("[assistente] falha ao consultar a IA:", e);
+      throw new Error("Não foi possível consultar a IA agora.");
     }
     if (!reply) reply = "Não consegui gerar uma resposta agora. Tente novamente em instantes.";
 

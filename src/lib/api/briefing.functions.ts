@@ -3,10 +3,57 @@ import { z } from "zod";
 import process from "node:process";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import Anthropic from "@anthropic-ai/sdk";
+import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import { montarResumo, type DadosGerenciais } from "@/lib/api/resumo-gerencial";
 
-const NIM_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const DEFAULT_MODEL = "openai/gpt-oss-120b";
+/**
+ * O modelo do briefing.
+ *
+ * Uma chamada por dia: o custo é irrelevante e a qualidade do texto é o que o
+ * admin lê. Configurável por ambiente para trocar sem mexer em código.
+ */
+const MODELO = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+
+/**
+ * Formato exigido da resposta.
+ *
+ * Antes o modelo era instruído a devolver JSON e a gente recortava do primeiro
+ * `{` ao último `}`, porque ele às vezes embrulhava em cercas de código. Com
+ * `messages.parse` o formato é imposto pela API e validado pelo schema — a
+ * gambiarra deixa de existir.
+ */
+/*
+ * Em JSON Schema, e não em Zod, de propósito: o helper de Zod do SDK espera a
+ * API do Zod 4, e o projeto está no 3.25 (que funciona em execução, mas não nos
+ * tipos). Este caminho não depende da versão.
+ */
+const FORMATO_BRIEFING = {
+  type: "object",
+  properties: {
+    texto: { type: "string", description: "O briefing, no máximo 4 frases." },
+    fila: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          titulo: { type: "string", description: "O que fazer." },
+          motivo: { type: "string", description: "Por que é urgente." },
+          destino: { type: "string", enum: ["aprovacoes", "processos", "leads"] },
+        },
+        required: ["titulo", "motivo", "destino"],
+        additionalProperties: false,
+      },
+    },
+    alertas: {
+      type: "array",
+      items: { type: "string" },
+      description: "O que está saindo do radar.",
+    },
+  },
+  required: ["texto", "fila", "alertas"],
+  additionalProperties: false,
+} as const;
 
 /** Um processo sem movimento por mais dias que isto entra no resumo. */
 const DIAS_PARADO = 7;
@@ -43,8 +90,6 @@ REGRAS:
 - Escreva em português do Brasil, direto, sem saudação e sem despedida.
 - O briefing tem no máximo 4 frases.
 
-Responda SOMENTE com JSON válido, sem cercas de código, neste formato:
-{"texto":"<o briefing>","fila":[{"titulo":"<a fazer>","motivo":"<por que é urgente>","destino":"<uma de: aprovacoes|processos|leads>"}],"alertas":["<o que está saindo do radar>"]}
 A fila vem ordenada da mais urgente para a menos urgente, com no máximo 6 itens.`;
 
 /** Fuso de São Paulo, para o "dia" bater com o dia do usuário. */
@@ -248,103 +293,66 @@ export const gerarBriefing = createServerFn({ method: "POST" })
 
     const vazio = { texto: "", fila: [] as ItemFila[], alertas: [] as string[] };
 
-    const apiKey = process.env.NVIDIA_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return {
         ...vazio,
         gerado_em: new Date().toISOString(),
         dados,
-        erroIA: "IA não configurada no servidor (NVIDIA_API_KEY ausente).",
+        erroIA: "IA não configurada no servidor (ANTHROPIC_API_KEY ausente).",
       };
     }
 
     const resumo = montarResumo(dados, new Date());
 
-    let bruto = "";
+    let texto = "";
+    let fila: ItemFila[] = [];
+    let alertas: string[] = [];
     const inicio = Date.now();
+
     try {
-      const res = await fetch(NIM_URL, {
-        method: "POST",
-        // Prazo obrigatório: sem ele, uma chamada que não volta deixa a tela
-        // girando para sempre. 25s não bastou na prática — o modelo respondeu
-        // mais devagar que o esperado —, então subimos para 50s e encolhemos o
-        // pedido. O limite da Vercel é 60s, e o painel já mostra os números
-        // mesmo quando a análise falha.
-        signal: AbortSignal.timeout(50_000),
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: process.env.NVIDIA_MODEL || DEFAULT_MODEL,
-          temperature: 0.3,
-          max_tokens: 700,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: resumo },
-          ],
-        }),
-      });
-      if (!res.ok) {
-        const corpo = await res.text().catch(() => "");
-        console.error("[briefing] NVIDIA respondeu", res.status, corpo.slice(0, 300));
-        throw new Error(String(res.status));
-      }
-      const json = await res.json();
-      bruto = json?.choices?.[0]?.message?.content ?? "";
-      // Registrado para saber se o prazo está bem calibrado sem ter de adivinhar.
+      const cliente = new Anthropic({ apiKey });
+      const resposta = await cliente.messages.parse(
+        {
+          model: MODELO,
+          max_tokens: 4000,
+          // O briefing é curto e a entrada é um resumo pequeno. Esforço baixo
+          // entrega o mesmo texto por uma fração do tempo e do custo.
+          output_config: { effort: "low", format: jsonSchemaOutputFormat(FORMATO_BRIEFING) },
+          system: SYSTEM_PROMPT,
+          messages: [{ role: "user", content: resumo }],
+        },
+        {
+          // Prazo do lado do cliente. O limite da Vercel é 60s, e o painel já
+          // mostra os números do banco mesmo quando a análise não vem.
+          timeout: 45_000,
+        },
+      );
+
       console.log(`[briefing] IA respondeu em ${Date.now() - inicio}ms`);
+
+      // `parsed_output` vem nulo se a validação falhar — o schema garante o
+      // formato, mas não que a resposta exista.
+      const saida = resposta.parsed_output;
+      if (!saida) throw new Error("resposta fora do formato esperado");
+
+      texto = saida.texto;
+      fila = saida.fila.slice(0, 6);
+      alertas = saida.alertas;
     } catch (e) {
-      // O motivo vai para o log da Vercel; ao usuário chega uma frase que
-      // distingue os dois casos que ele pode agir sobre.
-      const nome = e instanceof Error ? e.name : "";
+      // Devolvemos os dados mesmo assim: a lista de pendências não depende da
+      // IA, e é justamente quando a análise falha que ela mais importa.
       console.error(`[briefing] falha ao chamar a IA após ${Date.now() - inicio}ms:`, e);
 
-      // Diagnóstico: o mesmo host, num pedido trivial, com prazo curto.
-      //
-      // Separa duas causas que se parecem no log mas pedem consertos opostos:
-      // se ISTO responde, a rota até a NVIDIA está de pé e quem trava é o
-      // endpoint de completions; se ISTO também pendura, a saída de rede da
-      // região da função não alcança o host, e a correção é mudar a região.
-      const t0 = Date.now();
-      try {
-        const teste = await fetch("https://integrate.api.nvidia.com/v1/models", {
-          signal: AbortSignal.timeout(6_000),
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
-        console.error(
-          `[briefing] diagnostico: /v1/models respondeu ${teste.status} em ${Date.now() - t0}ms`,
-        );
-      } catch (e2) {
-        console.error(
-          `[briefing] diagnostico: /v1/models tambem falhou em ${Date.now() - t0}ms:`,
-          e2,
-        );
-      }
+      const ehPrazo = e instanceof Anthropic.APIConnectionTimeoutError;
       return {
         ...vazio,
         gerado_em: new Date().toISOString(),
         dados,
-        erroIA:
-          nome === "TimeoutError"
-            ? "A análise demorou demais e foi interrompida. Tente de novo."
-            : "Não foi possível gerar a análise agora.",
+        erroIA: ehPrazo
+          ? "A análise demorou demais e foi interrompida. Tente de novo."
+          : "Não foi possível gerar a análise agora.",
       };
-    }
-
-    // O modelo às vezes embrulha o JSON em cercas de código, mesmo instruído a
-    // não fazê-lo. Recortamos do primeiro { ao último } antes de interpretar.
-    let texto = "";
-    let fila: ItemFila[] = [];
-    let alertas: string[] = [];
-    try {
-      const ini = bruto.indexOf("{");
-      const fim = bruto.lastIndexOf("}");
-      const parsed = JSON.parse(bruto.slice(ini, fim + 1));
-      texto = String(parsed.texto ?? "");
-      fila = Array.isArray(parsed.fila) ? parsed.fila.slice(0, 6) : [];
-      alertas = Array.isArray(parsed.alertas) ? parsed.alertas.map(String) : [];
-    } catch {
-      // JSON quebrado não é motivo para deixar o admin sem nada: o texto cru
-      // ainda diz algo, e as listas de dados na tela seguem corretas.
-      texto = bruto.slice(0, 600);
     }
 
     const gerado_em = new Date().toISOString();
