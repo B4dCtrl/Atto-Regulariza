@@ -80,10 +80,24 @@ export const createProfessional = createServerFn({ method: "POST" })
       // que ninguém entenda o motivo. Preferimos voltar ao estado anterior e
       // deixar o admin repetir a operação.
       await supabaseAdmin.auth.admin.deleteUser(uid).catch(() => {
-        // Se nem desfazer deu certo, não há o que fazer aqui — a mensagem
-        // abaixo já manda procurar suporte, e o log da Vercel guarda o resto.
+        // Se nem desfazer deu certo, não há o que fazer aqui — o log da Vercel
+        // guarda o motivo.
       });
-      throw new Error("Não foi possível salvar o perfil. Nenhuma conta foi criada; tente de novo.");
+
+      console.error("[createProfessional] upsert do perfil falhou:", pErr);
+
+      // Coluna que não existe (42703) significa código novo contra banco
+      // velho: alguma migração não foi aplicada. Repetir a operação não
+      // resolve, e "tente de novo" mandaria procurar no lugar errado.
+      const faltaMigracao =
+        pErr.code === "42703" || /column .* does not exist/i.test(pErr.message ?? "");
+
+      throw new Error(
+        faltaMigracao
+          ? "O banco está desatualizado em relação ao site: falta aplicar uma migração. " +
+            `Nenhuma conta foi criada. (${pErr.message})`
+          : "Não foi possível salvar o perfil. Nenhuma conta foi criada; tente de novo.",
+      );
     }
 
     // Boas-vindas. Não leva a senha: e-mail e senha no mesmo canal significa que
