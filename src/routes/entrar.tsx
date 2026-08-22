@@ -12,6 +12,7 @@ import {
   X,
   Building2,
   Briefcase,
+  Loader2,
 } from "lucide-react";
 import { SessaoEmAberto } from "@/components/conta/SessaoEmAberto";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,16 +62,10 @@ export const Route = createFileRoute("/entrar")({
     const host = await getRequestHost();
     if (isCursoHost(host) && session) throw redirect({ to: "/cursos" });
 
-    // Desvio transitório: a rota protegida rodou a checagem antes de a sessão
-    // ser restaurada do localStorage e mandou para cá. Quem tem sessão válida
-    // volta na hora — sem isto, atualizar a página com F5 parecia deslogar.
-    //
-    // Só vale com a marca `?de=painel`. Quem digita /entrar direto continua
-    // vendo quem está conectado e escolhendo, que é a proteção de computador
-    // compartilhado.
-    if (search.de === "painel" && session) {
-      throw redirect({ to: await resolveLandingPath(session.user.id) });
-    }
+    // A volta do desvio transitório NÃO pode ficar aqui: `beforeLoad` roda no
+    // servidor durante o SSR, onde não existe localStorage e a sessão é sempre
+    // nula — e não roda de novo na hidratação. A checagem vive no componente,
+    // em `useEffect`, que é onde o navegador de fato executa.
   },
   component: EntrarPage,
 });
@@ -89,16 +84,32 @@ function EntrarPage() {
   const [showRoleModal, setShowRoleModal] = useState(false);
   /** Há sessão de outra visita neste navegador? */
   const [temSessao, setTemSessao] = useState(false);
+  /** Chegou aqui por desvio de rota protegida? Então pode ser sessão ainda não restaurada. */
+  const { de } = Route.useSearch();
+  const [restaurando, setRestaurando] = useState(de === "painel");
 
   useEffect(() => {
     let ativo = true;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (ativo) setTemSessao(!!session);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!ativo) return;
+      setTemSessao(!!session);
+
+      // Desvio transitório: a rota protegida checou a sessão durante o SSR,
+      // onde ela nunca existe, e mandou para cá. Quem tem sessão válida volta
+      // ao painel na hora — sem isto, atualizar com F5 parecia deslogar.
+      //
+      // Só com a marca `?de=painel`. Quem digita /entrar continua vendo quem
+      // está conectado e escolhendo: é a proteção de computador compartilhado.
+      if (de === "painel" && session) {
+        await navigate({ to: await resolveLandingPath(session.user.id), replace: true });
+        return;
+      }
+      setRestaurando(false);
     });
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [de, navigate]);
 
   // Carrossel do mini-status (mock ilustrativo) — troca sozinho a cada 2.6s
   const STATUS_STEPS = [
@@ -210,6 +221,16 @@ function EntrarPage() {
     login: "Acesse seu painel e veja onde está sua regularização.",
     forgot: "Enviaremos um link para redefinir sua senha.",
   };
+
+  // Enquanto decide se devolve ao painel, não mostra o formulário: piscar uma
+  // tela de login para quem está logado é o que fazia parecer que deslogou.
+  if (restaurando) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-5 w-5 animate-spin text-ink-soft" />
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen bg-background text-foreground md:grid-cols-2">
