@@ -23,6 +23,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { OfertaAssistente } from "@/components/cliente/OfertaAssistente";
 import { PERGUNTAS_FREQUENTES, type PerguntaFrequente } from "@/lib/perguntas-frequentes";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
@@ -398,15 +399,22 @@ function DashboardContent() {
     //
     // A cota de 10 por hora continua valendo: se estourar, o erro aparece no
     // chat e a pessoa segue conversando com a equipe normalmente.
-    const QUINZE_MIN = 15 * 60 * 1000;
-    const equipeAtiva = msgs.some(
-      (m) =>
-        !m.is_client &&
-        m.sender_name !== "Assistente IA" &&
-        Date.now() - new Date(m.created_at).getTime() < QUINZE_MIN,
-    );
-    if (!equipeAtiva) void askAI();
+    if (!equipeRespondeuAgora) void askAI();
   };
+
+  /**
+   * Alguém da equipe escreveu nos últimos 15 minutos?
+   *
+   * Decide duas coisas de uma vez: se a IA responde sozinha e se a oferta de
+   * ajuda aparece. As duas seguem a mesma regra de propósito — a assistente
+   * cobre o vazio e sai da frente quando há gente.
+   */
+  const equipeRespondeuAgora = msgs.some(
+    (m) =>
+      !m.is_client &&
+      m.sender_name !== "Assistente IA" &&
+      Date.now() - new Date(m.created_at).getTime() < 15 * 60 * 1000,
+  );
 
   /* ── Pergunta à IA (resposta entra no chat via realtime) ──
      Chamada pelo botão de estrela e, automaticamente, quando o cliente
@@ -996,7 +1004,24 @@ function DashboardContent() {
                       )}
                     </div>
 
-                    {/* Perguntas prontas: a primeira parada antes da IA. */}
+                    {/* Oferta de ajuda enquanto a equipe não responde.
+                      Some sozinha quando alguém da equipe entra na conversa —
+                      oferecer ajuda por cima de quem está respondendo é ruído. */}
+                  {!equipeRespondeuAgora && (
+                    <OfertaAssistente
+                      nomeProfissional={professional?.name ?? null}
+                      aoEscolher={(p) => {
+                        setFaqAberta(p);
+                        setErroAssistente(null);
+                        setTimeout(
+                          () => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }),
+                          50,
+                        );
+                      }}
+                    />
+                  )}
+
+                  {/* Perguntas prontas: a primeira parada antes da IA. */}
                     <div className="flex flex-wrap gap-1.5 border-t border-border px-4 pt-3">
                       {PERGUNTAS_FREQUENTES.map((p) => (
                         <button
