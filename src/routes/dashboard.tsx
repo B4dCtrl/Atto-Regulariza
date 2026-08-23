@@ -254,7 +254,7 @@ function DashboardContent() {
             // no envio, e o canal a entrega de novo.
             const msg = next as MessageRow;
             setMsgs((m) => (m.some((x) => x.id === msg.id) ? m : [...m, msg]));
-            setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
+            setTimeout(() => chatRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
           }
         },
       )
@@ -361,16 +361,16 @@ function DashboardContent() {
   }
 
   /* ── Mostra sempre a mensagem mais recente ──
-     Depende de `activeSection` além de `msgs`: ao abrir a aba Mensagens as
-     mensagens já estavam carregadas, então o efeito não disparava e a conversa
-     ficava no topo — era preciso arrastar até o fim para ler o que chegou.
+     Com a lista invertida, a mais nova é a PRIMEIRA — então "mostrar a mais
+     recente" é rolar para o topo, não para o fim.
 
-     O quadro de espera existe porque o container acabou de aparecer e ainda
-     não tem altura: rolar antes disso não move nada. */
+     Depende de `activeSection` além de `msgs`: ao abrir a aba Mensagens elas
+     já estavam carregadas e o efeito não disparava. O quadro de espera existe
+     porque o container acabou de aparecer e ainda não tem altura. */
   useEffect(() => {
     if (activeSection !== "messages") return;
     const id = requestAnimationFrame(() => {
-      chatRef.current?.scrollTo({ top: 9e9 });
+      chatRef.current?.scrollTo({ top: 0 });
     });
     return () => cancelAnimationFrame(id);
   }, [msgs, activeSection]);
@@ -398,7 +398,7 @@ function DashboardContent() {
     // mensagem, então filtramos por id para não duplicar na tela.
     if (enviada) {
       setMsgs((m) => (m.some((x) => x.id === enviada.id) ? m : [...m, enviada as MessageRow]));
-      setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
+      setTimeout(() => chatRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
     }
     setSendingMsg(false);
 
@@ -473,7 +473,7 @@ function DashboardContent() {
                 } as MessageRow,
               ],
         );
-        setTimeout(() => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 50);
+        setTimeout(() => chatRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
       }
     } catch (err) {
       const motivo = err instanceof Error ? err.message : "";
@@ -991,7 +991,13 @@ function DashboardContent() {
 
                     {/* Messages */}
                     <div ref={chatRef} className="flex-1 overflow-y-auto p-6 space-y-3">
-                      {msgs.map((m) => {
+                      {/* Mais recente no topo.
+                          O padrão de chat põe a nova embaixo, mas aqui a
+                          conversa é consultada, não acompanhada ao vivo: o
+                          cliente entra de vez em quando para ver o que
+                          responderam. Fazê-lo rolar até o fim toda vez para
+                          achar a novidade é trabalho sem motivo. */}
+                      {[...msgs].reverse().map((m) => {
                         const isAI = m.sender_name === "Assistente IA";
                         if (isAI) {
                           return (
@@ -1079,7 +1085,7 @@ function DashboardContent() {
                           setFaqAberta(p);
                           setErroAssistente(null);
                           setTimeout(
-                            () => chatRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }),
+                            () => chatRef.current?.scrollTo({ top: 0, behavior: "smooth" }),
                             50,
                           );
                         }}
