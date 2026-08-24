@@ -23,6 +23,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { ProtocoloInicial } from "@/components/cliente/ProtocoloInicial";
 import { OfertaAssistente } from "@/components/cliente/OfertaAssistente";
 import { type PerguntaFrequente } from "@/lib/perguntas-frequentes";
 import { registrarAcesso } from "@/lib/api/acessos";
@@ -94,6 +95,8 @@ function DashboardContent() {
   const { userId } = Route.useRouteContext();
   const [showTourDialog, setShowTourDialog] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
+  /** Protocolo inicial de documentos, logo depois do tutorial. */
+  const [showProtocolo, setShowProtocolo] = useState(false);
   const [showSearching, setShowSearching] = useState(false);
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
@@ -543,12 +546,18 @@ function DashboardContent() {
           <FirstTimeTutorial
             onDone={() => {
               setShowTutorial(false);
-              setShowSearching(true);
+              // O protocolo entra no lugar do modal de "procurando profissional":
+              // não há profissional a procurar antes de os documentos chegarem.
+              setShowProtocolo(true);
             }}
           />
         )}
         {showSearching && <SearchingProfessionalsModal onDone={() => setShowSearching(false)} />}
       </AnimatePresence>
+      {showProtocolo && propertyId && (
+        <ProtocoloInicial propertyId={propertyId} aoSair={() => setShowProtocolo(false)} />
+      )}
+
       <div className="flex h-screen overflow-hidden">
         {/* ═══ SIDEBAR ═══ */}
         <aside className="group sticky top-0 hidden h-screen w-16 shrink-0 md:block">

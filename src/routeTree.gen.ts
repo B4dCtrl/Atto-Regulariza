@@ -43,6 +43,7 @@ import { Route as AdminCadastroProfissionalRouteImport } from './routes/admin/ca
 import { Route as AdminCadastroClienteRouteImport } from './routes/admin/cadastro-cliente'
 import { Route as AdminAprovacoesProcessoRouteImport } from './routes/admin/aprovacoes-processo'
 import { Route as AdminAprovacoesRouteImport } from './routes/admin/aprovacoes'
+import { Route as AdminAnaliseRouteImport } from './routes/admin/analise'
 import { Route as AdminProjetoIdRouteImport } from './routes/admin/projeto.$id'
 
 const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
@@ -216,6 +217,11 @@ const AdminAprovacoesRoute = AdminAprovacoesRouteImport.update({
   path: '/aprovacoes',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAnaliseRoute = AdminAnaliseRouteImport.update({
+  id: '/analise',
+  path: '/analise',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProjetoIdRoute = AdminProjetoIdRouteImport.update({
   id: '/projeto/$id',
   path: '/projeto/$id',
@@ -242,6 +248,7 @@ export interface FileRoutesByFullPath {
   '/profissionais': typeof ProfissionaisRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/analise': typeof AdminAnaliseRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
   '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
@@ -278,6 +285,7 @@ export interface FileRoutesByTo {
   '/profissionais': typeof ProfissionaisRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/analise': typeof AdminAnaliseRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
   '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
@@ -316,6 +324,7 @@ export interface FileRoutesById {
   '/profissionais': typeof ProfissionaisRoute
   '/redefinir-senha': typeof RedefinirSenhaRoute
   '/termos-de-uso': typeof TermosDeUsoRoute
+  '/admin/analise': typeof AdminAnaliseRoute
   '/admin/aprovacoes': typeof AdminAprovacoesRoute
   '/admin/aprovacoes-processo': typeof AdminAprovacoesProcessoRoute
   '/admin/cadastro-cliente': typeof AdminCadastroClienteRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
     | '/profissionais'
     | '/redefinir-senha'
     | '/termos-de-uso'
+    | '/admin/analise'
     | '/admin/aprovacoes'
     | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/profissionais'
     | '/redefinir-senha'
     | '/termos-de-uso'
+    | '/admin/analise'
     | '/admin/aprovacoes'
     | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/profissionais'
     | '/redefinir-senha'
     | '/termos-de-uso'
+    | '/admin/analise'
     | '/admin/aprovacoes'
     | '/admin/aprovacoes-processo'
     | '/admin/cadastro-cliente'
@@ -710,6 +722,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAprovacoesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/analise': {
+      id: '/admin/analise'
+      path: '/analise'
+      fullPath: '/admin/analise'
+      preLoaderRoute: typeof AdminAnaliseRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/projeto/$id': {
       id: '/admin/projeto/$id'
       path: '/projeto/$id'
@@ -721,6 +740,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAnaliseRoute: typeof AdminAnaliseRoute
   AdminAprovacoesRoute: typeof AdminAprovacoesRoute
   AdminAprovacoesProcessoRoute: typeof AdminAprovacoesProcessoRoute
   AdminCadastroClienteRoute: typeof AdminCadastroClienteRoute
@@ -737,6 +757,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnaliseRoute: AdminAnaliseRoute,
   AdminAprovacoesRoute: AdminAprovacoesRoute,
   AdminAprovacoesProcessoRoute: AdminAprovacoesProcessoRoute,
   AdminCadastroClienteRoute: AdminCadastroClienteRoute,

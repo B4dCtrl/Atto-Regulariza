@@ -15,6 +15,7 @@ import {
   GraduationCap,
   ShieldCheck,
   Flag,
+  ClipboardCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -22,6 +23,7 @@ import { useEffect, useState } from "react";
 const mainItems = [
   { to: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true },
   { to: "/admin/leads", label: "Leads", icon: Inbox },
+  { to: "/admin/analise", label: "Em análise", icon: ClipboardCheck },
   { to: "/admin/processos", label: "Processos", icon: Briefcase },
   { to: "/admin/clientes", label: "Clientes", icon: Users },
   { to: "/admin/documentos", label: "Documentos", icon: FolderOpen },
