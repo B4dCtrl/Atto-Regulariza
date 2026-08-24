@@ -262,6 +262,7 @@ export type Database = {
           progress: number;
           current_stage: number;
           status: string;
+          coleta: string;
           next_action: string | null;
           next_action_deadline: string | null;
           assigned_professional_id: string | null;
@@ -287,6 +288,7 @@ export type Database = {
           progress?: number;
           current_stage?: number;
           status?: string;
+          coleta?: string;
           next_action?: string | null;
           next_action_deadline?: string | null;
           assigned_professional_id?: string | null;
@@ -312,6 +314,7 @@ export type Database = {
           progress?: number;
           current_stage?: number;
           status?: string;
+          coleta?: string;
           next_action?: string | null;
           next_action_deadline?: string | null;
           assigned_professional_id?: string | null;
@@ -821,6 +824,12 @@ export type Database = {
       consume_ai_quota: {
         Args: {
           _limit_per_hour?: number;
+        };
+        Returns: boolean;
+      };
+      essenciais_aprovados: {
+        Args: {
+          _property_id: string;
         };
         Returns: boolean;
       };

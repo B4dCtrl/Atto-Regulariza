@@ -24,11 +24,7 @@ describe("CHECKLIST_PADRAO", () => {
 
 describe("faltamDoChecklist", () => {
   it("lista os três quando nada foi enviado", () => {
-    expect(faltamDoChecklist([])).toEqual([
-      "identidade",
-      "comprovante_endereco",
-      "matricula",
-    ]);
+    expect(faltamDoChecklist([])).toEqual(["identidade", "comprovante_endereco", "matricula"]);
   });
 
   it("não conta documento excluído como entregue", () => {
