@@ -199,6 +199,12 @@ Fim do resquício do Lovable: sobra um único fornecedor de IA (NVIDIA NIM), em
 - ✅ "Nome do projeto" fora do cadastro do cliente
 - ✅ CTA da Hero (e dos outros três que compartilham o link) para (41) 98447-1404
 - ✅ Cartão da barra lateral do cliente conta pendências reais, não `next_action`
+
+## Concluído em 2026-08-24
+
+- ✅ Protocolo de coleta de documentos: checklist inicial pós-tutorial, análise com IA triando
+  e pessoa confirmando, e trava de delegação nos documentos essenciais
+  *(faltam as duas migrações e a verificação na tela)*
 - ✅ Item 11: restaurar documento excluído, e a política `documents_select` corrigida
 - ✅ Item 13: divergência de hidratação — era o `custom-cursor`
 - ✅ Botão "Entrar" na hero antes do scroll, viajando até o menu pelo mesmo `layoutId` do logo
