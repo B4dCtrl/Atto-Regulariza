@@ -991,6 +991,51 @@ function DashboardContent() {
 
                     {/* Messages */}
                     <div ref={chatRef} className="flex-1 overflow-y-auto p-6 space-y-3">
+                      {/* Digitando, resposta pronta e erro ficam ANTES da lista.
+                          Com a conversa invertida, o fim do rolo é o ponto mais
+                          distante — a resposta da pergunta pronta aparecia lá
+                          embaixo, longe de onde a pessoa está olhando. */}
+                      {askingAI && (
+                        <div className="flex justify-start">
+                          <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm text-accent ring-1 ring-accent/20">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Assistente IA está
+                            digitando…
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Resposta pronta. Não passa pela IA nem entra na conversa:
+                        é a mesma dúvida de sempre, com a resposta certa escrita
+                        à mão — instantânea, de graça e sem risco de invenção. */}
+                      {faqAberta && (
+                        <div className="flex justify-start">
+                          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-3 text-sm leading-relaxed ring-1 ring-border">
+                            <div className="mb-1.5 text-[11px] uppercase tracking-widest text-ink-soft">
+                              {faqAberta.pergunta}
+                            </div>
+                            {faqAberta.resposta}
+                            <button
+                              type="button"
+                              onClick={() => setFaqAberta(null)}
+                              className="mt-2 block text-[11px] text-ink-soft underline"
+                            >
+                              fechar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {erroAssistente && (
+                        <div className="flex justify-start">
+                          <div
+                            role="alert"
+                            className="max-w-[85%] rounded-2xl rounded-bl-md bg-red-50 px-4 py-2.5 text-xs text-red-700"
+                          >
+                            {erroAssistente}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Mais recente no topo.
                           O padrão de chat põe a nova embaixo, mas aqui a
                           conversa é consultada, não acompanhada ao vivo: o
@@ -1033,46 +1078,6 @@ function DashboardContent() {
                           </div>
                         );
                       })}
-                      {askingAI && (
-                        <div className="flex justify-start">
-                          <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm text-accent ring-1 ring-accent/20">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Assistente IA está
-                            digitando…
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Resposta pronta. Não passa pela IA nem entra na conversa:
-                        é a mesma dúvida de sempre, com a resposta certa escrita
-                        à mão — instantânea, de graça e sem risco de invenção. */}
-                      {faqAberta && (
-                        <div className="flex justify-start">
-                          <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-surface px-4 py-3 text-sm leading-relaxed ring-1 ring-border">
-                            <div className="mb-1.5 text-[11px] uppercase tracking-widest text-ink-soft">
-                              {faqAberta.pergunta}
-                            </div>
-                            {faqAberta.resposta}
-                            <button
-                              type="button"
-                              onClick={() => setFaqAberta(null)}
-                              className="mt-2 block text-[11px] text-ink-soft underline"
-                            >
-                              fechar
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {erroAssistente && (
-                        <div className="flex justify-start">
-                          <div
-                            role="alert"
-                            className="max-w-[85%] rounded-2xl rounded-bl-md bg-red-50 px-4 py-2.5 text-xs text-red-700"
-                          >
-                            {erroAssistente}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Oferta de ajuda enquanto a equipe não responde.
