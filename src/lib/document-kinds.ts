@@ -12,6 +12,7 @@ export type DocumentKind =
   | "matricula"
   | "iptu"
   | "identidade"
+  | "comprovante_endereco"
   | "planta"
   | "habite_se"
   | "ccir_car"
@@ -25,6 +26,7 @@ export const DOCUMENT_KINDS = [
   { kind: "matricula", label: "Matrícula / escritura", origem: "cliente" },
   { kind: "iptu", label: "IPTU atualizado", origem: "cliente" },
   { kind: "identidade", label: "RG e CPF do proprietário", origem: "cliente" },
+  { kind: "comprovante_endereco", label: "Comprovante de endereço", origem: "cliente" },
   { kind: "planta", label: "Planta do imóvel", origem: "cliente" },
   { kind: "habite_se", label: "Habite-se", origem: "cliente" },
   { kind: "ccir_car", label: "CCIR / CAR (rural)", origem: "cliente" },
