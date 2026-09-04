@@ -827,6 +827,13 @@ export type Database = {
         };
         Returns: boolean;
       };
+      avisar_erro: {
+        Args: {
+          _origem: string;
+          _detalhe: string;
+        };
+        Returns: undefined;
+      };
       consume_ai_quota: {
         Args: {
           _limit_per_hour?: number;

@@ -8,6 +8,7 @@ import {
   Loader2,
   MessageSquare,
   ShieldCheck,
+  TriangleAlert,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -23,6 +24,7 @@ const ICONE: Record<string, ElementType> = {
   documento: FileText,
   pendencia: AlertCircle,
   aprovacao: ShieldCheck,
+  erro: TriangleAlert,
 };
 
 function quandoFoi(iso: string): string {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import process from "node:process";
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
+import { avisarErro } from "@/lib/api/avisar-erro.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { MODELO_IA, aceitaEsforco } from "@/lib/api/modelo-ia";
@@ -204,6 +205,7 @@ export const sugerirAnalise = createServerFn({ method: "POST" })
       return { processo, documentos, pendencias: saida.pendencias, parecer: saida.parecer };
     } catch (e) {
       console.error("[analise] falha ao chamar a IA:", e);
+      avisarErro("sugestão da análise", e);
       return {
         processo,
         documentos: documentosBase,

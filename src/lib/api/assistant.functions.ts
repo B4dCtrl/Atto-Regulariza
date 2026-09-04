@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import process from "node:process";
 import Anthropic from "@anthropic-ai/sdk";
+import { avisarErro } from "@/lib/api/avisar-erro.server";
 import { MODELO_IA, aceitaEsforco } from "@/lib/api/modelo-ia";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
@@ -170,6 +171,7 @@ export const chatAssistant = createServerFn({ method: "POST" })
         .trim();
     } catch (e) {
       console.error("[assistente] falha ao consultar a IA:", e);
+      avisarErro("assistente do chat", e);
       throw new Error("Não foi possível consultar a IA agora.");
     }
     if (!reply) reply = "Não consegui gerar uma resposta agora. Tente novamente em instantes.";

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { avisarErro } from "@/lib/api/avisar-erro.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { enviarEmail, htmlBoasVindasProfissional } from "@/lib/api/email.server";
@@ -85,6 +86,7 @@ export const createProfessional = createServerFn({ method: "POST" })
       });
 
       console.error("[createProfessional] upsert do perfil falhou:", pErr);
+      avisarErro("cadastro de profissional", pErr);
 
       // Coluna que não existe (42703) significa código novo contra banco
       // velho: alguma migração não foi aplicada. Repetir a operação não

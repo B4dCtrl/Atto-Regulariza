@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import process from "node:process";
+import { avisarErro } from "@/lib/api/avisar-erro.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import Anthropic from "@anthropic-ai/sdk";
@@ -342,6 +343,7 @@ export const gerarBriefing = createServerFn({ method: "POST" })
       // Devolvemos os dados mesmo assim: a lista de pendências não depende da
       // IA, e é justamente quando a análise falha que ela mais importa.
       console.error(`[briefing] falha ao chamar a IA após ${Date.now() - inicio}ms:`, e);
+      avisarErro("briefing do painel", e);
 
       const ehPrazo = e instanceof Anthropic.APIConnectionTimeoutError;
       return {

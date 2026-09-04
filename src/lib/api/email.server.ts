@@ -1,4 +1,5 @@
 import process from "node:process";
+import { avisarErro } from "@/lib/api/avisar-erro.server";
 
 /**
  * Envio de e-mail transacional pela API do Resend.
@@ -60,6 +61,7 @@ export async function enviarEmail(p: {
     if (!res.ok) {
       const corpo = await res.text().catch(() => "");
       console.error("[email] Resend recusou", res.status, corpo.slice(0, 300));
+      avisarErro("envio de e-mail", `Resend ${res.status}: ${corpo.slice(0, 200)}`);
       return { ok: false, motivo: "O provedor de e-mail recusou o envio." };
     }
 
