@@ -15,13 +15,13 @@ import { Footer } from "@/components/landing/Footer";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Regulariza — Um portal para cada imóvel, cliente e processo" },
+      { title: "Ato Regulariza — Um portal para cada imóvel, cliente e processo" },
       {
         name: "description",
         content:
           "Plataforma brasileira que transforma o caos da regularização imobiliária em um fluxo claro, moderno e acompanhável. Cliente, profissional e empresa, conectados.",
       },
-      { property: "og:title", content: "Regulariza — Regularização imobiliária, finalmente clara" },
+      { property: "og:title", content: "Ato Regulariza — Regularização imobiliária, finalmente clara" },
       {
         property: "og:description",
         content:

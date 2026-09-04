@@ -21,7 +21,7 @@ import { WHATSAPP } from "@/lib/brand";
 export const Route = createFileRoute("/institucional")({
   head: () => ({
     meta: [
-      { title: "Institucional — Regulariza" },
+      { title: "Institucional — Ato Regulariza" },
       {
         name: "description",
         content:

@@ -7,7 +7,7 @@ import { Search, Bell, Plus, Loader2, User, Settings, LogOut, X } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/")({
-  head: () => ({ meta: [{ title: "Back office — Regulariza" }] }),
+  head: () => ({ meta: [{ title: "Back office — Ato Regulariza" }] }),
   beforeLoad: async () => {
     // Sem desvio por LOGIN_PAUSED: back office exige sessão + papel de admin.
     const {

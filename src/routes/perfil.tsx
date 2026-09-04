@@ -4,7 +4,7 @@ import { ArrowLeft, User, MapPin, Bell, Shield, Camera, Check } from "lucide-rea
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/perfil")({
-  head: () => ({ meta: [{ title: "Meu Perfil — Regulariza" }] }),
+  head: () => ({ meta: [{ title: "Meu Perfil — Ato Regulariza" }] }),
   beforeLoad: async () => {
     const {
       data: { session },

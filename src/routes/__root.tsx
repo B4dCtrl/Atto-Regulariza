@@ -4,11 +4,13 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   redirect,
 } from "@tanstack/react-router";
 import { getRequestHost } from "@/lib/request-host.server";
+import { JSON_LD, OG_IMAGE, SITE_URL } from "@/lib/seo";
 import { CustomCursor } from "@/components/ui/custom-cursor";
 import { ConstructionGate } from "@/components/ConstructionGate";
 import { StaffBar } from "@/components/StaffBar";
@@ -21,9 +23,7 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <p className="font-serif text-7xl text-foreground">404</p>
-        <h1 className="mt-4 text-xl font-semibold text-foreground">
-          Página não encontrada
-        </h1>
+        <h1 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h1>
         <p className="mt-2 text-sm text-ink-soft">
           A página que você está procurando não existe ou foi movida.
         </p>
@@ -47,9 +47,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Algo deu errado
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Algo deu errado</h1>
         <p className="mt-2 text-sm text-ink-soft">
           Ocorreu um erro inesperado. Tente novamente ou volte ao início.
         </p>
@@ -80,14 +78,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Regulariza — Regularização imobiliária, finalmente clara" },
+      { title: "Ato Regulariza — Regularização de imóveis, do começo ao registro" },
       {
         name: "description",
         content:
           "Plataforma brasileira que transforma o caos da regularização imobiliária em um fluxo claro. Cliente, profissional e empresa, conectados.",
       },
-      { name: "author", content: "Regulariza" },
-      { property: "og:title", content: "Regulariza — Regularização imobiliária, finalmente clara" },
+      { name: "author", content: "Ato Regulariza" },
+      { property: "og:site_name", content: "Ato Regulariza" },
+      {
+        property: "og:title",
+        content: "Ato Regulariza — Regularização de imóveis, do começo ao registro",
+      },
+      { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Ato Regulariza" },
+      { name: "twitter:image", content: OG_IMAGE },
       {
         property: "og:description",
         content:
@@ -96,7 +103,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pt_BR" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "robots", content: "index, follow" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -109,6 +115,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;1,400&display=swap",
       },
     ],
+    scripts: [{ type: "application/ld+json", children: JSON_LD }],
   }),
   // Subdomínio curso.atoregulariza.com.br: a raiz do domínio abre "Meus
   // cursos" em vez do site institucional. Só roda no servidor (SSR).
@@ -123,11 +130,47 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+/**
+ * Rotas que exibem dado de cliente. Nenhuma tem link público e todas exigem
+ * sessão, mas uma URL que vaze — colada num chat, num print — não pode virar
+ * resultado de busca. O robots.txt pede para não rastrear; esta meta garante
+ * que, se o buscador chegar mesmo assim, não indexe.
+ */
+const PRIVADAS = [
+  "/dashboard",
+  "/admin",
+  "/painel-profissional",
+  "/perfil",
+  "/perfil-profissional",
+  "/gestao",
+  "/equipe",
+  "/analise-cadastro",
+  "/redefinir-senha",
+  "/entrar",
+];
+
 function RootShell({ children }: { children: React.ReactNode }) {
+  // Canonical por página: sem ele, /precos e /precos?utm_source=x contam como
+  // duas páginas iguais e o Google divide a relevância entre as duas.
+  const caminho = useRouterState({ select: (e) => e.location.pathname });
+  const canonical = `${SITE_URL}${caminho === "/" ? "" : caminho.replace(/\/$/, "")}`;
+  const privada = PRIVADAS.some((r) => caminho === r || caminho.startsWith(`${r}/`));
+
   return (
     <html lang="pt-BR">
       <head>
         <HeadContent />
+        {privada ? (
+          <meta name="robots" content="noindex, nofollow" />
+        ) : (
+          <>
+            {/* max-snippet/max-image-preview soltam o tamanho do trecho que o
+                Google pode mostrar; sem eles ele corta curto. */}
+            <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+            <link rel="canonical" href={canonical} />
+            <meta property="og:url" content={canonical} />
+          </>
+        )}
       </head>
       <body>
         {children}

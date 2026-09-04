@@ -32,11 +32,11 @@ function isCursoHost(host: string) {
 export const Route = createFileRoute("/entrar")({
   head: () => ({
     meta: [
-      { title: "Entrar — Regulariza" },
+      { title: "Entrar — Ato Regulariza" },
       {
         name: "description",
         content:
-          "Acesse seu painel Regulariza e acompanhe a regularização do seu imóvel em tempo real.",
+          "Acesse seu painel da Ato Regulariza e acompanhe a regularização do seu imóvel em tempo real.",
       },
     ],
   }),

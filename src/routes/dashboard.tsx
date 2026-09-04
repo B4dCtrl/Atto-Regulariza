@@ -49,7 +49,7 @@ import { createClientIntakeBrowser, type IntakeData } from "@/lib/client-intake"
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Painel — Regulariza" },
+      { title: "Painel — Ato Regulariza" },
       {
         name: "description",
         content:

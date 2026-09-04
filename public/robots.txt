@@ -1,0 +1,21 @@
+# Ato Regulariza — https://www.atoregulariza.com.br
+
+# Buscadores e assistentes de IA: leitura liberada nas páginas públicas.
+# Ser citado por um assistente vale tanto quanto aparecer no Google.
+User-agent: *
+Allow: /
+
+# Áreas com dado de cliente. Não há link público para elas e o acesso exige
+# sessão, mas listar aqui evita que uma URL vazada vire resultado de busca.
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /painel-profissional
+Disallow: /perfil
+Disallow: /perfil-profissional
+Disallow: /gestao
+Disallow: /equipe
+Disallow: /analise-cadastro
+Disallow: /redefinir-senha
+Disallow: /entrar
+
+Sitemap: https://www.atoregulariza.com.br/sitemap.xml
