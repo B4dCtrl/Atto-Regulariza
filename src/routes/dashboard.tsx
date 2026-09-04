@@ -523,7 +523,14 @@ function DashboardContent() {
   if (!property) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-surface/50 p-6 text-center">
-        <p className="text-sm text-ink-soft">Nenhum imóvel vinculado a esta conta.</p>
+        {/* Quem entra pelo Google nunca passou pelo cadastro: a conta existe,
+            o imóvel não. "Nenhum imóvel vinculado" é verdade e não ajuda —
+            explica o que fazer, não só o que falta. */}
+        <h1 className="font-serif text-2xl leading-tight">Falta contar do seu imóvel</h1>
+        <p className="max-w-md text-sm leading-relaxed text-ink-soft">
+          Sua conta está criada. Para começarmos, precisamos saber qual é o imóvel e qual a situação
+          dele — são cinco perguntas rápidas, e a partir daí você acompanha tudo por aqui.
+        </p>
         {healError && (
           <p className="max-w-md text-xs text-red-500">Erro ao montar seu processo: {healError}</p>
         )}
@@ -531,7 +538,7 @@ function DashboardContent() {
           to="/cadastrar"
           className="rounded-full bg-foreground px-5 py-2.5 text-sm text-background hover:opacity-80 transition-opacity"
         >
-          Cadastrar um imóvel
+          Começar agora
         </Link>
         <Link to="/" className="text-xs text-ink-soft underline hover:text-foreground">
           Voltar ao site

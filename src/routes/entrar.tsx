@@ -184,7 +184,13 @@ function EntrarPage() {
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        // Volta para /entrar, não para /dashboard.
+        //
+        // O destino depende do papel — profissional e admin têm painel próprio,
+        // e mandar todo mundo ao painel do cliente fazia a pessoa cair numa
+        // tela que não é a dela. A marca `?de=painel` aciona a resolução por
+        // papel que a própria tela de entrada já faz.
+        redirectTo: `${window.location.origin}/entrar?de=painel`,
       },
     });
 
