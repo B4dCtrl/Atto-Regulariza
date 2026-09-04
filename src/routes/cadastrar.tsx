@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { SeletorLocalidade } from "@/components/forms/SeletorLocalidade";
@@ -110,7 +110,15 @@ const EMPTY: WizardData = {
   senha: "",
 };
 
-const TOTAL_STEPS = 6;
+/**
+ * Seis passos para quem chega deslogado; cinco para quem já entrou.
+ *
+ * Quem veio pelo Google já tem conta — pedir "crie sua conta" no fim seria
+ * pedir de novo o que ele acabou de fazer, e o wizard tentaria um cadastro que
+ * o Supabase recusaria por e-mail duplicado.
+ */
+const PASSOS_COM_CONTA = 5;
+const PASSOS_SEM_CONTA = 6;
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -125,6 +133,29 @@ function CadastrarPage() {
 
   const set = (k: keyof WizardData, v: string) => setData((d) => ({ ...d, [k]: v }));
 
+  /** Já existe sessão? Então a conta já foi criada — o wizard só coleta o imóvel. */
+  const [jaLogado, setJaLogado] = useState(false);
+  const [uidLogado, setUidLogado] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!ativo || !user) return;
+      setJaLogado(true);
+      setUidLogado(user.id);
+      // Aproveita o que o provedor já sabe, para a pessoa não redigitar.
+      setData((d) => ({
+        ...d,
+        nome: d.nome || (user.user_metadata?.name as string) || "",
+        email: d.email || user.email || "",
+      }));
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const TOTAL_STEPS = jaLogado ? PASSOS_COM_CONTA : PASSOS_SEM_CONTA;
   const progress = ((step - 1) / TOTAL_STEPS) * 100;
 
   const situacoes =
@@ -175,6 +206,21 @@ function CadastrarPage() {
       situacao: data.situacao,
       objetivo: data.objetivo,
     };
+
+    // Já logado (entrou pelo Google, por exemplo): a conta existe, só falta o
+    // processo. Chamar signUp aqui seria recusado por e-mail já cadastrado.
+    if (jaLogado && uidLogado) {
+      try {
+        await createClientIntakeBrowser(uidLogado, intake);
+      } catch (e) {
+        setError(`Não foi possível montar seu processo: ${(e as Error).message}`);
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+      navigate({ to: "/dashboard", search: { welcome: "1" } as never });
+      return;
+    }
 
     // Criar conta
     const { data: authData, error: authErr } = await supabase.auth.signUp({

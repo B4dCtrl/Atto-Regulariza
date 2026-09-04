@@ -5,7 +5,8 @@ export type LandingPath =
   | "/painel-profissional"
   | "/dashboard"
   | "/cursos"
-  | "/analise-cadastro";
+  | "/analise-cadastro"
+  | "/cadastrar";
 
 /**
  * Decide para onde um usuário autenticado deve ir, com base no seu papel:
@@ -14,6 +15,7 @@ export type LandingPath =
  * - admin (user_roles)            → /admin
  * - profissional aprovado         → /painel-profissional
  * - profissional pendente/recusado → tela de análise
+ * - cliente SEM imóvel             → /cadastrar (o wizard)
  * - cliente (padrão)               → /dashboard
  *
  * SEGURANÇA: o papel vem SOMENTE de tabelas protegidas por RLS
@@ -36,5 +38,18 @@ export async function resolveLandingPath(userId: string): Promise<LandingPath> {
     return profile.approval_status === "aprovado" ? "/painel-profissional" : "/analise-cadastro";
   }
 
-  return "/dashboard";
+  // Cliente sem imóvel vai para o wizard, não para o painel vazio.
+  //
+  // É o caso de quem entra pelo Google: a conta nasce no primeiro login, sem
+  // passar pelo cadastro, então não existe processo nenhum. Mandá-lo ao painel
+  // mostrava uma tela que só constatava a falta. O wizard é onde o imóvel é
+  // informado — e ele reconhece a sessão existente e pula a criação de conta.
+  const { data: imovel } = await supabase
+    .from("properties")
+    .select("id")
+    .eq("client_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  return imovel ? "/dashboard" : "/cadastrar";
 }
