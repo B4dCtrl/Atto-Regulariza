@@ -23,6 +23,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { AceiteTermos } from "@/components/conta/AceiteTermos";
 import { ProtocoloInicial } from "@/components/cliente/ProtocoloInicial";
 import { OfertaAssistente } from "@/components/cliente/OfertaAssistente";
 import { type PerguntaFrequente } from "@/lib/perguntas-frequentes";
@@ -1237,11 +1238,15 @@ function DashboardContent() {
 }
 
 function DashboardPage() {
+  // O aceite envolve tudo: o painel não monta antes dele, e nenhuma consulta
+  // do cliente é disparada por quem ainda não concordou com os termos.
   return (
-    <TourProvider onComplete={() => {}}>
-      <DashboardContent />
-      <DashboardTourSteps />
-    </TourProvider>
+    <AceiteTermos>
+      <TourProvider onComplete={() => {}}>
+        <DashboardContent />
+        <DashboardTourSteps />
+      </TourProvider>
+    </AceiteTermos>
   );
 }
 

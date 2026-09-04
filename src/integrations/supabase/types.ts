@@ -729,6 +729,8 @@ export type Database = {
           role: string;
           ultimo_acesso_em: string | null;
           senha_provisoria: boolean;
+          termos_versao: string | null;
+          termos_aceito_em: string | null;
           specialization: string | null;
           email: string | null;
           phone: string | null;
@@ -758,6 +760,8 @@ export type Database = {
           role?: string;
           ultimo_acesso_em?: string | null;
           senha_provisoria?: boolean;
+          termos_versao?: string | null;
+          termos_aceito_em?: string | null;
           approval_status?: "pendente" | "aprovado" | "recusado";
           approval_note?: string | null;
           specialization?: string | null;
@@ -785,6 +789,8 @@ export type Database = {
           role?: string;
           ultimo_acesso_em?: string | null;
           senha_provisoria?: boolean;
+          termos_versao?: string | null;
+          termos_aceito_em?: string | null;
           specialization?: string | null;
           email?: string | null;
           phone?: string | null;

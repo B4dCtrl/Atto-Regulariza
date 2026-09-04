@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
+import { AceiteTermos } from "@/components/conta/AceiteTermos";
 import { TrocarSenhaObrigatoria } from "@/components/conta/TrocarSenhaObrigatoria";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
@@ -204,10 +205,14 @@ function propToProc(p: PropertyRow): MockProcess {
  * consulta do painel chega a ser disparada por quem ainda não trocou a senha.
  */
 function PaginaProfissional() {
+  // Aceite POR FORA da troca de senha: definir senha para um serviço cujos
+  // termos você não aceitou é a ordem errada.
   return (
-    <TrocarSenhaObrigatoria>
-      <ProfissionalPage />
-    </TrocarSenhaObrigatoria>
+    <AceiteTermos>
+      <TrocarSenhaObrigatoria>
+        <ProfissionalPage />
+      </TrocarSenhaObrigatoria>
+    </AceiteTermos>
   );
 }
 
