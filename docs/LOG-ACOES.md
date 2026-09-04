@@ -203,8 +203,44 @@ Fim do resquício do Lovable: sobra um único fornecedor de IA (NVIDIA NIM), em
 ## Concluído em 2026-08-24
 
 - ✅ Protocolo de coleta de documentos: checklist inicial pós-tutorial, análise com IA triando
-  e pessoa confirmando, e trava de delegação nos documentos essenciais
-  *(faltam as duas migrações e a verificação na tela)*
+  e pessoa confirmando, e trava de delegação nos documentos essenciais.
+  **Migrações rodadas; trava provada em ROLLBACK** (delegar sem essencial recusa, com um só
+  recusa, com os dois aceita, matrícula não trava). *Falta percorrer na tela.*
+- ✅ Aceite dos termos com registro de versão e data no cadastro, popup bloqueante nos dois
+  painéis. Migração rodada.
+
+---
+
+## Para receber cliente com segurança — levantamento de 2026-09-03
+
+### 19. ⬜ Percorrer o caminho do cliente de ponta a ponta
+Cadastro → tutorial → protocolo → envio → análise → delegação → conversa. Cada peça foi
+testada isolada; a corrente inteira, nunca. Hoje descobrimos três coisas que jamais tinham
+funcionado, e todas apareceram porque o usuário usou.
+
+### 20. ⬜ Banco em `us-west-2` (Oregon, EUA)
+Os outros projetos Supabase do usuário estão em `sa-east-1`. CPF, matrícula e documentos de
+brasileiros armazenados fora do país exigem base legal para transferência internacional. O
+aceite agora declara isso (cláusula 5), mas migrar região depois de ter cliente é bem mais
+caro que agora. **Decisão pendente.**
+
+### 21. ⬜ Backup do banco
+Plano do Supabase não verificado. No gratuito não há recuperação a ponto no tempo. Perder o
+banco com processos reais dentro não é incidente, é fim de operação.
+
+### 22. ⬜ Segundo fator na conta admin
+Ela abre todos os processos, documentos e CPFs. Uma senha só é pouco. O Supabase oferece MFA
+sem custo adicional.
+
+### 23. ⬜ Nenhum monitoramento de erro
+Falha em produção só aparece quando o cliente reclama — foi assim que descobrimos o
+`chatAssistant`, a Central de documentos e o "Upload rápido" de maquete.
+
+### 24. ⬜ Texto dos termos não é contrato de serviço
+As cláusulas em `src/lib/termos.ts` cobrem consentimento de dados (LGPD), mas não prazo,
+preço nem obrigação das partes — o próprio texto diz que "a contratação ocorre por instrumento
+próprio", e esse instrumento não existe no sistema. Trocar o conteúdo é editar o arquivo e
+subir `VERSAO_TERMOS`; quem já aceitou é perguntado de novo.
 - ✅ Item 11: restaurar documento excluído, e a política `documents_select` corrigida
 - ✅ Item 13: divergência de hidratação — era o `custom-cursor`
 - ✅ Botão "Entrar" na hero antes do scroll, viajando até o menu pelo mesmo `layoutId` do logo
