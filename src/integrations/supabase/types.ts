@@ -12,7 +12,7 @@ export type Database = {
         Row: {
           id: string;
           name: string | null;
-          email: string;
+          email: string | null;
           phone: string | null;
           city: string | null;
           state: string | null;
@@ -26,11 +26,15 @@ export type Database = {
           status: string;
           professional_name: string | null;
           created_at: string;
+          triagem_cor: string | null;
+          triagem_produto: string | null;
+          triagem_motivo: string | null;
+          triagem_respostas: Json | null;
         };
         Insert: {
           id?: string;
           name?: string | null;
-          email: string;
+          email?: string | null;
           phone?: string | null;
           city?: string | null;
           state?: string | null;
@@ -43,12 +47,16 @@ export type Database = {
           converted?: boolean;
           status?: string;
           professional_name?: string | null;
+          triagem_cor?: string | null;
+          triagem_produto?: string | null;
+          triagem_motivo?: string | null;
+          triagem_respostas?: Json | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string | null;
-          email?: string;
+          email?: string | null;
           phone?: string | null;
           city?: string | null;
           state?: string | null;
@@ -61,6 +69,10 @@ export type Database = {
           converted?: boolean;
           status?: string;
           professional_name?: string | null;
+          triagem_cor?: string | null;
+          triagem_produto?: string | null;
+          triagem_motivo?: string | null;
+          triagem_respostas?: Json | null;
           created_at?: string;
         };
         Relationships: [];
@@ -597,6 +609,39 @@ export type Database = {
           alertas?: Json;
           gerado_em?: string;
         };
+        Relationships: [];
+      };
+      whatsapp_conversas: {
+        Row: {
+          telefone: string;
+          estado: Json;
+          lead_id: string | null;
+          encerrada: boolean;
+          criada_em: string;
+          atualizada_em: string;
+        };
+        Insert: {
+          telefone: string;
+          estado: Json;
+          lead_id?: string | null;
+          encerrada?: boolean;
+          criada_em?: string;
+          atualizada_em?: string;
+        };
+        Update: {
+          telefone?: string;
+          estado?: Json;
+          lead_id?: string | null;
+          encerrada?: boolean;
+          criada_em?: string;
+          atualizada_em?: string;
+        };
+        Relationships: [];
+      };
+      whatsapp_mensagens_vistas: {
+        Row: { mensagem_id: string; vista_em: string };
+        Insert: { mensagem_id: string; vista_em?: string };
+        Update: { mensagem_id?: string; vista_em?: string };
         Relationships: [];
       };
       notifications: {

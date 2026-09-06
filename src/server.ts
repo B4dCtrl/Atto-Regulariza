@@ -37,9 +37,34 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
+/**
+ * Webhook do WhatsApp.
+ *
+ * Atendido aqui, antes do roteador da aplicação, porque não é página: a Meta
+ * espera texto puro e um 200 rápido, e passar pelo SSR só somaria latência
+ * num caminho que ela reenvia quando demora.
+ *
+ * O import é dinâmico para o código do WhatsApp não entrar no pacote de toda
+ * requisição de página.
+ */
+const CAMINHO_WHATSAPP = "/api/whatsapp";
+
+async function tratarWhatsApp(request: Request, url: URL): Promise<Response | null> {
+  if (url.pathname !== CAMINHO_WHATSAPP) return null;
+
+  const { verificarWebhook, receberWebhook } = await import("./lib/api/whatsapp.server");
+
+  if (request.method === "GET") return verificarWebhook(url);
+  if (request.method === "POST") return receberWebhook(request);
+  return new Response("method not allowed", { status: 405 });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const doWhatsApp = await tratarWhatsApp(request, new URL(request.url));
+      if (doWhatsApp) return doWhatsApp;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

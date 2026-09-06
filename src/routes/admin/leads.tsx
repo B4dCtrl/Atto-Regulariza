@@ -62,7 +62,7 @@ const ADVANCE_LABEL: Record<LeadStatus, string> = {
 type LeadRow = Tables<"leads">;
 function rowToLead(r: LeadRow): Lead {
   return {
-    id: r.id, name: r.name ?? "—", phone: r.phone ?? "", email: r.email,
+    id: r.id, name: r.name ?? "—", phone: r.phone ?? "", email: r.email ?? "",
     city: r.city ?? "", state: r.state ?? "",
     propertyType: r.tipo_imovel ?? "—",
     situation: r.situacao ?? "—",
