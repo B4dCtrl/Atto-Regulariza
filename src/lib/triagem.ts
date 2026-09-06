@@ -276,3 +276,39 @@ function rotuloProduto(p: Produto): string {
       return "análise documental";
   }
 }
+
+/**
+ * As respostas em português, para a equipe ler.
+ *
+ * O banco guarda o valor cru — `nunca_averbada` — porque é ele que a conversa
+ * compara. Quem lê no painel precisa da frase inteira. Devolve na ordem em que
+ * foram perguntadas, ignorando o que não foi respondido.
+ */
+export function descreverRespostas(
+  respostas: Partial<Respostas>,
+): { pergunta: string; resposta: string }[] {
+  const saida: { pergunta: string; resposta: string }[] = [];
+
+  for (const p of PERGUNTAS) {
+    const valor = respostas[p.id];
+    if (valor === undefined || valor === null || valor === "") continue;
+
+    if (p.tipo === "texto") {
+      saida.push({ pergunta: p.texto, resposta: String(valor) });
+      continue;
+    }
+
+    const opcao = p.opcoes.find((o) => (o.valor as string) === valor);
+    // Sem rótulo conhecido, mostra o valor cru: melhor um dado feio que um
+    // dado ausente quando a equipe está decidindo o que fazer com o caso.
+    saida.push({ pergunta: p.texto, resposta: opcao?.rotulo ?? String(valor) });
+  }
+
+  return saida;
+}
+
+/** Nome do produto para a equipe ler, ou null quando não foi identificado. */
+export function nomeDoProduto(p: Produto): string | null {
+  if (!p) return null;
+  return rotuloProduto(p);
+}

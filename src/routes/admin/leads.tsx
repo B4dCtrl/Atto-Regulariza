@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { Plus, X, Building2, Clock, MapPin, Check, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { DetalheTriagem, type DadosTriagem } from "@/components/admin/DetalheTriagem";
+import type { Cor, Produto, Respostas } from "@/lib/triagem";
 import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/admin/leads")({
@@ -26,9 +28,23 @@ interface Lead {
   professionalName: string | null;
   notes: string;
   createdAt: string;
+  triagem: DadosTriagem;
 }
 
 /* ──────── Constants */
+/**
+ * Rótulos do filtro por cor.
+ *
+ * A cor sozinha não diz nada a quem chega no painel pela primeira vez; o nome
+ * ao lado ensina o significado sem precisar de legenda.
+ */
+const ROTULO_FILTRO_COR: Record<Cor | "todas", string> = {
+  todas: "Todas",
+  vermelho: "Titularidade",
+  amarelo: "Precisa análise",
+  verde: "Pronto p/ orçar",
+};
+
 const STATUS_FLOW: LeadStatus[] = ["novo", "triagem", "atribuido", "ativo"];
 
 const STATUS_LABEL: Record<LeadStatus, string> = {
@@ -73,6 +89,13 @@ function rowToLead(r: LeadRow): Lead {
     professionalName: r.professional_name ?? null,
     notes: r.notes ?? "",
     createdAt: r.created_at,
+    triagem: {
+      cor: (r.triagem_cor as Cor | null) ?? null,
+      motivo: r.triagem_motivo ?? null,
+      produto: (r.triagem_produto as Produto) ?? null,
+      respostas: (r.triagem_respostas as Partial<Respostas> | null) ?? null,
+      codigo: r.codigo ?? null,
+    },
   };
 }
 
@@ -81,6 +104,7 @@ function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
+  const [cor, setCor] = useState<Cor | "todas">("todas");
   const [notes, setNotes] = useState("");
   const [pros, setPros] = useState<{ id: string; name: string | null }[]>([]);
   const [showNew, setShowNew] = useState(false);
@@ -231,7 +255,9 @@ function LeadsPage() {
   };
 
   const activeLeads = leads.filter((l) => l.status !== "recusado");
-  const filtered = filter === "all" ? activeLeads : leads.filter((l) => l.status === filter);
+  const porStatus = filter === "all" ? activeLeads : leads.filter((l) => l.status === filter);
+  // Os dois filtros se somam: "Atribuído + vermelho" é uma pergunta legítima.
+  const filtered = cor === "todas" ? porStatus : porStatus.filter((l) => l.triagem.cor === cor);
   const countStatus = (s: LeadStatus) => leads.filter((l) => l.status === s).length;
 
   const newCount = countStatus("novo");
@@ -308,6 +334,33 @@ function LeadsPage() {
           );
         })}
       </div>
+
+      {/* Cor da triagem. Só aparece quando existe lead classificado — numa
+          base sem triagem, seria uma fileira de zeros sem serventia. */}
+      {leads.some((l) => l.triagem.cor) && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-ink-soft">Triagem</span>
+          {(["todas", "vermelho", "amarelo", "verde"] as const).map((c) => {
+            const quantos =
+              c === "todas"
+                ? porStatus.filter((l) => l.triagem.cor).length
+                : porStatus.filter((l) => l.triagem.cor === c).length;
+            return (
+              <button
+                key={c}
+                onClick={() => setCor(c)}
+                className={`rounded-full px-3 py-1.5 text-xs transition-colors ${
+                  cor === c
+                    ? "bg-foreground text-background"
+                    : "border border-border text-ink-soft hover:border-foreground/30"
+                }`}
+              >
+                {ROTULO_FILTRO_COR[c]} <span className="ml-1 opacity-60">{quantos}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
         {/* Lead list */}
@@ -444,11 +497,16 @@ function LeadsPage() {
                 </div>
               </div>
 
-              {/* Situation */}
-              <div>
-                <div className="mb-1 text-xs font-medium">Situação do imóvel</div>
-                <p className="text-xs text-ink-soft leading-relaxed">{selectedLead.situation}</p>
-              </div>
+              <DetalheTriagem dados={selectedLead.triagem} />
+
+              {/* Situação escrita à mão. Some quando a triagem já respondeu,
+                  para o painel não repetir "—" embaixo do que interessa. */}
+              {(selectedLead.situation !== "—" || !selectedLead.triagem.cor) && (
+                <div>
+                  <div className="mb-1 text-xs font-medium">Situação do imóvel</div>
+                  <p className="text-xs text-ink-soft leading-relaxed">{selectedLead.situation}</p>
+                </div>
+              )}
 
               {/* Professional */}
               {selectedLead.professionalName && (

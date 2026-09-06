@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { PERGUNTAS, classificar, type Respostas } from "./triagem";
+import {
+  PERGUNTAS,
+  classificar,
+  descreverRespostas,
+  nomeDoProduto,
+  type Respostas,
+} from "./triagem";
 
 /** Caso base: tudo tranquilo, dono com matrícula no próprio nome. */
 const base: Respostas = {
@@ -124,5 +130,48 @@ describe("classificar — roteamento e relato", () => {
     const r = classificar({ ...base, nome: "  " });
     expect(r.mensagem).not.toContain("undefined");
     expect(r.mensagem.trim().length).toBeGreaterThan(0);
+  });
+});
+
+describe("descreverRespostas", () => {
+  it("traduz o valor guardado no rótulo que a equipe lê", () => {
+    const d = descreverRespostas({ divergencia: "nunca_averbada" });
+    expect(d).toEqual([
+      {
+        pergunta: "O que está diferente do que consta no papel?",
+        resposta: "Construção nunca averbada",
+      },
+    ]);
+  });
+
+  it("mantém texto livre como está", () => {
+    const d = descreverRespostas({ cidade: "São José dos Pinhais" });
+    expect(d[0].resposta).toBe("São José dos Pinhais");
+  });
+
+  it("segue a ordem das perguntas, não a ordem do objeto", () => {
+    const d = descreverRespostas({ nome: "Tais", motivo: "vender", cidade: "Curitiba" });
+    expect(d.map((x) => x.resposta)).toEqual(["Vender ou financiar", "Curitiba", "Tais"]);
+  });
+
+  it("pula o que não foi respondido", () => {
+    expect(descreverRespostas({})).toEqual([]);
+    expect(descreverRespostas({ cidade: "" })).toEqual([]);
+  });
+
+  it("valor desconhecido aparece cru em vez de sumir", () => {
+    const d = descreverRespostas({ motivo: "algo_novo" as never });
+    expect(d[0].resposta).toBe("algo_novo");
+  });
+});
+
+describe("nomeDoProduto", () => {
+  it("dá o nome que a equipe usa", () => {
+    expect(nomeDoProduto("habitese")).toBe("habite-se / averbação da construção");
+    expect(nomeDoProduto("retificacao")).toBe("retificação de área");
+  });
+
+  it("sem produto identificado devolve null", () => {
+    expect(nomeDoProduto(null)).toBeNull();
   });
 });
