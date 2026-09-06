@@ -207,9 +207,11 @@ async function gravarLead(
     .from("leads")
     .insert({
       name: estado.respostas.nome ?? null,
-      // No Instagram não há telefone: o contato é o id do perfil, e guardá-lo
-      // como telefone daria um número que ninguém consegue discar.
+      // No Instagram não há telefone: o contato é o id do perfil. Guardá-lo em
+      // 'phone' daria um número que ninguém consegue discar, e a equipe
+      // tentaria ligar — por isso vai em coluna própria.
       phone: canal === "whatsapp" ? contato : null,
+      contato_externo: canal === "whatsapp" ? null : contato,
       city: r.cidade || null,
       tipo_imovel: estado.respostas.imovel ?? null,
       objetivo: estado.respostas.motivo ?? null,

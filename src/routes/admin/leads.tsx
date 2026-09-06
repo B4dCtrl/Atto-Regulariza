@@ -1,9 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import {
-  Plus, X, Building2, Clock, MapPin, Check,
-  AlertTriangle,
-} from "lucide-react";
+import { Plus, X, Building2, Clock, MapPin, Check, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -35,35 +32,41 @@ interface Lead {
 const STATUS_FLOW: LeadStatus[] = ["novo", "triagem", "atribuido", "ativo"];
 
 const STATUS_LABEL: Record<LeadStatus, string> = {
-  novo:      "Novo",
-  triagem:   "Triagem",
+  novo: "Novo",
+  triagem: "Triagem",
   atribuido: "Atribuído",
-  ativo:     "Ativo",
-  recusado:  "Recusado",
+  ativo: "Ativo",
+  recusado: "Recusado",
 };
 
 const STATUS_CLS: Record<LeadStatus, string> = {
-  novo:      "bg-blue-50 text-blue-700",
-  triagem:   "bg-yellow-50 text-yellow-700",
+  novo: "bg-blue-50 text-blue-700",
+  triagem: "bg-yellow-50 text-yellow-700",
   atribuido: "bg-purple-50 text-purple-700",
-  ativo:     "bg-green-50 text-green-700",
-  recusado:  "bg-surface text-ink-soft ring-1 ring-border",
+  ativo: "bg-green-50 text-green-700",
+  recusado: "bg-surface text-ink-soft ring-1 ring-border",
 };
 
 const ADVANCE_LABEL: Record<LeadStatus, string> = {
-  novo:      "Iniciar triagem",
-  triagem:   "Atribuir profissional",
+  novo: "Iniciar triagem",
+  triagem: "Atribuir profissional",
   atribuido: "Marcar como ativo",
-  ativo:     "",
-  recusado:  "",
+  ativo: "",
+  recusado: "",
 };
 
 /* ──────── Mapper */
 type LeadRow = Tables<"leads">;
 function rowToLead(r: LeadRow): Lead {
   return {
-    id: r.id, name: r.name ?? "—", phone: r.phone ?? "", email: r.email ?? "",
-    city: r.city ?? "", state: r.state ?? "",
+    id: r.id,
+    name: r.name ?? "—",
+    // Lead do Instagram não tem telefone; mostra o @ do perfil no lugar, para
+    // a linha nunca aparecer sem nenhuma forma de chegar na pessoa.
+    phone: r.phone ?? (r.contato_externo ? `Instagram ${r.contato_externo}` : ""),
+    email: r.email ?? "",
+    city: r.city ?? "",
+    state: r.state ?? "",
     propertyType: r.tipo_imovel ?? "—",
     situation: r.situacao ?? "—",
     status: (r.status as LeadStatus) ?? "novo",
@@ -75,20 +78,38 @@ function rowToLead(r: LeadRow): Lead {
 
 /* ──────── Component */
 function LeadsPage() {
-  const [leads,        setLeads]        = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [filter,       setFilter]       = useState<LeadStatus | "all">("all");
-  const [notes,        setNotes]        = useState("");
-  const [pros,         setPros]         = useState<{ id: string; name: string | null }[]>([]);
-  const [showNew,      setShowNew]      = useState(false);
-  const [nl,           setNl]           = useState({ name: "", email: "", phone: "", city: "", state: "", situation: "" });
-  const nlInp = "w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30";
+  const [filter, setFilter] = useState<LeadStatus | "all">("all");
+  const [notes, setNotes] = useState("");
+  const [pros, setPros] = useState<{ id: string; name: string | null }[]>([]);
+  const [showNew, setShowNew] = useState(false);
+  const [nl, setNl] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    city: "",
+    state: "",
+    situation: "",
+  });
+  const nlInp =
+    "w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30";
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.from("leads").select("*").order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setLeads(data.map((r) => rowToLead(r as LeadRow))); });
-    supabase.from("profiles").select("id, name").eq("role", "profissional").eq("active", true).order("name")
+    supabase
+      .from("leads")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setLeads(data.map((r) => rowToLead(r as LeadRow)));
+      });
+    supabase
+      .from("profiles")
+      .select("id, name")
+      .eq("role", "profissional")
+      .eq("active", true)
+      .order("name")
       .then(({ data }) => setPros(data ?? []));
   }, []);
 
@@ -111,8 +132,13 @@ function LeadsPage() {
     }
   };
 
-  const refuse    = (id: string) => { update(id, { status: "recusado" }); if (selectedLead?.id === id) setSelectedLead(null); };
-  const saveNotes = () => { if (selectedLead) update(selectedLead.id, { notes }); };
+  const refuse = (id: string) => {
+    update(id, { status: "recusado" });
+    if (selectedLead?.id === id) setSelectedLead(null);
+  };
+  const saveNotes = () => {
+    if (selectedLead) update(selectedLead.id, { notes });
+  };
   // Atribuir profissional = converter o lead em PROCESSO (imóvel) designado a ele
   // e abrir o ambiente de tratamento. O profissional passa a ver no painel dele.
   async function assignPro(proId: string) {
@@ -121,35 +147,54 @@ function LeadsPage() {
 
     // Idempotência: já há processo para este e-mail?
     const { data: existing } = await supabase
-      .from("properties").select("id").eq("client_email", selectedLead.email).limit(1).maybeSingle();
+      .from("properties")
+      .select("id")
+      .eq("client_email", selectedLead.email)
+      .limit(1)
+      .maybeSingle();
 
     let propId = existing?.id as string | undefined;
     if (!propId) {
       const tipo = selectedLead.propertyType !== "—" ? selectedLead.propertyType : "";
       const propName = `${tipo ? tipo.charAt(0).toUpperCase() + tipo.slice(1) : "Imóvel"}${selectedLead.city ? ` — ${selectedLead.city}` : ""}`;
-      const { data: prop, error } = await supabase.from("properties").insert({
-        name: propName,
-        city: selectedLead.city || null,
-        state: selectedLead.state || null,
-        status: "analise",
-        current_stage: 1,
-        progress: 10,
-        assigned_professional_id: proId,
-        client_name: selectedLead.name,
-        client_email: selectedLead.email,
-        client_phone: selectedLead.phone || null,
-        tipo_imovel: tipo || null,
-        situacao: selectedLead.situation !== "—" ? selectedLead.situation : null,
-        notes: selectedLead.notes || null,
-      }).select("id").single();
-      if (error || !prop) { alert(`Erro ao criar processo: ${error?.message ?? "desconhecido"}`); return; }
+      const { data: prop, error } = await supabase
+        .from("properties")
+        .insert({
+          name: propName,
+          city: selectedLead.city || null,
+          state: selectedLead.state || null,
+          status: "analise",
+          current_stage: 1,
+          progress: 10,
+          assigned_professional_id: proId,
+          client_name: selectedLead.name,
+          client_email: selectedLead.email,
+          client_phone: selectedLead.phone || null,
+          tipo_imovel: tipo || null,
+          situacao: selectedLead.situation !== "—" ? selectedLead.situation : null,
+          notes: selectedLead.notes || null,
+        })
+        .select("id")
+        .single();
+      if (error || !prop) {
+        alert(`Erro ao criar processo: ${error?.message ?? "desconhecido"}`);
+        return;
+      }
       propId = prop.id;
       const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
       await supabase.from("process_stages").insert(
-        STAGE_LABELS.map((label, i) => ({ property_id: propId, stage_number: i + 1, label, state: i === 0 ? "active" : "pending" })),
+        STAGE_LABELS.map((label, i) => ({
+          property_id: propId,
+          stage_number: i + 1,
+          label,
+          state: i === 0 ? "active" : "pending",
+        })),
       );
     } else {
-      await supabase.from("properties").update({ assigned_professional_id: proId }).eq("id", propId);
+      await supabase
+        .from("properties")
+        .update({ assigned_professional_id: proId })
+        .eq("id", propId);
     }
 
     await update(selectedLead.id, { status: "atribuido", professionalName: pro?.name ?? null });
@@ -157,22 +202,37 @@ function LeadsPage() {
   }
   async function createManualLead() {
     if (!nl.name.trim() || !nl.email.trim()) return;
-    const { data, error } = await supabase.from("leads").insert({
-      name: nl.name, email: nl.email, phone: nl.phone || null,
-      city: nl.city || null, state: nl.state || null,
-      situacao: nl.situation || null, status: "novo", source: "manual",
-    }).select("*").single();
-    if (error) { alert(`Erro ao criar lead: ${error.message}`); return; }
+    const { data, error } = await supabase
+      .from("leads")
+      .insert({
+        name: nl.name,
+        email: nl.email,
+        phone: nl.phone || null,
+        city: nl.city || null,
+        state: nl.state || null,
+        situacao: nl.situation || null,
+        status: "novo",
+        source: "manual",
+      })
+      .select("*")
+      .single();
+    if (error) {
+      alert(`Erro ao criar lead: ${error.message}`);
+      return;
+    }
     if (data) setLeads((prev) => [rowToLead(data as LeadRow), ...prev]);
     setNl({ name: "", email: "", phone: "", city: "", state: "", situation: "" });
     setShowNew(false);
   }
 
-  const openDetail = (lead: Lead) => { setSelectedLead(lead); setNotes(lead.notes); };
+  const openDetail = (lead: Lead) => {
+    setSelectedLead(lead);
+    setNotes(lead.notes);
+  };
 
-  const activeLeads   = leads.filter((l) => l.status !== "recusado");
-  const filtered      = filter === "all" ? activeLeads : leads.filter((l) => l.status === filter);
-  const countStatus   = (s: LeadStatus) => leads.filter((l) => l.status === s).length;
+  const activeLeads = leads.filter((l) => l.status !== "recusado");
+  const filtered = filter === "all" ? activeLeads : leads.filter((l) => l.status === filter);
+  const countStatus = (s: LeadStatus) => leads.filter((l) => l.status === s).length;
 
   const newCount = countStatus("novo");
 
@@ -186,11 +246,16 @@ function LeadsPage() {
           <p className="mt-1 text-sm text-ink-soft">
             {activeLeads.length} leads ativos ·{" "}
             {newCount > 0 && (
-              <span className="text-accent font-medium">{newCount} novo{newCount !== 1 ? "s" : ""} aguardando triagem</span>
+              <span className="text-accent font-medium">
+                {newCount} novo{newCount !== 1 ? "s" : ""} aguardando triagem
+              </span>
             )}
           </p>
         </div>
-        <button onClick={() => setShowNew(true)} className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm text-background hover:bg-foreground/90 transition-colors">
+        <button
+          onClick={() => setShowNew(true)}
+          className="inline-flex items-center gap-2 rounded-full bg-foreground px-4 py-2 text-sm text-background hover:bg-foreground/90 transition-colors"
+        >
           <Plus className="h-4 w-4" />
           Novo lead manual
         </button>
@@ -205,11 +270,19 @@ function LeadsPage() {
               key={s}
               onClick={() => setFilter(s)}
               className={`rounded-2xl border p-3 text-left transition-all ${
-                filter === s ? "border-foreground bg-foreground text-background" : "border-border bg-background hover:border-foreground/30"
+                filter === s
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background hover:border-foreground/30"
               }`}
             >
-              <div className={`text-2xl font-serif tracking-tight ${filter === s ? "" : ""}`}>{count}</div>
-              <div className={`text-xs mt-0.5 ${filter === s ? "text-background/70" : "text-ink-soft"}`}>{STATUS_LABEL[s]}</div>
+              <div className={`text-2xl font-serif tracking-tight ${filter === s ? "" : ""}`}>
+                {count}
+              </div>
+              <div
+                className={`text-xs mt-0.5 ${filter === s ? "text-background/70" : "text-ink-soft"}`}
+              >
+                {STATUS_LABEL[s]}
+              </div>
             </button>
           );
         })}
@@ -253,20 +326,28 @@ function LeadsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.97 }}
                 className={`cursor-pointer rounded-2xl bg-background ring-1 p-4 transition-all hover:shadow-md ${
-                  selectedLead?.id === lead.id ? "ring-foreground" : "ring-border hover:ring-foreground/20"
+                  selectedLead?.id === lead.id
+                    ? "ring-foreground"
+                    : "ring-border hover:ring-foreground/20"
                 }`}
                 onClick={() => openDetail(lead)}
               >
                 <div className="flex items-start gap-3">
                   {/* Avatar */}
                   <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface ring-1 ring-border text-xs font-medium">
-                    {lead.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                    {lead.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join("")}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-sm font-medium">{lead.name}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] ${STATUS_CLS[lead.status]}`}>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] ${STATUS_CLS[lead.status]}`}
+                      >
                         {STATUS_LABEL[lead.status]}
                       </span>
                       {lead.professionalName && (
@@ -274,10 +355,20 @@ function LeadsPage() {
                       )}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-soft">
-                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{lead.city}/{lead.state}</span>
-                      <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{lead.propertyType}</span>
-                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />
-                        {new Date(lead.createdAt).toLocaleDateString("pt-BR", { day:"2-digit", month:"short" })}
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {lead.city}/{lead.state}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {lead.propertyType}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(lead.createdAt).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "short",
+                        })}
                       </span>
                     </div>
                     <p className="mt-1.5 text-xs text-ink-soft line-clamp-1">{lead.situation}</p>
@@ -286,7 +377,11 @@ function LeadsPage() {
                   {/* Quick action */}
                   {STATUS_FLOW.includes(lead.status) && lead.status !== "ativo" && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); if (lead.status === "triagem") openDetail(lead); else advance(lead); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (lead.status === "triagem") openDetail(lead);
+                        else advance(lead);
+                      }}
                       className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-ink-soft hover:bg-foreground hover:text-background hover:border-foreground transition-colors whitespace-nowrap"
                     >
                       {ADVANCE_LABEL[lead.status]}
@@ -294,7 +389,8 @@ function LeadsPage() {
                   )}
                   {lead.status === "ativo" && (
                     <span className="shrink-0 flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs text-green-700">
-                      <Check className="h-3 w-3" />Ativo
+                      <Check className="h-3 w-3" />
+                      Ativo
                     </span>
                   )}
                 </div>
@@ -320,7 +416,10 @@ function LeadsPage() {
                   <h3 className="font-serif text-xl tracking-tight">{selectedLead.name}</h3>
                   <div className="mt-0.5 text-xs text-ink-soft">{selectedLead.email}</div>
                 </div>
-                <button onClick={() => setSelectedLead(null)} className="text-ink-soft hover:text-foreground">
+                <button
+                  onClick={() => setSelectedLead(null)}
+                  className="text-ink-soft hover:text-foreground"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -328,9 +427,9 @@ function LeadsPage() {
               {/* Details grid */}
               <div className="space-y-2 rounded-2xl bg-surface p-3 text-xs">
                 {[
-                  ["Telefone",  selectedLead.phone],
-                  ["Cidade",    `${selectedLead.city}/${selectedLead.state}`],
-                  ["Tipo",      selectedLead.propertyType],
+                  ["Telefone", selectedLead.phone],
+                  ["Cidade", `${selectedLead.city}/${selectedLead.state}`],
+                  ["Tipo", selectedLead.propertyType],
                 ].map(([k, v]) => (
                   <div key={k} className="flex gap-2">
                     <span className="w-20 shrink-0 text-ink-soft">{k}</span>
@@ -355,7 +454,11 @@ function LeadsPage() {
               {selectedLead.professionalName && (
                 <div className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2.5 text-xs">
                   <div className="grid h-6 w-6 place-items-center rounded-full bg-foreground text-background text-[10px] font-medium">
-                    {selectedLead.professionalName.split(" ").map((n) => n[0]).slice(0,2).join("")}
+                    {selectedLead.professionalName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join("")}
                   </div>
                   <span className="text-ink-soft">Atribuído a</span>
                   <span className="font-medium">{selectedLead.professionalName}</span>
@@ -398,9 +501,13 @@ function LeadsPage() {
                       onChange={(e) => assignPro(e.target.value)}
                       className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30"
                     >
-                      <option value="" disabled>Selecione um profissional…</option>
+                      <option value="" disabled>
+                        Selecione um profissional…
+                      </option>
                       {pros.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name ?? "(sem nome)"}</option>
+                        <option key={p.id} value={p.id}>
+                          {p.name ?? "(sem nome)"}
+                        </option>
                       ))}
                     </select>
                     {pros.length === 0 && (
@@ -438,31 +545,82 @@ function LeadsPage() {
         {showNew && (
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={() => setShowNew(false)}
           >
             <motion.div
               className="w-full max-w-md rounded-3xl bg-background ring-1 ring-border p-6"
-              initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="font-serif text-xl tracking-tight">Novo lead manual</h3>
-                <button onClick={() => setShowNew(false)} className="text-ink-soft hover:text-foreground"><X className="h-4 w-4" /></button>
+                <button
+                  onClick={() => setShowNew(false)}
+                  className="text-ink-soft hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
               <div className="space-y-3">
-                <input value={nl.name} onChange={(e) => setNl({ ...nl, name: e.target.value })} placeholder="Nome *" className={nlInp} />
-                <input value={nl.email} onChange={(e) => setNl({ ...nl, email: e.target.value })} placeholder="E-mail *" className={nlInp} />
-                <input value={nl.phone} onChange={(e) => setNl({ ...nl, phone: e.target.value })} placeholder="Telefone" className={nlInp} />
+                <input
+                  value={nl.name}
+                  onChange={(e) => setNl({ ...nl, name: e.target.value })}
+                  placeholder="Nome *"
+                  className={nlInp}
+                />
+                <input
+                  value={nl.email}
+                  onChange={(e) => setNl({ ...nl, email: e.target.value })}
+                  placeholder="E-mail *"
+                  className={nlInp}
+                />
+                <input
+                  value={nl.phone}
+                  onChange={(e) => setNl({ ...nl, phone: e.target.value })}
+                  placeholder="Telefone"
+                  className={nlInp}
+                />
                 <div className="flex gap-3">
-                  <input value={nl.city} onChange={(e) => setNl({ ...nl, city: e.target.value })} placeholder="Cidade" className={nlInp} />
-                  <input value={nl.state} onChange={(e) => setNl({ ...nl, state: e.target.value })} placeholder="UF" className={`${nlInp} w-20`} />
+                  <input
+                    value={nl.city}
+                    onChange={(e) => setNl({ ...nl, city: e.target.value })}
+                    placeholder="Cidade"
+                    className={nlInp}
+                  />
+                  <input
+                    value={nl.state}
+                    onChange={(e) => setNl({ ...nl, state: e.target.value })}
+                    placeholder="UF"
+                    className={`${nlInp} w-20`}
+                  />
                 </div>
-                <textarea value={nl.situation} onChange={(e) => setNl({ ...nl, situation: e.target.value })} placeholder="Situação do imóvel" rows={2} className={`${nlInp} resize-none`} />
+                <textarea
+                  value={nl.situation}
+                  onChange={(e) => setNl({ ...nl, situation: e.target.value })}
+                  placeholder="Situação do imóvel"
+                  rows={2}
+                  className={`${nlInp} resize-none`}
+                />
               </div>
               <div className="mt-5 flex gap-2">
-                <button onClick={() => setShowNew(false)} className="flex-1 rounded-xl border border-border py-2.5 text-sm text-ink-soft hover:bg-surface transition-colors">Cancelar</button>
-                <button onClick={createManualLead} disabled={!nl.name.trim() || !nl.email.trim()} className="flex-1 rounded-xl bg-foreground py-2.5 text-sm text-background hover:bg-foreground/90 disabled:opacity-50 transition-colors">Criar lead</button>
+                <button
+                  onClick={() => setShowNew(false)}
+                  className="flex-1 rounded-xl border border-border py-2.5 text-sm text-ink-soft hover:bg-surface transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={createManualLead}
+                  disabled={!nl.name.trim() || !nl.email.trim()}
+                  className="flex-1 rounded-xl bg-foreground py-2.5 text-sm text-background hover:bg-foreground/90 disabled:opacity-50 transition-colors"
+                >
+                  Criar lead
+                </button>
               </div>
             </motion.div>
           </motion.div>
