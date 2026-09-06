@@ -22,7 +22,17 @@ import { ATENDIMENTO_PHONE } from "@/lib/brand";
 import { formaAlternativa } from "@/lib/telefone-br";
 import { montarPayloadIg, lerEntradaIg } from "@/lib/instagram-formato";
 
-const GRAPH = "https://graph.facebook.com/v21.0";
+/**
+ * Cada canal tem seu endereço.
+ *
+ * O WhatsApp fala pelo graph.facebook.com; a API do Instagram com login do
+ * Instagram fala pelo graph.instagram.com. Mandar para o host errado devolve
+ * um 400 que não explica nada.
+ */
+const HOST = {
+  whatsapp: "https://graph.facebook.com/v21.0",
+  instagram: "https://graph.instagram.com/v21.0",
+} as const;
 
 /**
  * De onde veio a conversa.
@@ -40,10 +50,7 @@ export type Canal = "whatsapp" | "instagram";
  * Meta — e cada mensagem que o bot responde é uma conversa cobrada. A Meta
  * assina o corpo com o App Secret; conferimos antes de olhar o conteúdo.
  */
-async function assinaturaConfere(corpoBruto: string, cabecalho: string | null): Promise<boolean> {
-  const segredo = process.env.META_APP_SECRET;
-  if (!segredo || !cabecalho?.startsWith("sha256=")) return false;
-
+async function assinaCom(segredo: string, corpoBruto: string): Promise<string> {
   const chave = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(segredo),
@@ -52,20 +59,40 @@ async function assinaturaConfere(corpoBruto: string, cabecalho: string | null): 
     ["sign"],
   );
   const assinado = await crypto.subtle.sign("HMAC", chave, new TextEncoder().encode(corpoBruto));
-  const esperado = [...new Uint8Array(assinado)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return [...new Uint8Array(assinado)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
-  const recebido = cabecalho.slice("sha256=".length);
-  if (recebido.length !== esperado.length) return false;
-
-  // Comparação de tempo constante: comparar com === vaza, pelo tempo de
-  // resposta, quantos caracteres iniciais o atacante acertou.
+/** Compara em tempo constante: `===` vaza, pelo tempo, quantos caracteres o atacante acertou. */
+function iguais(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
   let diferenca = 0;
-  for (let i = 0; i < esperado.length; i++) {
-    diferenca |= esperado.charCodeAt(i) ^ recebido.charCodeAt(i);
-  }
+  for (let i = 0; i < a.length; i++) diferenca |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diferenca === 0;
+}
+
+/**
+ * Assinatura da requisição.
+ *
+ * Sem isto, qualquer um que descubra a URL conversa com o bot fingindo ser a
+ * Meta — e cada mensagem que o bot responde é uma conversa cobrada.
+ *
+ * **São duas chaves.** O app do Facebook e o app do Instagram têm segredos
+ * diferentes, e a mesma URL recebe os dois canais. Aceitamos qualquer uma das
+ * duas: o corpo diz de qual canal veio, mas conferir a assinatura antes de
+ * confiar no corpo é justamente o ponto.
+ */
+async function assinaturaConfere(corpoBruto: string, cabecalho: string | null): Promise<boolean> {
+  if (!cabecalho?.startsWith("sha256=")) return false;
+  const recebido = cabecalho.slice("sha256=".length);
+
+  const segredos = [process.env.META_APP_SECRET, process.env.INSTAGRAM_APP_SECRET].filter(
+    (x): x is string => Boolean(x),
+  );
+
+  for (const segredo of segredos) {
+    if (iguais(await assinaCom(segredo, corpoBruto), recebido)) return true;
+  }
+  return false;
 }
 
 /** Número desconhecido para a Meta. Ver telefone-br.ts. */
@@ -82,7 +109,7 @@ async function tentarEnvio(
 ): Promise<Tentativa> {
   const corpo = canal === "instagram" ? montarPayloadIg(para, envio) : montarPayload(para, envio);
 
-  const res = await fetch(`${GRAPH}/${origemId}/messages`, {
+  const res = await fetch(`${HOST[canal]}/${origemId}/messages`, {
     method: "POST",
     signal: AbortSignal.timeout(10_000),
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },

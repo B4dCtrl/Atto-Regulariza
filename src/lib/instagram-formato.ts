@@ -13,7 +13,8 @@
 import type { Envio } from "./conversa-triagem";
 
 export const LIMITE_IG = {
-  texto: 1000,
+  /** A Meta conta **bytes**, não caracteres: cada "ã" ocupa dois. */
+  textoBytes: 1000,
   titulo: 20,
   /** Acima disso o Instagram recusa a mensagem. Nossas perguntas têm 4. */
   maxRespostasRapidas: 13,
@@ -30,15 +31,33 @@ function cortar(texto: string, limite: number): string {
   return texto.length <= limite ? texto : texto.slice(0, limite);
 }
 
+/**
+ * Corta pelo tamanho em bytes, sem partir um caractere ao meio.
+ *
+ * `slice` conta caracteres; a Meta conta bytes. Em português a diferença
+ * aparece rápido — "não" tem 3 caracteres e 4 bytes.
+ */
+function cortarBytes(texto: string, limite: number): string {
+  const bytes = new TextEncoder().encode(texto);
+  if (bytes.length <= limite) return texto;
+  // decode com stream:false descarta a sobra de um caractere partido.
+  return new TextDecoder("utf-8", { fatal: false })
+    .decode(bytes.slice(0, limite))
+    .replace(/�$/, "");
+}
+
 export function montarPayloadIg(para: string, envio: Envio): PayloadIg {
   if (envio.tipo === "texto") {
-    return { recipient: { id: para }, message: { text: cortar(envio.texto, LIMITE_IG.texto) } };
+    return {
+      recipient: { id: para },
+      message: { text: cortarBytes(envio.texto, LIMITE_IG.textoBytes) },
+    };
   }
 
   return {
     recipient: { id: para },
     message: {
-      text: cortar(envio.texto, LIMITE_IG.texto),
+      text: cortarBytes(envio.texto, LIMITE_IG.textoBytes),
       quick_replies: envio.opcoes.slice(0, LIMITE_IG.maxRespostasRapidas).map((o) => ({
         content_type: "text",
         // O curto vem primeiro: cortar "Construção nunca averbada" em 20

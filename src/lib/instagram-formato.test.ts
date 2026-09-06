@@ -56,7 +56,19 @@ describe("montarPayloadIg", () => {
 
   it("corta texto acima do limite", () => {
     const p = montarPayloadIg("123", { tipo: "texto", texto: "x".repeat(3000) });
-    expect(p.message.text.length).toBe(LIMITE_IG.texto);
+    expect(p.message.text.length).toBe(LIMITE_IG.textoBytes);
+  });
+
+  it("corta por bytes, nao por caracteres — acento ocupa dois", () => {
+    const p = montarPayloadIg("123", { tipo: "texto", texto: "á".repeat(3000) });
+    const bytes = new TextEncoder().encode(p.message.text).length;
+    expect(bytes).toBeLessThanOrEqual(LIMITE_IG.textoBytes);
+    expect(p.message.text.length).toBe(LIMITE_IG.textoBytes / 2);
+  });
+
+  it("nunca parte um caractere ao meio", () => {
+    const p = montarPayloadIg("123", { tipo: "texto", texto: "ç".repeat(600) + "fim" });
+    expect(p.message.text).not.toContain("�");
   });
 });
 
