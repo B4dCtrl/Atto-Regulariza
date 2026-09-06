@@ -865,6 +865,16 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      avisar_lead_triagem: {
+        Args: {
+          _cor: string;
+          _nome: string;
+          _cidade: string;
+          _telefone: string;
+          _motivo: string;
+        };
+        Returns: undefined;
+      };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];

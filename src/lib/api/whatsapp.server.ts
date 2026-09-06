@@ -169,7 +169,32 @@ async function gravarLead(telefone: string, estado: Estado): Promise<string | un
     avisarErro("triagem do WhatsApp", `lead não gravado: ${error.message}`);
     return undefined;
   }
+
+  await avisarAdmins(telefone, estado);
   return data?.id;
+}
+
+/**
+ * Cutuca os admins no sino do painel.
+ *
+ * Sem isto o lead cai numa lista que alguém precisa lembrar de abrir — e um
+ * caso vermelho que chega às 23h fica invisível até alguém procurar. Não
+ * derruba a conversa se falhar: a pessoa do outro lado não tem culpa de o
+ * aviso não sair, e o lead já está gravado.
+ */
+async function avisarAdmins(telefone: string, estado: Estado): Promise<void> {
+  const r = estado.resultado;
+  if (!r) return;
+
+  const { error } = await supabaseAdmin.rpc("avisar_lead_triagem", {
+    _cor: r.cor,
+    _nome: (estado.respostas.nome ?? "").trim(),
+    _cidade: r.cidade,
+    _telefone: telefone,
+    _motivo: r.motivo,
+  });
+
+  if (error) console.error("[whatsapp] aviso não enviado", error.message);
 }
 
 /**
