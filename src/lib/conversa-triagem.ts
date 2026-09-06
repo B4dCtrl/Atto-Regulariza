@@ -15,7 +15,7 @@ import { PERGUNTAS, classificar, type Respostas, type Resultado } from "./triage
 
 export type Envio =
   | { tipo: "texto"; texto: string }
-  | { tipo: "opcoes"; texto: string; opcoes: { valor: string; rotulo: string }[] };
+  | { tipo: "opcoes"; texto: string; opcoes: { valor: string; rotulo: string; curto?: string }[] };
 
 export type Estado = {
   /** Índice da próxima pergunta em PERGUNTAS. 8 = acabou. */
@@ -53,7 +53,11 @@ function perguntaDe(passo: number): Envio {
   return {
     tipo: "opcoes",
     texto: p.texto,
-    opcoes: p.opcoes.map((o) => ({ valor: o.valor as string, rotulo: o.rotulo })),
+    opcoes: p.opcoes.map((o) => ({
+      valor: o.valor as string,
+      rotulo: o.rotulo,
+      ...(o.curto ? { curto: o.curto } : {}),
+    })),
   };
 }
 

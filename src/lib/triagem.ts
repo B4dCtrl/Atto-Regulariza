@@ -54,7 +54,14 @@ export type Resultado = {
   mensagem: string;
 };
 
-type Opcao<T> = { valor: T; rotulo: string };
+/**
+ * Uma alternativa de resposta.
+ *
+ * `curto` existe para canal com pouco espaço — resposta rápida do Instagram
+ * cabe em 20 caracteres e não tem descrição, então cortar no meio deixaria a
+ * pessoa escolhendo às cegas. Só as opções que passam do limite precisam.
+ */
+type Opcao<T> = { valor: T; rotulo: string; curto?: string };
 
 type Pergunta =
   | { id: "cidade" | "relato" | "nome"; tipo: "texto"; texto: string }
@@ -105,7 +112,7 @@ export const PERGUNTAS: readonly Pergunta[] = [
     tipo: "opcoes",
     texto: "O que está diferente do que consta no papel?",
     opcoes: [
-      { valor: "nunca_averbada", rotulo: "Construção nunca averbada" },
+      { valor: "nunca_averbada", rotulo: "Construção nunca averbada", curto: "Nunca averbada" },
       { valor: "ampliacao", rotulo: "Ampliação ou reforma" },
       { valor: "area_nao_bate", rotulo: "Área não bate" },
       { valor: "nao_sei", rotulo: "Não sei dizer" },
