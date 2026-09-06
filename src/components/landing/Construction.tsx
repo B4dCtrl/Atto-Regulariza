@@ -8,15 +8,17 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 
 export function Construction() {
   const [showField, setShowField] = useState(false);
-  const [pwd, setPwd]             = useState("");
-  const [erro, setErro]           = useState(false);
+  const [pwd, setPwd] = useState("");
+  const [erro, setErro] = useState(false);
 
   function tentarEntrar(e: FormEvent) {
     e.preventDefault();
     if (pwd === DEV_ACCESS_KEY) {
       try {
         localStorage.setItem(DEV_STORAGE_KEY, String(Date.now() + DEV_EXPIRY_MS));
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
       window.location.href = "/";
     } else {
       setErro(true);
@@ -69,14 +71,13 @@ export function Construction() {
 
         {/* Texto */}
         <p className="mt-5 max-w-md text-balance leading-relaxed text-ink-soft">
-          Nossa plataforma de regularização imobiliária está quase pronta.
-          Em breve, regularizar seu imóvel vai ser simples, claro e acompanhável
-          em tempo real.
+          Nossa plataforma de regularização imobiliária está quase pronta. Em breve, regularizar seu
+          imóvel vai ser simples, claro e acompanhável em tempo real.
         </p>
 
         {/* WhatsApp — captura leads mesmo durante a construção */}
         <a
-          href={WHATSAPP.avaliacaoGratuita}
+          href={WHATSAPP.adiantarCaso}
           target="_blank"
           rel="noreferrer"
           className="group mt-9 inline-flex items-center gap-2 rounded-full bg-foreground py-3 pl-6 pr-2 text-base text-background shadow-[0_10px_30px_-10px_oklch(0.16_0.01_60_/_0.4)] transition-all hover:scale-[1.02]"
@@ -110,13 +111,18 @@ export function Construction() {
                 transition={{ duration: 0.25 }}
                 className="flex flex-col items-center gap-2"
               >
-                <div className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${erro ? "border-red-300 bg-red-50" : "border-border bg-surface-elevated"}`}>
+                <div
+                  className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs ${erro ? "border-red-300 bg-red-50" : "border-border bg-surface-elevated"}`}
+                >
                   <Lock className="h-3 w-3 text-ink-soft" />
                   <input
                     autoFocus
                     type="password"
                     value={pwd}
-                    onChange={(e) => { setPwd(e.target.value); setErro(false); }}
+                    onChange={(e) => {
+                      setPwd(e.target.value);
+                      setErro(false);
+                    }}
                     placeholder="Senha da equipe"
                     className="w-36 bg-transparent outline-none placeholder:text-ink-soft/50"
                   />
