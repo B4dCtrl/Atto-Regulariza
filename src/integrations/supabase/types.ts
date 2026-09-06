@@ -31,6 +31,7 @@ export type Database = {
           triagem_motivo: string | null;
           triagem_respostas: Json | null;
           contato_externo: string | null;
+          codigo: string | null;
         };
         Insert: {
           id?: string;
@@ -53,6 +54,7 @@ export type Database = {
           triagem_motivo?: string | null;
           triagem_respostas?: Json | null;
           contato_externo?: string | null;
+          codigo?: string | null;
           created_at?: string;
         };
         Update: {
@@ -76,6 +78,7 @@ export type Database = {
           triagem_motivo?: string | null;
           triagem_respostas?: Json | null;
           contato_externo?: string | null;
+          codigo?: string | null;
           created_at?: string;
         };
         Relationships: [];

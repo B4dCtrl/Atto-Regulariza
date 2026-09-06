@@ -62,11 +62,32 @@ async function tratarWhatsApp(request: Request, url: URL): Promise<Response | nu
   return new Response("method not allowed", { status: 405 });
 }
 
+/**
+ * Link curto do caso: /f/<codigo>.
+ *
+ * Redireciona para a conversa no WhatsApp da equipe, com uma saudação que
+ * carrega só o código. Fica aqui, antes do roteador, porque é redirecionamento
+ * puro — abrir uma página React para depois sair dela custaria um segundo de
+ * tela branca no celular do cliente.
+ */
+async function tratarLinkCurto(url: URL): Promise<Response | null> {
+  const achado = /^\/f\/([A-Z2-9]{6})$/.exec(url.pathname);
+  if (!achado) return null;
+
+  const { destinoDoCodigo } = await import("./lib/api/link-curto.server");
+  return Response.redirect(destinoDoCodigo(achado[1]), 302);
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      const doWhatsApp = await tratarWhatsApp(request, new URL(request.url));
+      const url = new URL(request.url);
+
+      const doWhatsApp = await tratarWhatsApp(request, url);
       if (doWhatsApp) return doWhatsApp;
+
+      const curto = await tratarLinkCurto(url);
+      if (curto) return curto;
 
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

@@ -20,6 +20,8 @@ import { iniciar, avancar, type Estado, type Envio } from "@/lib/conversa-triage
 import { montarPayload, lerEntrada } from "@/lib/whatsapp-formato";
 import { ATENDIMENTO_PHONE } from "@/lib/brand";
 import { formaAlternativa } from "@/lib/telefone-br";
+import { gerarCodigo } from "@/lib/codigo-curto";
+import { SITE_URL } from "@/lib/seo";
 import { montarPayloadIg, lerEntradaIg } from "@/lib/instagram-formato";
 
 /**
@@ -199,6 +201,7 @@ async function gravarLead(
   contato: string,
   estado: Estado,
   canal: Canal,
+  codigo: string,
 ): Promise<string | undefined> {
   const r = estado.resultado;
   if (!r) return undefined;
@@ -206,6 +209,7 @@ async function gravarLead(
   const { data, error } = await supabaseAdmin
     .from("leads")
     .insert({
+      codigo,
       name: estado.respostas.nome ?? null,
       // No Instagram não há telefone: o contato é o id do perfil. Guardá-lo em
       // 'phone' daria um número que ninguém consegue discar, e a equipe
@@ -262,21 +266,17 @@ async function avisarAdmins(telefone: string, estado: Estado): Promise<void> {
 /**
  * Encaminhamento para o humano.
  *
- * O bot só faz a triagem; quem atende é gente, no número de sempre. O link
- * já leva o resumo escrito, para a pessoa não precisar repetir tudo.
+ * O bot só faz a triagem; quem atende é gente, no número de sempre.
+ *
+ * O link é curto e nosso — `atoregulariza.com.br/f/K7M2QX`. Antes era um
+ * `wa.me` com o resumo do caso codificado na URL, o que dava mais de duzentos
+ * caracteres de `%C3%A9%20` e parecia golpe. O resumo não se perde: a equipe
+ * já tem o caso inteiro no painel, e o código diz de quem se trata.
  */
-function convite(estado: Estado): Envio {
-  const nome = (estado.respostas.nome ?? "").trim();
-  const cidade = (estado.respostas.cidade ?? "").trim();
-  const resumo = encodeURIComponent(
-    `Olá! Acabei de fazer a triagem pelo assistente.\n\n` +
-      `Nome: ${nome}\nCidade: ${cidade}\nCaso: ${estado.respostas.relato ?? ""}`,
-  );
+function convite(codigo: string): Envio {
   return {
     tipo: "texto",
-    texto:
-      `Para continuar com um especialista, é só tocar aqui: ` +
-      `https://wa.me/${ATENDIMENTO_PHONE}?text=${resumo}`,
+    texto: `Para falar com um especialista, é só tocar aqui: ${SITE_URL}/f/${codigo}`,
   };
 }
 
@@ -357,10 +357,11 @@ export async function receberWebhook(request: Request): Promise<Response> {
 
     let leadId: string | undefined;
     if (passo.estado.encerrada && !anterior?.encerrada) {
+      const codigo = gerarCodigo();
       if (passo.estado.resultado) {
-        leadId = await gravarLead(chave, passo.estado, entrada.canal);
+        leadId = await gravarLead(chave, passo.estado, entrada.canal, codigo);
       }
-      envios.push(convite(passo.estado));
+      envios.push(convite(codigo));
     }
 
     await salvarEstado(chave, passo.estado, leadId);
