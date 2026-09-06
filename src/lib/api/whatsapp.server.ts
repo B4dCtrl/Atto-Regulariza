@@ -15,6 +15,7 @@ import { avisarErro } from "@/lib/api/avisar-erro.server";
 import { iniciar, avancar, type Estado, type Envio } from "@/lib/conversa-triagem";
 import { montarPayload, lerEntrada } from "@/lib/whatsapp-formato";
 import { ATENDIMENTO_PHONE } from "@/lib/brand";
+import { formaAlternativa } from "@/lib/telefone-br";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -53,6 +54,27 @@ async function assinaturaConfere(corpoBruto: string, cabecalho: string | null): 
   return diferenca === 0;
 }
 
+/** Número desconhecido para a Meta. Ver telefone-br.ts. */
+const ERRO_NUMERO_NAO_PERMITIDO = 131030;
+
+type Tentativa = { ok: true } | { ok: false; status: number; corpo: string };
+
+async function tentarEnvio(
+  phoneId: string,
+  token: string,
+  para: string,
+  envio: Envio,
+): Promise<Tentativa> {
+  const res = await fetch(`${GRAPH}/${phoneId}/messages`, {
+    method: "POST",
+    signal: AbortSignal.timeout(10_000),
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(montarPayload(para, envio)),
+  });
+  if (res.ok) return { ok: true };
+  return { ok: false, status: res.status, corpo: await res.text().catch(() => "") };
+}
+
 async function enviar(para: string, envio: Envio): Promise<void> {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_ID;
@@ -61,17 +83,22 @@ async function enviar(para: string, envio: Envio): Promise<void> {
     return;
   }
 
-  const res = await fetch(`${GRAPH}/${phoneId}/messages`, {
-    method: "POST",
-    signal: AbortSignal.timeout(10_000),
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(montarPayload(para, envio)),
-  });
+  let r = await tentarEnvio(phoneId, token, para, envio);
 
-  if (!res.ok) {
-    const detalhe = await res.text().catch(() => "");
-    console.error("[whatsapp] envio recusado", res.status, detalhe.slice(0, 300));
-    avisarErro("envio pelo WhatsApp", `${res.status}: ${detalhe.slice(0, 200)}`);
+  // O nono dígito: a mensagem chega de 554184471404 e a Meta pode só conhecer
+  // 5541984471404 — mesmo telefone, duas grafias. Quando ela diz que não
+  // conhece o número, tentamos a outra antes de desistir.
+  if (!r.ok && r.corpo.includes(String(ERRO_NUMERO_NAO_PERMITIDO))) {
+    const outra = formaAlternativa(para);
+    if (outra) {
+      console.warn(`[whatsapp] ${para} recusado; tentando ${outra}`);
+      r = await tentarEnvio(phoneId, token, outra, envio);
+    }
+  }
+
+  if (!r.ok) {
+    console.error("[whatsapp] envio recusado", r.status, r.corpo.slice(0, 300));
+    avisarErro("envio pelo WhatsApp", `${r.status}: ${r.corpo.slice(0, 200)}`);
   }
 }
 
