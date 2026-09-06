@@ -227,7 +227,7 @@ export async function receberWebhook(request: Request): Promise<Response> {
 
     const anterior = await carregarEstado(entrada.de);
 
-    const passo = anterior ? avancar(anterior, entrada.texto) : iniciar();
+    const passo = anterior ? avancar(anterior, entrada.texto) : iniciar(entrada.texto);
     const envios = [...passo.envios];
 
     let leadId: string | undefined;

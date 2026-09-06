@@ -132,3 +132,23 @@ describe("avancar — sair para humano", () => {
     expect(r.estado.respostas.relato).toContain("prefeitura");
   });
 });
+
+describe("iniciar — primeira mensagem", () => {
+  it("quem já abre pedindo atendente não recebe questionário", () => {
+    const r = iniciar("oi, quero falar com um atendente");
+    expect(r.estado.pediuHumano).toBe(true);
+    expect(r.estado.encerrada).toBe(true);
+    expect(r.envios).toHaveLength(1);
+    expect(r.envios[0].texto).toMatch(/pessoa da equipe/i);
+  });
+
+  it("mensagem comum começa a triagem normalmente", () => {
+    const r = iniciar("oi");
+    expect(r.estado.pediuHumano).toBe(false);
+    expect(r.envios.at(-1)?.texto).toContain("O que te trouxe aqui?");
+  });
+
+  it("sem texto nenhum também começa a triagem", () => {
+    expect(iniciar().envios).toHaveLength(2);
+  });
+});

@@ -57,7 +57,20 @@ function perguntaDe(passo: number): Envio {
   };
 }
 
-export function iniciar(): { estado: Estado; envios: Envio[] } {
+/**
+ * Primeira mensagem da pessoa.
+ *
+ * O texto dela importa: quem abre a conversa pedindo atendente não deve
+ * receber um questionário como resposta. Nesse caso a triagem nem começa.
+ */
+export function iniciar(primeiraMensagem = ""): { estado: Estado; envios: Envio[] } {
+  if (PEDE_HUMANO.test(primeiraMensagem.trim())) {
+    return {
+      estado: { ...estadoInicial(), encerrada: true, pediuHumano: true },
+      envios: [{ tipo: "texto", texto: SAIDA_HUMANA }],
+    };
+  }
+
   return {
     estado: estadoInicial(),
     envios: [{ tipo: "texto", texto: SAUDACAO }, perguntaDe(0)],
