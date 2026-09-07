@@ -71,6 +71,16 @@ const ADVANCE_LABEL: Record<LeadStatus, string> = {
   recusado: "",
 };
 
+/**
+ * Cidade e estado, sem barra solta.
+ *
+ * Lead da triagem não tem estado — o bot pergunta a cidade e para por aí. O
+ * `cidade/estado` cru virava "São José dos Pinhais/", com a barra órfã no fim.
+ */
+function local(cidade: string, estado: string): string {
+  return [cidade, estado].filter(Boolean).join("/") || "—";
+}
+
 /* ──────── Mapper */
 type LeadRow = Tables<"leads">;
 function rowToLead(r: LeadRow): Lead {
@@ -410,7 +420,7 @@ function LeadsPage() {
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-soft">
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {lead.city}/{lead.state}
+                        {local(lead.city, lead.state)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Building2 className="h-3 w-3" />
@@ -481,7 +491,7 @@ function LeadsPage() {
               <div className="space-y-2 rounded-2xl bg-surface p-3 text-xs">
                 {[
                   ["Telefone", selectedLead.phone],
-                  ["Cidade", `${selectedLead.city}/${selectedLead.state}`],
+                  ["Cidade", local(selectedLead.city, selectedLead.state)],
                   ["Tipo", selectedLead.propertyType],
                 ].map(([k, v]) => (
                   <div key={k} className="flex gap-2">
