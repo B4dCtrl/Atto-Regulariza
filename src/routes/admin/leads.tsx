@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Plus, X, Building2, Clock, MapPin, Check, AlertTriangle } from "lucide-react";
+import { Plus, X, Building2, Clock, MapPin, Check, AlertTriangle, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { DetalheTriagem, type DadosTriagem } from "@/components/admin/DetalheTriagem";
@@ -115,6 +115,7 @@ function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [filter, setFilter] = useState<LeadStatus | "all">("all");
   const [cor, setCor] = useState<Cor | "todas">("todas");
+  const [busca, setBusca] = useState("");
   const [notes, setNotes] = useState("");
   const [pros, setPros] = useState<{ id: string; name: string | null }[]>([]);
   const [showNew, setShowNew] = useState(false);
@@ -267,7 +268,30 @@ function LeadsPage() {
   const activeLeads = leads.filter((l) => l.status !== "recusado");
   const porStatus = filter === "all" ? activeLeads : leads.filter((l) => l.status === filter);
   // Os dois filtros se somam: "Atribuído + vermelho" é uma pergunta legítima.
-  const filtered = cor === "todas" ? porStatus : porStatus.filter((l) => l.triagem.cor === cor);
+  const porCor = cor === "todas" ? porStatus : porStatus.filter((l) => l.triagem.cor === cor);
+
+  /**
+   * Busca por código, nome, cidade ou contato.
+   *
+   * O código é o motivo de existir: a pessoa chega no WhatsApp dizendo "meu
+   * código é TAJ7K2", e sem isto não havia como achar o caso — o código ficava
+   * decorativo no painel.
+   *
+   * Quando o texto parece um código (seis caracteres do nosso alfabeto), a
+   * busca ignora os filtros de fase e cor: quem digita um código quer AQUELE
+   * caso, mesmo que ele esteja numa aba que não está aberta.
+   */
+  const termo = busca.trim().toLowerCase();
+  const pareceCodigo = /^[a-z2-9]{6}$/.test(termo);
+  const universo = pareceCodigo ? leads : porCor;
+
+  const filtered = !termo
+    ? porCor
+    : universo.filter((l) =>
+        [l.triagem.codigo, l.name, l.city, l.phone, l.email]
+          .filter(Boolean)
+          .some((campo) => String(campo).toLowerCase().includes(termo)),
+      );
   const countStatus = (s: LeadStatus) => leads.filter((l) => l.status === s).length;
 
   const newCount = countStatus("novo");
@@ -372,12 +396,29 @@ function LeadsPage() {
         </div>
       )}
 
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por código, nome, cidade ou contato"
+            className="w-full rounded-xl border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none transition-colors focus:border-foreground/30"
+          />
+        </div>
+        {pareceCodigo && (
+          <p className="mt-1.5 text-xs text-ink-soft">
+            Buscando o código em todas as fases, inclusive nas que estão fechadas nos filtros.
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
         {/* Lead list */}
         <div className="space-y-2">
           {filtered.length === 0 && (
             <div className="rounded-2xl bg-background ring-1 ring-border py-12 text-center text-sm text-ink-soft">
-              Nenhum lead nesta fase.
+              {termo ? "Nenhum lead encontrado." : "Nenhum lead nesta fase."}
             </div>
           )}
           <AnimatePresence>
