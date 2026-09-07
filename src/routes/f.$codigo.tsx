@@ -43,8 +43,13 @@ function PaginaCaso() {
   const nome = caso && caso !== "carregando" ? caso.primeiroNome : "";
   const ola = nome ? `${nome}, ` : "";
 
+  // Sem o código: ele é linguagem interna, e pedir que a pessoa se identifique
+  // por um protocolo soa a fila de banco. A equipe acha o caso pelo telefone,
+  // pelo nome ou pela busca do painel.
   const whats = `https://wa.me/${ATENDIMENTO_PHONE}?text=${encodeURIComponent(
-    `Olá! Terminei a triagem pelo assistente. Meu código é ${codigo}.`,
+    nome
+      ? `Olá! Sou ${nome}, fiz a triagem pelo assistente da Ato e queria continuar.`
+      : "Olá! Fiz a triagem pelo assistente da Ato e queria continuar.",
   )}`;
 
   return (
@@ -136,10 +141,6 @@ function PaginaCaso() {
               <MessageCircle className="h-4 w-4" />
               Prefiro falar com alguém
             </a>
-
-            <p className="mt-5 text-center text-[11px] text-ink-soft">
-              Caso <span className="font-mono">{codigo}</span>
-            </p>
           </div>
         )}
       </div>
