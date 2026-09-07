@@ -14,6 +14,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ALFABETO } from "@/lib/codigo-curto";
 
 /** O que a página pode mostrar. */
@@ -48,4 +49,47 @@ export const buscarCaso = createServerFn({ method: "GET" })
       cidade: lead.city ?? "",
       jaCadastrado: Boolean(lead.converted),
     };
+  });
+
+/**
+ * As respostas da triagem, para o wizard não perguntar de novo.
+ *
+ * Devolve o que a própria pessoa respondeu — não a leitura interna. Cor,
+ * motivo da classificação e produto sugerido continuam fora: são o julgamento
+ * da Ato sobre o caso, e mostrar isso a quem só quer se cadastrar seria
+ * estranho e desnecessário.
+ */
+export const respostasDoCaso = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ codigo: z.string().regex(CODIGO_VALIDO) }))
+  .handler(async ({ data }): Promise<Record<string, string> | null> => {
+    const { data: lead } = await supabaseAdmin
+      .from("leads")
+      .select("triagem_respostas, converted")
+      .eq("codigo", data.codigo)
+      .maybeSingle();
+
+    // Lead já convertido não devolve mais nada: o link cumpriu a função, e
+    // deixá-lo servindo dados depois disso só amplia a janela de exposição.
+    if (!lead || lead.converted) return null;
+    return (lead.triagem_respostas as Record<string, string> | null) ?? null;
+  });
+
+/**
+ * Marca o lead como convertido depois que a conta foi criada.
+ *
+ * Exige sessão: só quem acabou de se cadastrar fecha o próprio caso. Sem isso,
+ * qualquer um com o código marcaria leads alheios como convertidos e eles
+ * sumiriam da fila da equipe.
+ */
+export const converterCaso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ codigo: z.string().regex(CODIGO_VALIDO) }))
+  .handler(async ({ data }): Promise<void> => {
+    const { error } = await supabaseAdmin
+      .from("leads")
+      .update({ converted: true, status: "ativo" })
+      .eq("codigo", data.codigo)
+      .eq("converted", false);
+
+    if (error) console.error("[caso] falha ao converter lead", error.message);
   });

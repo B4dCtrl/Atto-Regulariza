@@ -5,9 +5,18 @@ import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } f
 import { SeletorLocalidade } from "@/components/forms/SeletorLocalidade";
 import { supabase } from "@/integrations/supabase/client";
 import { createClientIntakeBrowser, type IntakeData } from "@/lib/client-intake";
+import { respostasDoCaso, converterCaso } from "@/lib/api/caso.server";
+import { intakeDaTriagem } from "@/lib/triagem-para-intake";
+import type { Respostas } from "@/lib/triagem";
 
 export const Route = createFileRoute("/cadastrar")({
   head: () => ({ meta: [{ title: "Regularize seu imóvel — Ato Regulariza" }] }),
+  // `?caso=K7M2QX` chega de quem já fez a triagem no WhatsApp ou no Instagram.
+  // Validar aqui evita carregar lixo da URL para dentro do formulário.
+  validateSearch: (busca: Record<string, unknown>): { caso?: string } => {
+    const c = String(busca.caso ?? "").toUpperCase();
+    return /^[A-Z2-9]{6}$/.test(c) ? { caso: c } : {};
+  },
   // "Criar conta" = conta nova. Encerra qualquer sessão ativa para não cair em
   // loop com o login anterior; o formulário aparece sempre limpo.
   beforeLoad: async () => {
@@ -120,6 +129,33 @@ const EMPTY: WizardData = {
 const PASSOS_COM_CONTA = 5;
 const PASSOS_SEM_CONTA = 6;
 
+/** Só o que veio preenchido sobrescreve o formulário; branco não apaga nada. */
+function limparVazios(v: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(v).filter(([, valor]) => valor !== ""));
+}
+
+/**
+ * Primeiro passo que a triagem não respondeu.
+ *
+ * Pular para o fim quando falta algo faria o cadastro nascer incompleto; parar
+ * no primeiro buraco pede só o que falta, na ordem que a pessoa já conhece.
+ */
+function primeiroPassoVazio(v: {
+  tipo_imovel: string;
+  tem_escritura: string;
+  situacao: string;
+  cidade: string;
+  estado: string;
+  objetivo: string;
+}): number {
+  if (!v.tipo_imovel) return 1;
+  if (!v.tem_escritura) return 2;
+  if (!v.situacao) return 3;
+  if (!v.cidade || !v.estado) return 4;
+  if (!v.objetivo) return 5;
+  return 6;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 function CadastrarPage() {
@@ -133,9 +169,55 @@ function CadastrarPage() {
 
   const set = (k: keyof WizardData, v: string) => setData((d) => ({ ...d, [k]: v }));
 
+  /**
+   * Fecha o lead da triagem depois que a conta existe.
+   *
+   * Nunca derruba o cadastro: a conta e o processo já estão criados, e falhar
+   * aqui significa apenas um lead que continua na fila da equipe — visível e
+   * corrigível. Perder a conta por causa disso seria muito pior.
+   */
+  async function fecharCaso() {
+    if (!caso) return;
+    try {
+      await converterCaso({ data: { codigo: caso } });
+    } catch {
+      // Silêncio proposital: ver comentário acima.
+    }
+  }
+
   /** Já existe sessão? Então a conta já foi criada — o wizard só coleta o imóvel. */
   const [jaLogado, setJaLogado] = useState(false);
   const [uidLogado, setUidLogado] = useState<string | null>(null);
+
+  const { caso } = Route.useSearch();
+
+  /**
+   * Quem veio da triagem não repete o que já respondeu.
+   *
+   * Preenchemos o que dá para traduzir e pulamos para o primeiro passo que
+   * ficou vazio — em geral a cidade, porque a triagem pergunta a cidade mas
+   * não o estado. Perguntar de novo o que a pessoa acabou de responder no
+   * WhatsApp é o jeito mais rápido de perdê-la aqui.
+   */
+  useEffect(() => {
+    if (!caso) return;
+    let ativo = true;
+
+    respostasDoCaso({ data: { codigo: caso } })
+      .then((respostas) => {
+        if (!ativo || !respostas) return;
+        const vindo = intakeDaTriagem(respostas as Partial<Respostas>);
+        setData((d) => ({ ...d, ...limparVazios(vindo) }));
+        setStep(primeiroPassoVazio(vindo));
+      })
+      .catch(() => {
+        // Link velho ou caso já convertido: o wizard segue normal, do começo.
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [caso]);
 
   useEffect(() => {
     let ativo = true;
@@ -217,6 +299,7 @@ function CadastrarPage() {
         setLoading(false);
         return;
       }
+      await fecharCaso();
       setLoading(false);
       navigate({ to: "/dashboard", search: { welcome: "1" } as never });
       return;
@@ -256,6 +339,7 @@ function CadastrarPage() {
         setLoading(false);
         return;
       }
+      await fecharCaso();
       setLoading(false);
       // ?welcome=1 dispara tutorial + busca de profissional.
       navigate({ to: "/dashboard", search: { welcome: "1" } as never });

@@ -82,12 +82,14 @@ function PaginaCaso() {
         {caso && caso !== "carregando" && (
           <div className="rounded-3xl bg-background p-6 ring-1 ring-border sm:p-8">
             <h1 className="font-serif text-2xl leading-tight">
-              {ola}falta um documento para começarmos
+              {ola}o próximo passo são os documentos
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-ink-soft">
-              É a <strong className="font-medium text-foreground">matrícula atualizada</strong> do
-              imóvel{caso.cidade ? `, em ${caso.cidade}` : ""}. É por ela que descobrimos o que
-              consta no cartório hoje — e sem isso qualquer orçamento seria chute.
+              O principal é a{" "}
+              <strong className="font-medium text-foreground">matrícula atualizada</strong> do
+              imóvel{caso.cidade ? `, em ${caso.cidade}` : ""}: é por ela que descobrimos o que
+              consta no cartório hoje, e sem isso qualquer orçamento seria chute. Também pedimos seu
+              documento com foto e um comprovante de endereço.
             </p>
 
             <div className="mt-5 space-y-2.5 rounded-2xl bg-surface/60 p-4 text-sm">
