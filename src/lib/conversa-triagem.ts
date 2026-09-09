@@ -32,12 +32,13 @@ export type Estado = {
 };
 
 const SAUDACAO =
-  "Olá! Sou o assistente da Ato Regulariza. Vou fazer algumas perguntas rápidas " +
-  "para entender seu caso e te encaminhar para a pessoa certa. Leva menos de dois minutos. " +
-  "Se preferir falar com uma pessoa a qualquer momento, é só escrever: Falar com atendente.";
+  "Olá! Sou o **assistente da Ato Regulariza**. Vou fazer algumas perguntas rápidas " +
+  "para entender seu caso e te encaminhar para a pessoa certa. Leva menos de **dois minutos**." +
+  "\n\nSe preferir falar com uma pessoa a qualquer momento, é só escrever: " +
+  "**Falar com atendente**.";
 
 const SAIDA_HUMANA =
-  "Claro. Já avisei a equipe — em breve uma pessoa da equipe assume esta conversa por aqui.";
+  "Claro. **Já avisei a equipe** — em breve alguém assume esta conversa por aqui.";
 
 /**
  * Pedidos de atendimento humano.

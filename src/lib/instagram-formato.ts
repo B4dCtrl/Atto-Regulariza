@@ -11,6 +11,7 @@
  */
 
 import type { Envio } from "./conversa-triagem";
+import { semFormato } from "./enfase";
 
 export const LIMITE_IG = {
   /** A Meta conta **bytes**, não caracteres: cada "ã" ocupa dois. */
@@ -37,7 +38,8 @@ function cortar(texto: string, limite: number): string {
  * `slice` conta caracteres; a Meta conta bytes. Em português a diferença
  * aparece rápido — "não" tem 3 caracteres e 4 bytes.
  */
-function cortarBytes(texto: string, limite: number): string {
+function cortarBytes(cru: string, limite: number): string {
+  const texto = semFormato(cru);
   const bytes = new TextEncoder().encode(texto);
   if (bytes.length <= limite) return texto;
   // decode com stream:false descarta a sobra de um caractere partido.

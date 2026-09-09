@@ -7,6 +7,7 @@
  */
 
 import type { Envio } from "./conversa-triagem";
+import { paraWhatsApp } from "./enfase";
 
 /**
  * Limites da API. Estourar qualquer um faz a Meta recusar a mensagem inteira
@@ -44,6 +45,11 @@ function cortar(texto: string, limite: number): string {
   return texto.length <= limite ? texto : texto.slice(0, limite);
 }
 
+/** Corta e traduz a ênfase para a marcação do WhatsApp. */
+function texto(t: string, limite: number): string {
+  return cortar(paraWhatsApp(t), limite);
+}
+
 export function montarPayload(para: string, envio: Envio): Payload {
   const base = {
     messaging_product: "whatsapp",
@@ -55,11 +61,11 @@ export function montarPayload(para: string, envio: Envio): Payload {
     return {
       ...base,
       type: "text",
-      text: { body: cortar(envio.texto, LIMITE.corpo), preview_url: false },
+      text: { body: texto(envio.texto, LIMITE.corpo), preview_url: false },
     };
   }
 
-  const corpo = { text: cortar(envio.texto, LIMITE.corpo) };
+  const corpo = { text: texto(envio.texto, LIMITE.corpo) };
 
   if (envio.opcoes.length <= LIMITE.maxBotoes) {
     return {

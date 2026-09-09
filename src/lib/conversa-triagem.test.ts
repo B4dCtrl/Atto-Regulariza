@@ -115,7 +115,7 @@ describe("avancar — sair para humano", () => {
     const r = avancar(estado, "quero falar com um atendente");
     expect(r.estado.encerrada).toBe(true);
     expect(r.estado.pediuHumano).toBe(true);
-    expect(r.envios.at(-1)?.texto).toMatch(/pessoa da equipe/i);
+    expect(r.envios.at(-1)?.texto).toMatch(/já avisei a equipe/i);
   });
 
   it("reconhece variações comuns na pergunta de opções", () => {
@@ -156,7 +156,7 @@ describe("iniciar — primeira mensagem", () => {
     expect(r.estado.pediuHumano).toBe(true);
     expect(r.estado.encerrada).toBe(true);
     expect(r.envios).toHaveLength(1);
-    expect(r.envios[0].texto).toMatch(/pessoa da equipe/i);
+    expect(r.envios[0].texto).toMatch(/já avisei a equipe/i);
   });
 
   it("mensagem comum começa a triagem normalmente", () => {

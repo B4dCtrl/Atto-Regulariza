@@ -22,8 +22,15 @@ import type { Cor } from "@/lib/triagem";
 
 const HOST = "https://graph.facebook.com/v21.0";
 
-/** O modelo aprovado na Meta. Os nomes têm que bater com os de lá. */
-type Modelo = "novo_lead" | "pedido_atendente";
+/**
+ * O modelo aprovado na Meta. Os nomes têm que bater com os de lá.
+ *
+ * `lead_triagem` substituiu um `novo_lead` que a Meta reclassificou como
+ * marketing: "Novo lead" com link do site parecia divulgação. O texto atual
+ * é registro de atendimento, que é o que ele de fato é — e o que a categoria
+ * de utilidade cobre.
+ */
+type Modelo = "lead_triagem" | "pedido_atendente";
 
 /** Cor da triagem como a equipe vê no celular: sem ler, só de bater o olho. */
 const EMOJI: Record<Cor, string> = {
@@ -84,7 +91,7 @@ export function avisarNovoLead(dados: {
   cor: Cor;
   produto: string | null;
 }): void {
-  void enviarModelo("novo_lead", [
+  void enviarModelo("lead_triagem", [
     dados.nome,
     dados.cidade,
     EMOJI[dados.cor],
