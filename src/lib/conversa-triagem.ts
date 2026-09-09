@@ -15,7 +15,11 @@ import { PERGUNTAS, classificar, type Respostas, type Resultado } from "./triage
 
 export type Envio =
   | { tipo: "texto"; texto: string }
-  | { tipo: "opcoes"; texto: string; opcoes: { valor: string; rotulo: string; curto?: string }[] };
+  | {
+      tipo: "opcoes";
+      texto: string;
+      opcoes: { valor: string; rotulo: string; curto?: string; descricao?: string }[];
+    };
 
 export type Estado = {
   /** Índice da próxima pergunta em PERGUNTAS. 8 = acabou. */
@@ -29,7 +33,8 @@ export type Estado = {
 
 const SAUDACAO =
   "Olá! Sou o assistente da Ato Regulariza. Vou fazer algumas perguntas rápidas " +
-  "para entender seu caso e te encaminhar para a pessoa certa. Leva menos de dois minutos.";
+  "para entender seu caso e te encaminhar para a pessoa certa. Leva menos de dois minutos. " +
+  "Se preferir falar com uma pessoa a qualquer momento, é só escrever: Falar com atendente.";
 
 const SAIDA_HUMANA =
   "Claro. Já avisei a equipe — em breve uma pessoa da equipe assume esta conversa por aqui.";
@@ -42,6 +47,22 @@ const SAIDA_HUMANA =
  * não é pedido de transferência — é o relato.
  */
 const PEDE_HUMANO = /\b(atendente|humano|pessoa|consultor|especialista)\b/i;
+
+/**
+ * A frase que a saudação promete.
+ *
+ * Vale em qualquer momento, inclusive em campo de texto livre: quem escreve
+ * só isto não está respondendo à pergunta, está pedindo para sair. Por ser a
+ * frase inteira e nada mais, não se confunde com relato.
+ */
+const PEDIDO_DIRETO =
+  /^\s*(quero\s+)?falar\s+com\s+(um[a]?\s+)?(atendente|humano|pessoa|consultor|especialista)[.!]?\s*$/i;
+
+/** A pessoa quer sair do bot agora? */
+function pedeHumano(texto: string, tipoDaPergunta: "texto" | "opcoes"): boolean {
+  if (PEDIDO_DIRETO.test(texto)) return true;
+  return tipoDaPergunta === "opcoes" && PEDE_HUMANO.test(texto);
+}
 
 function estadoInicial(): Estado {
   return { passo: 0, respostas: {}, encerrada: false, pediuHumano: false, resultado: null };
@@ -57,6 +78,7 @@ function perguntaDe(passo: number): Envio {
       valor: o.valor as string,
       rotulo: o.rotulo,
       ...(o.curto ? { curto: o.curto } : {}),
+      ...(o.descricao ? { descricao: o.descricao } : {}),
     })),
   };
 }
@@ -68,7 +90,7 @@ function perguntaDe(passo: number): Envio {
  * receber um questionário como resposta. Nesse caso a triagem nem começa.
  */
 export function iniciar(primeiraMensagem = ""): { estado: Estado; envios: Envio[] } {
-  if (PEDE_HUMANO.test(primeiraMensagem.trim())) {
+  if (pedeHumano(primeiraMensagem.trim(), "opcoes")) {
     return {
       estado: { ...estadoInicial(), encerrada: true, pediuHumano: true },
       envios: [{ tipo: "texto", texto: SAIDA_HUMANA }],
@@ -89,7 +111,7 @@ export function avancar(estado: Estado, entrada: string): { estado: Estado; envi
   const pergunta = PERGUNTAS[estado.passo];
   const texto = entrada.trim();
 
-  if (pergunta.tipo === "opcoes" && PEDE_HUMANO.test(texto)) {
+  if (pedeHumano(texto, pergunta.tipo)) {
     return {
       estado: { ...estado, encerrada: true, pediuHumano: true },
       envios: [{ tipo: "texto", texto: SAIDA_HUMANA }],

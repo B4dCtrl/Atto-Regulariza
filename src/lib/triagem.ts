@@ -60,8 +60,12 @@ export type Resultado = {
  * `curto` existe para canal com pouco espaço — resposta rápida do Instagram
  * cabe em 20 caracteres e não tem descrição, então cortar no meio deixaria a
  * pessoa escolhendo às cegas. Só as opções que passam do limite precisam.
+ *
+ * `descricao` é a segunda linha em canal que tem uma — a lista do WhatsApp.
+ * Serve para explicar a opção sem inchar o rótulo: o nome técnico do
+ * documento, por exemplo. Sem ela, a linha mostra só o rótulo.
  */
-type Opcao<T> = { valor: T; rotulo: string; curto?: string };
+type Opcao<T> = { valor: T; rotulo: string; curto?: string; descricao?: string };
 
 type Pergunta =
   | { id: "cidade" | "relato" | "nome"; tipo: "texto"; texto: string }
@@ -73,6 +77,10 @@ type Pergunta =
 
 /** O roteiro. Qualquer canal renderiza a partir daqui, na ordem. */
 export const PERGUNTAS: readonly Pergunta[] = [
+  // O nome vem primeiro porque a conversa pode terminar a qualquer momento —
+  // quem pede atendente no meio some do aviso se o nome só for perguntado no
+  // fim. E tratar a pessoa pelo nome desde a segunda pergunta soa melhor.
+  { id: "nome", tipo: "texto", texto: "Para começar, qual seu nome?" },
   {
     id: "motivo",
     tipo: "opcoes",
@@ -112,7 +120,11 @@ export const PERGUNTAS: readonly Pergunta[] = [
     tipo: "opcoes",
     texto: "O que está diferente do que consta no papel?",
     opcoes: [
-      { valor: "nunca_averbada", rotulo: "Construção nunca averbada", curto: "Nunca averbada" },
+      {
+        valor: "nunca_averbada",
+        rotulo: "Averbação Construção",
+        descricao: "(Habite-se)",
+      },
       { valor: "ampliacao", rotulo: "Ampliação ou reforma" },
       { valor: "area_nao_bate", rotulo: "Área não bate" },
       { valor: "nao_sei", rotulo: "Não sei dizer" },
@@ -130,7 +142,6 @@ export const PERGUNTAS: readonly Pergunta[] = [
     ],
   },
   { id: "relato", tipo: "texto", texto: "Me conta em uma frase o que está acontecendo:" },
-  { id: "nome", tipo: "texto", texto: "Qual seu nome?" },
 ];
 
 /**

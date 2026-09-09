@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { PERGUNTAS } from "./triagem";
-import { iniciar } from "./conversa-triagem";
+import { iniciar, avancar } from "./conversa-triagem";
+
+/** A pergunta de opções: hoje é a segunda, depois do nome. */
+const perguntaDeOpcoes = () => avancar(iniciar().estado, "Maria Silva").envios[0];
 import { montarPayloadIg, lerEntradaIg, LIMITE_IG } from "./instagram-formato";
 
 describe("montarPayloadIg", () => {
@@ -12,13 +15,13 @@ describe("montarPayloadIg", () => {
   });
 
   it("opções viram respostas rápidas", () => {
-    const p = montarPayloadIg("123", iniciar().envios[1]);
+    const p = montarPayloadIg("123", perguntaDeOpcoes());
     expect(p.message.quick_replies).toHaveLength(4);
     expect(p.message.quick_replies?.[0].content_type).toBe("text");
   });
 
   it("o payload da resposta é o valor, que a conversa espera de volta", () => {
-    const p = montarPayloadIg("123", iniciar().envios[1]);
+    const p = montarPayloadIg("123", perguntaDeOpcoes());
     expect(p.message.quick_replies?.map((q) => q.payload)).toEqual([
       "vender",
       "heranca",

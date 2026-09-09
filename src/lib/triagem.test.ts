@@ -22,6 +22,7 @@ const base: Respostas = {
 describe("PERGUNTAS", () => {
   it("tem as oito perguntas, na ordem da triagem", () => {
     expect(PERGUNTAS.map((p) => p.id)).toEqual([
+      "nome",
       "motivo",
       "imovel",
       "cidade",
@@ -29,13 +30,12 @@ describe("PERGUNTAS", () => {
       "divergencia",
       "area",
       "relato",
-      "nome",
     ]);
   });
 
   it("marca como texto livre só cidade, relato e nome", () => {
     const livres = PERGUNTAS.filter((p) => p.tipo === "texto").map((p) => p.id);
-    expect(livres).toEqual(["cidade", "relato", "nome"]);
+    expect(livres).toEqual(["nome", "cidade", "relato"]);
   });
 });
 
@@ -139,7 +139,7 @@ describe("descreverRespostas", () => {
     expect(d).toEqual([
       {
         pergunta: "O que está diferente do que consta no papel?",
-        resposta: "Construção nunca averbada",
+        resposta: "Averbação Construção",
       },
     ]);
   });
@@ -151,7 +151,7 @@ describe("descreverRespostas", () => {
 
   it("segue a ordem das perguntas, não a ordem do objeto", () => {
     const d = descreverRespostas({ nome: "Tais", motivo: "vender", cidade: "Curitiba" });
-    expect(d.map((x) => x.resposta)).toEqual(["Vender ou financiar", "Curitiba", "Tais"]);
+    expect(d.map((x) => x.resposta)).toEqual(["Tais", "Vender ou financiar", "Curitiba"]);
   });
 
   it("pula o que não foi respondido", () => {

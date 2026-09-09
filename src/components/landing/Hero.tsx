@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, MessageCircle } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { WHATSAPP } from "@/lib/brand";
 import { WordScrambleText } from "@/components/ui/word-scramble-text";
 import { MagneticButton } from "@/components/ui/magnetic-button";
@@ -94,23 +93,13 @@ export function Hero() {
               href={WHATSAPP.avaliacaoGratuita}
               target="_blank"
               rel="noreferrer"
-              className="group inline-flex items-center gap-3 rounded-full bg-foreground py-4 pl-8 pr-3 text-base font-medium text-background shadow-[0_12px_32px_-10px_oklch(0.13_0.03_55_/_0.4)] transition-all hover:scale-[1.02]"
+              className="group inline-flex items-center gap-3 rounded-full bg-accent py-4 pl-8 pr-3 text-base font-medium text-background shadow-[0_12px_32px_-10px_oklch(0.13_0.03_55_/_0.4)] transition-all hover:scale-[1.02]"
             >
-              Quero regularizar meu imóvel
-              <span className="grid h-10 w-10 place-items-center rounded-full bg-accent transition-transform group-hover:rotate-12">
+              Falar com Especialista
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-background/20 transition-transform group-hover:rotate-12">
                 <ArrowUpRight className="h-5 w-5 text-background" />
               </span>
             </a>
-          </MagneticButton>
-
-          <MagneticButton strength={0.2}>
-            <Link
-              to="/precos"
-              className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/5 px-8 py-4 text-base font-medium text-foreground/80 transition-all hover:border-foreground/30 hover:bg-foreground/10"
-            >
-              <MessageCircle className="h-5 w-5" />
-              Falar com Especialista
-            </Link>
           </MagneticButton>
         </motion.div>
       </div>

@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { PERGUNTAS } from "./triagem";
-import { iniciar } from "./conversa-triagem";
+import { iniciar, avancar } from "./conversa-triagem";
+
+/** A pergunta de opções: hoje é a segunda, depois do nome. */
+const perguntaDeOpcoes = () => avancar(iniciar().estado, "Maria Silva").envios[0];
 import { montarPayload, lerEntrada, LIMITE } from "./whatsapp-formato";
 
 describe("montarPayload", () => {
@@ -65,7 +68,7 @@ describe("montarPayload", () => {
   });
 
   it("o id da linha é o valor, que é o que a conversa espera de volta", () => {
-    const p = montarPayload("55", iniciar().envios[1]);
+    const p = montarPayload("55", perguntaDeOpcoes());
     const ids = p.interactive?.action.sections?.[0].rows.map((r) => r.id);
     expect(ids).toEqual(["vender", "heranca", "notificacao", "regularizar"]);
   });

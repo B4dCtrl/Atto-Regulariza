@@ -89,14 +89,15 @@ export function montarPayload(para: string, envio: Envio): Payload {
         sections: [
           {
             title: "Escolha uma",
-            // O título tem 24 caracteres; o rótulo que não couber vai inteiro
-            // na descrição, para a pessoa nunca ler uma opção pela metade.
+            // O título tem 24 caracteres. A descrição da opção, quando existe,
+            // é a segunda linha. Sem ela, o rótulo que não coube no título vai
+            // inteiro para baixo — assim a linha nunca mostra a mesma frase
+            // duas vezes, uma delas cortada no meio.
             rows: envio.opcoes.map((o) => {
-              const title = cortar(o.rotulo, LIMITE.tituloLinha);
+              const title = cortar(o.curto ?? o.rotulo, LIMITE.tituloLinha);
               const linha: Linha = { id: o.valor, title };
-              if (title !== o.rotulo) {
-                linha.description = cortar(o.rotulo, LIMITE.descricaoLinha);
-              }
+              const descricao = o.descricao ?? (title === o.rotulo ? undefined : o.rotulo);
+              if (descricao) linha.description = cortar(descricao, LIMITE.descricaoLinha);
               return linha;
             }),
           },

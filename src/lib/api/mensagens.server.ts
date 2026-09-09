@@ -16,7 +16,9 @@
 import process from "node:process";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { avisarErro } from "@/lib/api/avisar-erro.server";
+import { avisarNovoLead, avisarPedidoDeAtendente } from "@/lib/api/avisar-lead.server";
 import { iniciar, avancar, type Estado, type Envio } from "@/lib/conversa-triagem";
+import { PERGUNTAS, nomeDoProduto } from "@/lib/triagem";
 import { montarPayload, lerEntrada } from "@/lib/whatsapp-formato";
 import { ATENDIMENTO_PHONE } from "@/lib/brand";
 import { formaAlternativa } from "@/lib/telefone-br";
@@ -173,14 +175,41 @@ async function jaVista(id: string): Promise<boolean> {
   return error?.code === "23505";
 }
 
-async function carregarEstado(telefone: string): Promise<Estado | null> {
+/**
+ * Depois de quanto tempo uma conversa encerrada deixa de valer.
+ *
+ * Encerrada não pode ser para sempre: quem foi atendido em marco e volta em
+ * junho com outro imovel ficaria falando sozinho. Sete dias e mais que o
+ * suficiente para a equipe assumir quem pediu atendente, e curto o bastante
+ * para nao parecer que o numero morreu.
+ */
+const DIAS_ATE_REABRIR = 7;
+
+/** Palavra que reabre na hora, sem esperar o prazo. */
+const REINICIAR = /^\s*(recome[cç]ar|reiniciar|come[cç]ar de novo)[.!]?\s*$/i;
+
+async function carregarEstado(
+  telefone: string,
+): Promise<{ estado: Estado; atualizadaEm: string } | null> {
   const { data } = await supabaseAdmin
     .from("whatsapp_conversas")
-    .select("estado, encerrada")
+    .select("estado, encerrada, atualizada_em")
     .eq("telefone", telefone)
     .maybeSingle();
   if (!data) return null;
-  return data.estado as Estado;
+  return { estado: data.estado as Estado, atualizadaEm: data.atualizada_em };
+}
+
+/**
+ * A conversa encerrada ja pode recomecar?
+ *
+ * Vale o prazo, ou a pessoa pedindo explicitamente. Sem isso o bot fica mudo
+ * para sempre para quem ja falou com ele uma vez.
+ */
+export function podeReabrir(atualizadaEm: string, texto: string): boolean {
+  if (REINICIAR.test(texto)) return true;
+  const dias = (Date.now() - new Date(atualizadaEm).getTime()) / 86_400_000;
+  return dias >= DIAS_ATE_REABRIR;
 }
 
 async function salvarEstado(telefone: string, estado: Estado, leadId?: string): Promise<void> {
@@ -276,7 +305,9 @@ async function avisarAdmins(telefone: string, estado: Estado): Promise<void> {
 function convite(codigo: string): Envio {
   return {
     tipo: "texto",
-    texto: `Para falar com um especialista, é só tocar aqui: ${SITE_URL}/f/${codigo}`,
+    texto:
+      `Um profissional da Ato Regulariza entra em contato em breve. ` +
+      `Para adiantar, toque aqui e complete seu cadastro: ${SITE_URL}/f/${codigo}`,
   };
 }
 
@@ -333,6 +364,38 @@ function chaveDaConversa(canal: Canal, de: string): string {
   return canal === "instagram" ? `ig:${de}` : de;
 }
 
+/**
+ * O aviso no WhatsApp de quem atende.
+ *
+ * Dois desfechos, dois modelos: quem respondeu tudo vira lead classificado;
+ * quem pediu atendente vira conversa a assumir, e aí o que importa é em que
+ * pergunta parou — é o contexto que a pessoa não vai querer repetir.
+ *
+ * Sem await: o cliente não espera o nosso aviso.
+ */
+function avisarEquipe(estado: Estado, entrada: { de: string; canal: Canal }): void {
+  const nome = estado.respostas.nome?.trim() || "Sem nome";
+
+  if (estado.pediuHumano) {
+    const pergunta = PERGUNTAS[estado.passo];
+    avisarPedidoDeAtendente({
+      nome,
+      telefone: entrada.canal === "instagram" ? `Instagram ${entrada.de}` : entrada.de,
+      parouEm: pergunta ? pergunta.texto : "Antes de começar",
+    });
+    return;
+  }
+
+  const r = estado.resultado;
+  if (!r) return;
+  avisarNovoLead({
+    nome,
+    cidade: r.cidade,
+    cor: r.cor,
+    produto: nomeDoProduto(r.produto),
+  });
+}
+
 export async function receberWebhook(request: Request): Promise<Response> {
   const corpoBruto = await request.text();
 
@@ -350,7 +413,14 @@ export async function receberWebhook(request: Request): Promise<Response> {
     if (entrada.idMensagem && (await jaVista(entrada.idMensagem))) return new Response("ok");
 
     const chave = chaveDaConversa(entrada.canal, entrada.de);
-    const anterior = await carregarEstado(chave);
+    const salvo = await carregarEstado(chave);
+
+    // Conversa encerrada volta do zero depois do prazo, ou quando a pessoa
+    // pede. Fora isso, quem escreve esta falando com a equipe, e o bot
+    // interromper seria pior que o silencio.
+    const recomecar =
+      !salvo || (salvo.estado.encerrada && podeReabrir(salvo.atualizadaEm, entrada.texto));
+    const anterior = recomecar ? null : salvo.estado;
 
     const passo = anterior ? avancar(anterior, entrada.texto) : iniciar(entrada.texto);
     const envios = [...passo.envios];
@@ -362,6 +432,7 @@ export async function receberWebhook(request: Request): Promise<Response> {
         leadId = await gravarLead(chave, passo.estado, entrada.canal, codigo);
       }
       envios.push(convite(codigo));
+      avisarEquipe(passo.estado, entrada);
     }
 
     await salvarEstado(chave, passo.estado, leadId);

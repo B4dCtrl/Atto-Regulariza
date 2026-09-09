@@ -7,6 +7,19 @@
  */
 export const ATENDIMENTO_PHONE = "5541984471404";
 
+/**
+ * O número do bot: (41) 3790-0305.
+ *
+ * Atende a triagem 24 horas e classifica o caso antes de chegar em alguém.
+ * Só recebe quem é dono de imóvel — imobiliária, construtora e profissional
+ * caem no atendimento humano, porque as oito perguntas da triagem falam de
+ * "seu imóvel" e não fariam sentido para eles.
+ *
+ * Não recebe ligação: número de API do WhatsApp é só mensagem. Por isso o
+ * telefone público do site e do Google continua sendo o de atendimento.
+ */
+export const BOT_PHONE = "554137900305";
+
 const wa = (text: string, phone: string = ATENDIMENTO_PHONE) =>
   `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
 
@@ -24,12 +37,14 @@ const wa = (text: string, phone: string = ATENDIMENTO_PHONE) =>
 export const WHATSAPP = {
   /** Dono de imóvel, vindo dos CTAs da landing. */
   avaliacaoGratuita: wa(
-    "Olá! Vim pelo site da Ato Regulariza e quero regularizar meu imóvel.\n\nCidade do imóvel: \nO que preciso resolver: ",
+    "Olá! Vim pelo site da Ato Regulariza e quero regularizar meu imóvel.",
+    BOT_PHONE,
   ),
 
   /** Mesma intenção, mas vindo da página de obras — vale saber a diferença. */
   adiantarCaso: wa(
-    "Olá! Vim pela página inicial da Ato Regulariza e quero adiantar meu caso de regularização.\n\nCidade do imóvel: \nO que preciso resolver: ",
+    "Olá! Vim pela página inicial da Ato Regulariza e quero adiantar meu caso de regularização.",
+    BOT_PHONE,
   ),
 
   /** Imobiliária ou construtora avaliando parceria. */
