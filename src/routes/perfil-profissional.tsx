@@ -2,9 +2,10 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, User, Award, MapPin, Clock, Bell, CreditCard,
-  Camera, Check,
+  Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { FotoDePerfil } from "@/components/perfil/FotoDePerfil";
 
 export const Route = createFileRoute("/perfil-profissional")({
   head: () => ({ meta: [{ title: "Meu Perfil — Profissional" }] }),
@@ -51,6 +52,7 @@ const ESTADOS = [
 ];
 
 type ProfProfile = {
+  fotoUrl: string | null;
   nome: string;
   email: string;
   telefone: string;
@@ -72,7 +74,8 @@ type ProfProfile = {
 };
 
 const EMPTY_PROFILE: ProfProfile = {
-  nome: "",
+  
+  fotoUrl: null,nome: "",
   email: "",
   telefone: "",
   bio: "",
@@ -230,6 +233,7 @@ function PerfilProfissionalPage() {
         const s = (data.settings ?? {}) as Record<string, boolean>;
         setProf((p) => ({
           ...p,
+          fotoUrl: data.avatar_url ?? null,
           nome: data.name ?? "", email: data.email ?? "", telefone: data.phone ?? "",
           bio: data.bio ?? "", conselho: data.council ?? "", registro: data.registro ?? "",
           especialidades: data.specialties ?? [], estados: data.regions ?? [],
@@ -245,7 +249,7 @@ function PerfilProfissionalPage() {
 
   async function salvar(section: string) {
     await supabase.from("profiles").upsert({
-      id: userId, role: "profissional",
+      id: userId, role: "profissional", avatar_url: prof.fotoUrl,
       name: prof.nome, email: prof.email, phone: prof.telefone,
       bio: prof.bio, council: prof.conselho, registro: prof.registro,
       specialties: prof.especialidades, regions: prof.estados,
@@ -366,14 +370,17 @@ function PerfilProfissionalPage() {
 
                 {/* Avatar */}
                 <div className="mb-8 flex items-center gap-5">
-                  <div className="relative">
-                    <div className="grid h-20 w-20 place-items-center rounded-full bg-foreground text-2xl font-medium text-background">
-                      {initials}
-                    </div>
-                    <button className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-accent text-accent-foreground ring-2 ring-background">
-                      <Camera className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  <FotoDePerfil
+                    userId={userId}
+                    url={prof.fotoUrl}
+                    iniciais={initials}
+                    aoTrocar={(url) => {
+                      set("fotoUrl", url);
+                      void supabase
+                        .from("profiles")
+                        .upsert({ id: userId, avatar_url: url, role: "profissional" });
+                    }}
+                  />
                   <div>
                     <div className="font-medium">{prof.nome}</div>
                     <div className="text-sm text-ink-soft">

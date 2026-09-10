@@ -1,7 +1,8 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { ArrowLeft, User, MapPin, Bell, Shield, Camera, Check } from "lucide-react";
+import { ArrowLeft, User, MapPin, Bell, Shield, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { FotoDePerfil } from "@/components/perfil/FotoDePerfil";
 
 export const Route = createFileRoute("/perfil")({
   head: () => ({ meta: [{ title: "Meu Perfil — Ato Regulariza" }] }),
@@ -42,9 +43,11 @@ type Profile = {
   notifPush: boolean;
   notifAtualizacoes: boolean;
   notifMarketing: boolean;
+  fotoUrl: string | null;
 };
 
 const EMPTY_PROFILE: Profile = {
+  fotoUrl: null,
   nome: "",
   email: "",
   telefone: "",
@@ -272,6 +275,7 @@ function PerfilPage() {
           cpf: data.cpf ?? "",
           cidade: data.city ?? "",
           estado: data.state ?? "",
+          fotoUrl: data.avatar_url ?? null,
           notifEmail: s.notifEmail ?? true,
           notifSms: s.notifSms ?? false,
           notifPush: s.notifPush ?? false,
@@ -293,6 +297,7 @@ function PerfilPage() {
       cpf: profile.cpf,
       city: profile.cidade,
       state: profile.estado,
+      avatar_url: profile.fotoUrl,
       role: "cliente",
       settings: {
         notifEmail: profile.notifEmail,
@@ -397,14 +402,19 @@ function PerfilPage() {
 
                 {/* Avatar */}
                 <div className="mb-8 flex items-center gap-5">
-                  <div className="relative">
-                    <div className="grid h-20 w-20 place-items-center rounded-full bg-foreground text-2xl font-medium text-background">
-                      {initials}
-                    </div>
-                    <button className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-accent text-accent-foreground ring-2 ring-background">
-                      <Camera className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  <FotoDePerfil
+                    userId={userId}
+                    url={profile.fotoUrl}
+                    iniciais={initials}
+                    aoTrocar={(url) => {
+                      // Grava na hora: a pessoa trocou a foto, não vai
+                      // procurar um botão de salvar do outro lado da tela.
+                      set("fotoUrl", url);
+                      void supabase
+                        .from("profiles")
+                        .upsert({ id: userId, avatar_url: url, role: "cliente" });
+                    }}
+                  />
                   <div>
                     <div className="font-medium">{profile.nome}</div>
                     <div className="text-sm text-ink-soft">{profile.email}</div>

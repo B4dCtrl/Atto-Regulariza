@@ -778,6 +778,7 @@ export type Database = {
           name: string | null;
           initials: string | null;
           role: string;
+          avatar_url: string | null;
           ultimo_acesso_em: string | null;
           senha_provisoria: boolean;
           termos_versao: string | null;
@@ -809,6 +810,7 @@ export type Database = {
           name?: string | null;
           initials?: string | null;
           role?: string;
+          avatar_url?: string | null;
           ultimo_acesso_em?: string | null;
           senha_provisoria?: boolean;
           termos_versao?: string | null;
@@ -838,6 +840,7 @@ export type Database = {
           name?: string | null;
           initials?: string | null;
           role?: string;
+          avatar_url?: string | null;
           ultimo_acesso_em?: string | null;
           senha_provisoria?: boolean;
           termos_versao?: string | null;
