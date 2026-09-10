@@ -307,7 +307,10 @@ export function Nav() {
               className="group inline-flex items-center gap-1.5 rounded-full bg-foreground py-1.5 pl-4 pr-1.5 text-sm text-background transition-all hover:bg-foreground/90"
             >
               Começar agora
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-accent transition-transform group-hover:rotate-12">
+              {/* Bolinha neutra de propósito: o laranja é do CTA principal do
+                  hero. Dois laranjas na mesma tela disputam a atenção e a
+                  pessoa não sabe qual é a ação que importa. */}
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-background/20 transition-transform group-hover:rotate-12">
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </span>
             </Link>
