@@ -17,6 +17,7 @@ import { Route as PoliticaDeCookiesRouteImport } from './routes/politica-de-cook
 import { Route as PerfilProfissionalRouteImport } from './routes/perfil-profissional'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PainelProfissionalRouteImport } from './routes/painel-profissional'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as InstitucionalRouteImport } from './routes/institucional'
 import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as EquipeRouteImport } from './routes/equipe'
@@ -85,6 +86,11 @@ const PerfilRoute = PerfilRouteImport.update({
 const PainelProfissionalRoute = PainelProfissionalRouteImport.update({
   id: '/painel-profissional',
   path: '/painel-profissional',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstitucionalRoute = InstitucionalRouteImport.update({
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/painel': typeof PainelRoute
   '/painel-profissional': typeof PainelProfissionalRoute
   '/perfil': typeof PerfilRoute
   '/perfil-profissional': typeof PerfilProfissionalRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/painel': typeof PainelRoute
   '/painel-profissional': typeof PainelProfissionalRoute
   '/perfil': typeof PerfilRoute
   '/perfil-profissional': typeof PerfilProfissionalRoute
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/painel': typeof PainelRoute
   '/painel-profissional': typeof PainelProfissionalRoute
   '/perfil': typeof PerfilRoute
   '/perfil-profissional': typeof PerfilProfissionalRoute
@@ -365,6 +374,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/gestao'
     | '/institucional'
+    | '/painel'
     | '/painel-profissional'
     | '/perfil'
     | '/perfil-profissional'
@@ -403,6 +413,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/gestao'
     | '/institucional'
+    | '/painel'
     | '/painel-profissional'
     | '/perfil'
     | '/perfil-profissional'
@@ -442,6 +453,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/gestao'
     | '/institucional'
+    | '/painel'
     | '/painel-profissional'
     | '/perfil'
     | '/perfil-profissional'
@@ -482,6 +494,7 @@ export interface RootRouteChildren {
   EquipeRoute: typeof EquipeRoute
   GestaoRoute: typeof GestaoRoute
   InstitucionalRoute: typeof InstitucionalRoute
+  PainelRoute: typeof PainelRoute
   PainelProfissionalRoute: typeof PainelProfissionalRoute
   PerfilRoute: typeof PerfilRoute
   PerfilProfissionalRoute: typeof PerfilProfissionalRoute
@@ -551,6 +564,13 @@ declare module '@tanstack/react-router' {
       path: '/painel-profissional'
       fullPath: '/painel-profissional'
       preLoaderRoute: typeof PainelProfissionalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/institucional': {
@@ -818,6 +838,7 @@ const rootRouteChildren: RootRouteChildren = {
   EquipeRoute: EquipeRoute,
   GestaoRoute: GestaoRoute,
   InstitucionalRoute: InstitucionalRoute,
+  PainelRoute: PainelRoute,
   PainelProfissionalRoute: PainelProfissionalRoute,
   PerfilRoute: PerfilRoute,
   PerfilProfissionalRoute: PerfilProfissionalRoute,

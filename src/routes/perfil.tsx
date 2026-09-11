@@ -358,7 +358,9 @@ function PerfilPage() {
             Painel
           </Link>
           <div className="h-5 w-px bg-border" />
-          <Link to="/" className="flex items-center">
+          {/* Para o painel, nao para a home: quem esta logado clicando na
+              logo quer voltar ao produto, nao a pagina de vendas dele. */}
+          <Link to="/painel" className="flex items-center">
             <img src="/ato-lockup.png" alt="Ato Regulariza" className="h-7 w-auto object-contain" />
           </Link>
           <div className="ml-auto flex items-center gap-3">
