@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, User, MapPin, Bell, Shield, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { FotoDePerfil } from "@/components/perfil/FotoDePerfil";
+import { excluirMinhaConta, PALAVRA_DE_CONFIRMACAO } from "@/lib/api/conta.functions";
 
 export const Route = createFileRoute("/perfil")({
   head: () => ({ meta: [{ title: "Meu Perfil — Ato Regulariza" }] }),
@@ -216,6 +217,30 @@ function PerfilPage() {
   const { userId } = Route.useRouteContext();
   const [active, setActive] = useState<Section>("conta");
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [palavraExclusao, setPalavraExclusao] = useState("");
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null);
+
+  /**
+   * Exclui a conta e tira a pessoa do ar.
+   *
+   * O signOut é local e obrigatório: o servidor já apagou o usuário, e a
+   * sessão que sobra no navegador só produziria erros confusos na próxima
+   * tela que tentasse carregar algo.
+   */
+  async function excluirConta() {
+    setErroExclusao(null);
+    setExcluindo(true);
+    try {
+      await excluirMinhaConta({ data: { confirmacao: palavraExclusao } });
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (e) {
+      setErroExclusao(e instanceof Error ? e.message : "Não foi possível excluir a conta.");
+      setExcluindo(false);
+    }
+  }
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [senha, setSenha] = useState({ atual: "", nova: "", confirmar: "" });
   const [erroSenha, setErroSenha] = useState<string | null>(null);
@@ -622,9 +647,57 @@ function PerfilPage() {
                   <p className="mb-4 text-sm text-ink-soft">
                     Ações permanentes e irreversíveis. Prossiga com cuidado.
                   </p>
-                  <button className="rounded-full border border-destructive/30 px-4 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10">
-                    Excluir minha conta
-                  </button>
+                  {!confirmandoExclusao ? (
+                    <button
+                      onClick={() => setConfirmandoExclusao(true)}
+                      className="rounded-full border border-destructive/30 px-4 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      Excluir minha conta
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-ink-soft">
+                        Seus dados pessoais serão removidos e você perderá o acesso. Os
+                        documentos dos processos ficam arquivados sem ligação com você,
+                        porque a lei exige que sejam guardados. Não dá para desfazer.
+                      </p>
+                      <p className="text-sm">
+                        Para confirmar, digite{" "}
+                        <strong className="font-medium">{PALAVRA_DE_CONFIRMACAO}</strong>:
+                      </p>
+                      <input
+                        value={palavraExclusao}
+                        onChange={(e) => setPalavraExclusao(e.target.value)}
+                        placeholder={PALAVRA_DE_CONFIRMACAO}
+                        className="w-48 rounded-xl border border-destructive/30 bg-background px-3 py-2 text-sm outline-none focus:border-destructive"
+                      />
+                      {erroExclusao && (
+                        <p className="text-sm text-destructive">{erroExclusao}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={excluirConta}
+                          disabled={
+                            excluindo ||
+                            palavraExclusao.trim().toUpperCase() !== PALAVRA_DE_CONFIRMACAO
+                          }
+                          className="rounded-full bg-destructive px-4 py-2 text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                        >
+                          {excluindo ? "Excluindo..." : "Excluir definitivamente"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setConfirmandoExclusao(false);
+                            setPalavraExclusao("");
+                            setErroExclusao(null);
+                          }}
+                          className="rounded-full border border-border px-4 py-2 text-sm text-ink-soft transition-colors hover:bg-surface"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </section>
               </div>
             )}
