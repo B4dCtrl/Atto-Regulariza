@@ -4,6 +4,7 @@ import { TrocarSenhaObrigatoria } from "@/components/conta/TrocarSenhaObrigatori
 import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { supabase } from "@/integrations/supabase/client";
+import { usePresenca } from "@/hooks/usePresenca";
 import React, { useState, useRef, useEffect, type FormEvent } from "react";
 import {
   ArrowLeft, Bell, Briefcase, Building2, Check, CheckCircle2,
@@ -219,6 +220,10 @@ function PaginaProfissional() {
 function ProfissionalPage() {
   const { userId } = Route.useRouteContext();
   const navigate = useNavigate();
+
+  // Diz ao chat do cliente que há alguém aqui. Sem isto a assistente responde
+  // na hora e atropela quem está com a tela aberta digitando.
+  usePresenca();
   const [mainSection,  setMainSection]  = useState<MainSection>("processos");
   const [selectedId,   setSelectedId]   = useState<string | null>(null);
   const [activeStage,  setActiveStage]  = useState(1);

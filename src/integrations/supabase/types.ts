@@ -874,6 +874,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      registrar_presenca: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      profissional_online: {
+        Args: { _property_id: string };
+        Returns: boolean;
+      };
+      cobrar_resposta: {
+        Args: { _property_id: string };
+        Returns: undefined;
+      };
       avisar_lead_triagem: {
         Args: {
           _cor: string;

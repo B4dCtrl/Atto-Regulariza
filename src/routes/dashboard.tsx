@@ -121,6 +121,10 @@ function DashboardContent() {
   const chatRef = useRef<HTMLDivElement>(null);
   /** Espera antes de a IA responder — reiniciada a cada mensagem enviada. */
   const timerIaRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Cutucão do profissional aos 3 minutos, quando ele está online e calado. */
+  const timerCobrancaRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** "Já vai responder" — some assim que alguém da equipe escreve. */
+  const [profissionalACaminho, setProfissionalAcaminho] = useState(false);
 
   /* ── Busca imóvel do cliente logado ── */
   useEffect(() => {
@@ -406,29 +410,46 @@ function DashboardContent() {
     }
     setSendingMsg(false);
 
-    // Resposta automática, mas só quando não há gente conversando.
+    // Quem responde: a assistente ou o profissional?
     //
-    // A assistente existe para o cliente não ficar no vazio. Quando o
-    // profissional está ali respondendo, ela atrapalha: duas vozes na mesma
-    // conversa, e a dela sem autoridade nenhuma sobre o caso. Por isso ela se
-    // cala se alguém da equipe escreveu nos últimos 15 minutos.
+    // Antes a assistente entrava sempre que ninguém da equipe tivesse falado
+    // em 15 minutos. Ela atropelava o profissional que estava ali, com a tela
+    // aberta, escrevendo — e o cliente ficava com duas vozes ao mesmo tempo,
+    // gastando cota de IA numa pergunta que o humano ia responder melhor.
     //
-    // A cota de 10 por hora continua valendo: se estourar, o erro aparece no
-    // chat e a pessoa segue conversando com a equipe normalmente.
-    // Espera a pessoa terminar de escrever antes de responder.
+    // Agora depende de quem está online AGORA:
     //
-    // O primeiro freio que tentei bloqueava a IA por um minuto após cada
-    // resposta — e aí uma pergunta nova, feita logo depois, ficava sem
-    // resposta. Errado: o problema nunca foi a frequência, era responder
-    // "oi", "oi", "cadê o responsável?" separadamente.
+    // - **profissional ausente** — a assistente responde em 4 s, como antes.
+    //   Ninguém vai responder tão cedo; esperar seria só deixar o cliente no
+    //   vazio.
+    // - **profissional online** — ele tem 3 minutos. Aos 3, leva um aviso no
+    //   sino. Aos 5, se ainda não respondeu, a assistente cobre.
     //
-    // Agora cada mensagem reinicia a contagem. Rajada de três vira UMA
-    // resposta, quatro segundos depois da última — e ela chega com as três já
-    // no histórico, então cobre todas.
+    // Em qualquer caso, uma linha curta avisa na hora que alguém está vindo:
+    // silêncio em chat parece defeito, e três minutos de tela parada fazem a
+    // pessoa escrever de novo — ou desistir.
+    //
+    // Cada mensagem reinicia a contagem. Rajada de três vira UMA resposta,
+    // com as três já no histórico, então cobre todas.
     if (timerIaRef.current) clearTimeout(timerIaRef.current);
-    if (!equipeRespondeuAgora) {
+    if (timerCobrancaRef.current) clearTimeout(timerCobrancaRef.current);
+
+    if (equipeRespondeuAgora) return;
+
+    const { data: online } = await supabase.rpc("profissional_online", {
+      _property_id: propertyId,
+    });
+
+    if (!online) {
       timerIaRef.current = setTimeout(() => void askAI(true), 4000);
+      return;
     }
+
+    setProfissionalAcaminho(true);
+    timerCobrancaRef.current = setTimeout(() => {
+      void supabase.rpc("cobrar_resposta", { _property_id: propertyId });
+    }, 3 * 60 * 1000);
+    timerIaRef.current = setTimeout(() => void askAI(true), 5 * 60 * 1000);
   };
 
   /**
@@ -444,6 +465,15 @@ function DashboardContent() {
       m.sender_name !== "Assistente IA" &&
       Date.now() - new Date(m.created_at).getTime() < 15 * 60 * 1000,
   );
+
+  // Alguém da equipe respondeu: o aviso de "já vai responder" cumpriu o papel
+  // e sai da tela, junto com os prazos que ele anunciava.
+  useEffect(() => {
+    if (!equipeRespondeuAgora) return;
+    setProfissionalAcaminho(false);
+    if (timerIaRef.current) clearTimeout(timerIaRef.current);
+    if (timerCobrancaRef.current) clearTimeout(timerCobrancaRef.current);
+  }, [equipeRespondeuAgora]);
 
   /* ── Pergunta à IA (resposta entra no chat via realtime) ──
      Chamada pelo botão de estrela e, automaticamente, quando o cliente
@@ -1017,6 +1047,21 @@ function DashboardContent() {
                           <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-accent/10 px-4 py-2.5 text-sm text-accent ring-1 ring-accent/20">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Assistente IA está
                             digitando…
+                          </div>
+                        </div>
+                      )}
+
+                      {/* O profissional está online e tem alguns minutos para
+                          responder. Sem esta linha o cliente encara uma tela
+                          parada e acha que a mensagem não chegou — escreve de
+                          novo, ou desiste. */}
+                      {profissionalACaminho && !askingAI && (
+                        <div className="flex justify-start">
+                          <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-surface px-4 py-2.5 text-sm text-ink-soft ring-1 ring-border">
+                            <span className="h-2 w-2 rounded-full bg-green-500" />
+                            {professional?.name
+                              ? `${professional.name.split(" ")[0]} está online e já vai responder.`
+                              : "Sua especialista está online e já vai responder."}
                           </div>
                         </div>
                       )}
