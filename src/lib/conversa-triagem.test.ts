@@ -169,3 +169,27 @@ describe("iniciar — primeira mensagem", () => {
     expect(iniciar().envios).toHaveLength(2);
   });
 });
+
+describe("quem já conversou antes", () => {
+  it("não ouve a apresentação de novo nem repete o nome", () => {
+    const r = iniciar("oi", "Maria Silva");
+    expect(r.envios[0].texto).toMatch(/oi de novo/i);
+    expect(r.envios[0].texto).toContain("Maria");
+    // pula direto para a pergunta de opções, sem perguntar o nome
+    expect(r.envios[1].texto).toContain("O que te trouxe aqui?");
+    expect(r.estado.passo).toBe(1);
+    expect(r.estado.respostas.nome).toBe("Maria Silva");
+  });
+
+  it("sem nome guardado, a saudação completa volta", () => {
+    const r = iniciar("oi");
+    expect(r.envios[0].texto).toMatch(/assistente da Ato Regulariza/i);
+    expect(r.envios.at(-1)?.texto).toContain("qual seu nome?");
+  });
+
+  it("quem volta pedindo atendente sai na hora, mesmo com nome conhecido", () => {
+    const r = iniciar("Falar com atendente", "Maria Silva");
+    expect(r.estado.pediuHumano).toBe(true);
+    expect(r.estado.encerrada).toBe(true);
+  });
+});

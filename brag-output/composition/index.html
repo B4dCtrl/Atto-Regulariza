@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="pt-BR" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* Fontes locais: o render não vai à rede, então a família precisa estar
+         no disco. Subconjunto latino — cobre os acentos do português. */
+      @font-face {
+        font-family: "Instrument Serif";
+        font-style: normal;
+        font-weight: 400;
+        src: url("assets/fonts/InstrumentSerif-Regular.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Inter";
+        font-style: normal;
+        font-weight: 400;
+        src: url("assets/fonts/Inter-Regular.woff2") format("woff2");
+      }
+
+      :root {
+        --creme: #fbf6ee;
+        --laranja: #e86030;
+        --petroleo: #153a40;
+        --verde: #2f8f57;
+        --suave: rgba(21, 58, 64, 0.6);
+        --borda: rgba(21, 58, 64, 0.12);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--creme);
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        background: var(--creme);
+        font-family: "Inter", system-ui, sans-serif;
+        color: var(--petroleo);
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 96px;
+      }
+
+      .titulo {
+        font-family: "Instrument Serif", Georgia, serif;
+        font-size: 104px;
+        line-height: 1.04;
+        letter-spacing: -0.01em;
+      }
+
+      .rotulo {
+        font-size: 30px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--suave);
+        margin-bottom: 28px;
+      }
+
+      .laranja {
+        color: var(--laranja);
+      }
+
+      /* ── conversa ── */
+      .bolha {
+        max-width: 700px;
+        padding: 30px 36px;
+        border-radius: 36px;
+        font-size: 34px;
+        line-height: 1.42;
+        background: #fff;
+        border: 1px solid var(--borda);
+        border-bottom-left-radius: 10px;
+        box-shadow: 0 10px 30px -18px rgba(21, 58, 64, 0.35);
+      }
+
+      .bolha-cliente {
+        align-self: flex-end;
+        background: var(--laranja);
+        color: #fff;
+        border: none;
+        border-bottom-left-radius: 36px;
+        border-bottom-right-radius: 10px;
+      }
+
+      .opcoes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        max-width: 860px;
+      }
+
+      .chip {
+        padding: 22px 34px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid var(--borda);
+        font-size: 30px;
+        color: var(--petroleo);
+      }
+
+      .linha-lista {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 30px 36px;
+        border-radius: 28px;
+        background: #fff;
+        border: 2px solid var(--laranja);
+        max-width: 700px;
+      }
+
+      .linha-lista b {
+        font-size: 36px;
+        font-weight: 600;
+      }
+
+      .linha-lista span {
+        font-size: 28px;
+        color: var(--suave);
+      }
+
+      /* ── portal ── */
+      .cartao {
+        background: #fff;
+        border: 1px solid var(--borda);
+        border-radius: 40px;
+        padding: 48px;
+        box-shadow: 0 30px 70px -40px rgba(21, 58, 64, 0.5);
+      }
+
+      .trilha {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 8px;
+      }
+
+      .etapa {
+        flex: 1;
+        text-align: center;
+        font-size: 24px;
+        color: var(--suave);
+      }
+
+      .ponto {
+        height: 14px;
+        border-radius: 999px;
+        background: rgba(21, 58, 64, 0.14);
+        margin-bottom: 16px;
+      }
+
+      .ponto.feito {
+        background: var(--verde);
+      }
+
+      .ponto.ativa {
+        background: var(--laranja);
+      }
+
+      .doc {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 28px 0;
+        border-bottom: 1px solid var(--borda);
+        font-size: 30px;
+      }
+
+      .selo {
+        font-size: 24px;
+        padding: 10px 22px;
+        border-radius: 999px;
+      }
+
+      .selo.ok {
+        color: var(--verde);
+        background: rgba(47, 143, 87, 0.12);
+      }
+
+      /* Laranja mais fechado que o da marca: sobre o fundo claro do selo, o
+         tom original ficava em 2,97:1 e o gate exige 3:1. */
+      .selo.analise {
+        color: #b8471d;
+        background: rgba(232, 96, 48, 0.12);
+      }
+
+      .pessoa {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-top: 12px;
+      }
+
+      .avatar {
+        width: 84px;
+        height: 84px;
+        border-radius: 999px;
+        background: var(--petroleo);
+        color: var(--creme);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+      }
+
+      .micro {
+        font-size: 22px;
+        color: var(--suave);
+        margin-top: 28px;
+      }
+
+      /* ── fecho ── */
+      #s5 {
+        align-items: center;
+        text-align: center;
+      }
+
+      #s5-casa {
+        width: 300px;
+        height: auto;
+        margin-bottom: 48px;
+      }
+
+      #s5-assinatura {
+        font-family: "Instrument Serif", Georgia, serif;
+        font-size: 96px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1080"
+      data-height="1920"
+    >
+      <!-- 1 · A DOR -->
+      <section id="s1" class="clip scene" data-start="0" data-duration="2.6" data-track-index="0">
+        <div id="s1-l1" class="titulo">Imóvel irregular</div>
+        <div id="s1-l2" class="titulo">
+          <span class="laranja">trava</span> venda, herança<br aria-hidden="true" />
+        </div>
+        <div id="s1-l3" class="titulo">e financiamento.</div>
+      </section>
+
+      <!-- 2 · O WHATSAPP -->
+      <section id="s2" class="clip scene" data-start="2.6" data-duration="5.8" data-track-index="0">
+        <div id="s2-rotulo" class="rotulo">Uma conversa. Sem formulário.</div>
+        <div style="display: flex; flex-direction: column; gap: 24px">
+          <div id="s2-b1" class="bolha">
+            Olá! Sou o assistente da Ato Regulariza. Vou fazer algumas perguntas rápidas para
+            entender seu caso e te encaminhar para a pessoa certa.
+          </div>
+          <div id="s2-b2" class="bolha">Para começar, qual seu nome?</div>
+          <div id="s2-b3" class="bolha bolha-cliente">Maria Silva</div>
+          <div id="s2-b4" class="bolha">O que te trouxe aqui?</div>
+          <div id="s2-chips" class="opcoes">
+            <span class="chip">Vender ou financiar</span>
+            <span class="chip">Herança / inventário</span>
+            <span class="chip">Recebi notificação</span>
+            <span class="chip">Só quero regularizar</span>
+          </div>
+          <div id="s2-destaque" class="linha-lista">
+            <b>Averbação Construção</b>
+            <span>(Habite-se)</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 · O LINK -->
+      <section id="s3" class="clip scene" data-start="8.4" data-duration="3.8" data-track-index="0">
+        <div id="s3-bolha" class="bolha" style="margin-bottom: 56px">
+          Um profissional da Ato Regulariza entra em contato em breve. Para adiantar, toque aqui e
+          complete seu cadastro:
+          <span class="laranja">atoregulariza.com.br/f/EKR6NT</span>
+        </div>
+        <div id="s3-titulo" class="titulo">Seu caso já chega<br aria-hidden="true" />montado.</div>
+      </section>
+
+      <!-- 4 · O ACOMPANHAMENTO -->
+      <section id="s4" class="clip scene" data-start="12.2" data-duration="5.2" data-track-index="0">
+        <div id="s4-titulo" class="titulo" style="font-size: 82px; margin-bottom: 48px">
+          Acompanhe cada etapa<br aria-hidden="true" />em tempo real.
+        </div>
+        <div id="s4-cartao" class="cartao">
+          <div class="trilha">
+            <div class="etapa"><div class="ponto feito"></div>Cadastro</div>
+            <div class="etapa"><div class="ponto feito"></div>Análise</div>
+            <div class="etapa"><div class="ponto ativa"></div>Profissional</div>
+            <div class="etapa"><div class="ponto"></div>Tramitação</div>
+            <div class="etapa"><div class="ponto"></div>Entrega</div>
+          </div>
+          <div style="margin-top: 40px">
+            <div class="doc">
+              <span>Matrícula atualizada.pdf</span><span class="selo ok">Aprovado</span>
+            </div>
+            <div class="doc" style="border-bottom: none">
+              <span>Planta da edícula.pdf</span><span class="selo analise">Em análise</span>
+            </div>
+          </div>
+          <div class="pessoa">
+            <div class="avatar">MS</div>
+            <div>
+              <div style="font-size: 32px">Mariana Silva</div>
+              <div style="font-size: 26px; color: var(--suave)">Arquiteta e Urbanista</div>
+            </div>
+          </div>
+        </div>
+        <div id="s4-micro" class="micro">Prazo estimado. Varia conforme cartório e prefeitura.</div>
+      </section>
+
+      <!-- 5 · FECHO -->
+      <section id="s5" class="clip scene" data-start="17.4" data-duration="2.6" data-track-index="0">
+        <img id="s5-casa" src="assets/casa-ato.png" alt="Ato Regulariza" />
+        <div id="s5-assinatura">Um ato<span class="laranja">.</span> Regulariza!</div>
+      </section>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      /* 1 · A dor — as três linhas sobem em sequência curta. O gancho é a
+         frase, não a marca: quem tem imóvel irregular se reconhece já aqui. */
+      tl.fromTo(
+        ["#s1-l1", "#s1-l2", "#s1-l3"],
+        { opacity: 0, y: 40 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.16, ease: "power2.out" },
+        0.1,
+      );
+      tl.to("#s1", { opacity: 0, duration: 0.3 }, 2.3);
+
+      /* 2 · A conversa monta-se bolha a bolha, no ritmo de quem digita. Cada
+         uma segura tempo suficiente para ser lida antes da próxima entrar. */
+      tl.fromTo("#s2-rotulo", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 2.7);
+      tl.fromTo(
+        "#s2-b1",
+        { opacity: 0, y: 28 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" },
+        2.9,
+      );
+      tl.fromTo(
+        "#s2-b2",
+        { opacity: 0, y: 28 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" },
+        4.0,
+      );
+      tl.fromTo(
+        "#s2-b3",
+        { opacity: 0, y: 28 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" },
+        4.7,
+      );
+      tl.fromTo(
+        "#s2-b4",
+        { opacity: 0, y: 28 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" },
+        5.3,
+      );
+      tl.fromTo(
+        "#s2-chips > *",
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.35, stagger: 0.09, ease: "power2.out" },
+        5.8,
+      );
+      tl.fromTo(
+        "#s2-destaque",
+        { opacity: 0, scale: 0.94 },
+        { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(1.6)" },
+        6.7,
+      );
+      tl.to("#s2", { opacity: 0, duration: 0.3 }, 8.1);
+
+      /* 3 · O link fecha a conversa e abre o portal. */
+      tl.fromTo(
+        "#s3-bolha",
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" },
+        8.5,
+      );
+      tl.fromTo(
+        "#s3-titulo",
+        { opacity: 0, y: 36 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        9.5,
+      );
+      tl.to("#s3", { opacity: 0, duration: 0.3 }, 11.9);
+
+      /* 4 · O painel. O cartão sobe inteiro; a etapa ativa acende depois, que
+         é o detalhe que diz "isto está andando agora". */
+      tl.fromTo(
+        "#s4-titulo",
+        { opacity: 0, y: 32 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        12.3,
+      );
+      tl.fromTo(
+        "#s4-cartao",
+        { opacity: 0, y: 60 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        12.9,
+      );
+      tl.fromTo(
+        "#s4 .ponto.feito",
+        { scaleX: 0.2, transformOrigin: "left center" },
+        { scaleX: 1, duration: 0.4, stagger: 0.12, ease: "power2.out" },
+        13.5,
+      );
+      tl.fromTo(
+        "#s4 .ponto.ativa",
+        { scaleX: 0.2, transformOrigin: "left center" },
+        { scaleX: 1, duration: 0.45, ease: "power2.out" },
+        13.9,
+      );
+      tl.fromTo("#s4-micro", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 14.6);
+      tl.to("#s4", { opacity: 0, duration: 0.3 }, 17.1);
+
+      /* 5 · Fecho: a casa cresce e a assinatura entra, igual ao fim da cena
+         animada do site. */
+      tl.fromTo(
+        "#s5-casa",
+        { opacity: 0, scale: 0.7 },
+        { opacity: 1, scale: 1, duration: 0.6, ease: "back.out(1.5)" },
+        17.5,
+      );
+      tl.fromTo(
+        "#s5-assinatura",
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        17.9,
+      );
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

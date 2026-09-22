@@ -206,6 +206,20 @@ async function carregarEstado(
  * Vale o prazo, ou a pessoa pedindo explicitamente. Sem isso o bot fica mudo
  * para sempre para quem ja falou com ele uma vez.
  */
+/**
+ * Mensagem sem palavra nenhuma deve ser ignorada?
+ *
+ * Figurinha, foto, áudio, reação e marcação em story chegam como evento de
+ * mensagem com texto vazio. Quem marca a Ato num story não está pedindo
+ * atendimento — e disparar a triagem inteira ali é o bot falando fora de hora.
+ *
+ * A exceção é quem está NO MEIO da triagem: aí o silêncio deixaria a pessoa
+ * travada sem saber por quê, e repetir a pergunta é o certo.
+ */
+export function deveIgnorar(texto: string, conversaEmAndamento: boolean): boolean {
+  return texto.trim() === "" && !conversaEmAndamento;
+}
+
 export function podeReabrir(atualizadaEm: string, texto: string): boolean {
   if (REINICIAR.test(texto)) return true;
   const dias = (Date.now() - new Date(atualizadaEm).getTime()) / 86_400_000;
@@ -422,7 +436,12 @@ export async function receberWebhook(request: Request): Promise<Response> {
       !salvo || (salvo.estado.encerrada && podeReabrir(salvo.atualizadaEm, entrada.texto));
     const anterior = recomecar ? null : salvo.estado;
 
-    const passo = anterior ? avancar(anterior, entrada.texto) : iniciar(entrada.texto);
+    // Em andamento = existe conversa aberta esperando resposta.
+    if (deveIgnorar(entrada.texto, anterior !== null)) return new Response("ok");
+
+    const passo = anterior
+      ? avancar(anterior, entrada.texto)
+      : iniciar(entrada.texto, salvo?.estado.respostas.nome);
     const envios = [...passo.envios];
 
     let leadId: string | undefined;

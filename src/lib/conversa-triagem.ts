@@ -37,6 +37,20 @@ const SAUDACAO =
   "\n\nSe preferir falar com uma pessoa a qualquer momento, é só escrever: " +
   "**Falar com atendente**.";
 
+/**
+ * Para quem já conversou antes.
+ *
+ * A saudação completa explica o que é o assistente e quanto tempo leva —
+ * informação que só serve uma vez. Repetir a cada volta soa a robô que não
+ * lembra de nada, e o nome já está guardado da conversa anterior.
+ */
+function saudacaoDeVolta(nome: string): string {
+  const primeiro = nome.trim().split(/\s+/)[0] || "";
+  return primeiro
+    ? `Oi de novo, **${primeiro}**! Como posso ajudar hoje?`
+    : "Oi de novo! Como posso ajudar hoje?";
+}
+
 const SAIDA_HUMANA =
   "Claro. **Já avisei a equipe** — em breve alguém assume esta conversa por aqui.";
 
@@ -90,11 +104,24 @@ function perguntaDe(passo: number): Envio {
  * O texto dela importa: quem abre a conversa pedindo atendente não deve
  * receber um questionário como resposta. Nesse caso a triagem nem começa.
  */
-export function iniciar(primeiraMensagem = ""): { estado: Estado; envios: Envio[] } {
+export function iniciar(
+  primeiraMensagem = "",
+  nomeConhecido?: string,
+): { estado: Estado; envios: Envio[] } {
   if (pedeHumano(primeiraMensagem.trim(), "opcoes")) {
     return {
       estado: { ...estadoInicial(), encerrada: true, pediuHumano: true },
       envios: [{ tipo: "texto", texto: SAIDA_HUMANA }],
+    };
+  }
+
+  // Quem já passou por aqui não repete o nome nem ouve a apresentação de
+  // novo: começa direto na pergunta que importa.
+  const nome = nomeConhecido?.trim();
+  if (nome) {
+    return {
+      estado: { ...estadoInicial(), passo: 1, respostas: { nome } },
+      envios: [{ tipo: "texto", texto: saudacaoDeVolta(nome) }, perguntaDe(1)],
     };
   }
 
