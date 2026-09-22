@@ -41,3 +41,8 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Saída do /brag: video e quadros sao artefato, nao codigo.
+brag-output/*.mp4
+brag-output/*.jpg
+brag-output/quadros/
