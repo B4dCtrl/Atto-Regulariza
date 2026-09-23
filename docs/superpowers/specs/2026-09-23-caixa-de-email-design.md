@@ -16,8 +16,10 @@ endereço próprio sem pagar caixas novas.
 três vezes mais tempo e duplica dado pessoal. Se um dia fizer falta ligar e-mail a cliente, ela
 entra por cima desta sem refazer a tela.
 
-**Uma caixa, três aliases.** `gabriel@`, `tais@` e `lauro@` são aliases gratuitos da Hostinger
-que entregam em `contato@`. O painel mostra para qual endereço cada e-mail foi mandado.
+**Uma caixa, quatro aliases.** `gabriel@`, `tais@`, `lauro@` e `suporte@` são aliases da
+Hostinger (criados em 2026-09-23; o plano permite 5) que entregam em `contato@`. A Hostinger
+permite enviar e receber por eles. O painel mostra para qual endereço cada e-mail foi mandado.
+`suporte@` é o endereço público que vai para o rodapé do site.
 
 **Ler, responder e escrever e-mail novo** já nesta versão (decisão do usuário, 2026-09-23).
 
@@ -68,10 +70,10 @@ As pastas são uma lista fechada no servidor. O cliente nunca manda nome de past
 
 ### Remetente
 
-`de` só aceita um de quatro endereços: `contato@`, `gabriel@`, `tais@`, `lauro@`. Na resposta,
-o padrão é o alias que recebeu o e-mail, descoberto pelos cabeçalhos `To`, `Cc` e
-`Delivered-To`. Se a Hostinger recusar o envio como alias, o endereço sai da lista e a resposta
-vai como `contato@`. Isso é verificado no primeiro envio de teste.
+`de` só aceita um de cinco endereços: `contato@`, `suporte@`, `gabriel@`, `tais@`, `lauro@`.
+Na resposta, o padrão é o alias que recebeu o e-mail, descoberto pelos cabeçalhos `To`, `Cc` e
+`Delivered-To`; sem alias reconhecido, `contato@`. A autenticação SMTP é sempre a do
+`contato@` — o alias só muda o `From`.
 
 ### Conversa
 
@@ -107,8 +109,8 @@ com `service_role`. Serve para a equipe ver quem respondeu e para o limite de en
 
 ## Tela
 
-Três áreas: lista à esquerda (com abas Entrada e Enviados e o filtro "Todos / Gabriel / Taís /
-Lauro / Contato"), e-mail aberto à direita, e o botão **Escrever** no topo. Responder abre o
+Três áreas: lista à esquerda (com abas Entrada e Enviados e o filtro "Todos / Contato / Suporte /
+Gabriel / Taís / Lauro"), e-mail aberto à direita, e o botão **Escrever** no topo. Responder abre o
 editor embaixo do e-mail, com `de` e `para` já preenchidos. No celular, a lista e o e-mail
 viram telas separadas.
 
@@ -118,6 +120,11 @@ O editor é texto simples. Formatação e anexo no envio ficam fora desta versã
 
 Anexo no envio, busca, pastas além de Entrada e Enviados, apagar e mover e-mail, "mostrar
 imagens", papel `equipe`, ligar e-mail ao cliente.
+
+## Rodapé do site
+
+Depois da caixa pronta, o rodapé público passa a mostrar `suporte@atoregulariza.com.br` como
+contato por e-mail (pedido do usuário, 2026-09-23).
 
 ## Testes
 
@@ -131,7 +138,7 @@ imagens", papel `equipe`, ligar e-mail ao cliente.
 
 ## O que o usuário precisa fazer fora do código
 
-1. Criar os aliases `gabriel@`, `tais@` e `lauro@` no hPanel, apontando para `contato@`.
+1. ~~Criar os aliases no hPanel~~ — feito em 2026-09-23.
 2. Colar `MAIL_USER` e `MAIL_PASSWORD` nas variáveis de ambiente da Vercel.
 3. Cada profissional cria a conta no site com o seu alias; o admin dá o papel `admin` pela
    `user_roles`.
