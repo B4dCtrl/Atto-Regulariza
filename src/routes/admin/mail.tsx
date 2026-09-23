@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, PenSquare, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { listarEmails, abrirEmail } from "@/lib/api/mail.functions";
@@ -29,19 +29,30 @@ function MailPage() {
   const [aberto, setAberto] = useState<EmailAberto | null>(null);
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
 
+  // Contadores de pedido em voo: IMAP demora segundos, e trocar de aba/filtro
+  // ou clicar em dois e-mails rápido pode fazer a resposta mais lenta chegar
+  // por último. Cada função só aplica sua resposta se ainda for a mais
+  // recente — senão o "Enviados" mostraria itens da Entrada, ou um clique
+  // reabriria o e-mail errado sob a aba nova.
+  const cargaId = useRef(0);
+  const abrirId = useRef(0);
+
   const carregar = useCallback(async () => {
+    const id = ++cargaId.current;
     setCarregando(true);
     try {
       const r = await listarEmails({
         data: { pasta, pagina, alias },
         headers: await cabecalhoAuth(),
       });
+      if (id !== cargaId.current) return; // uma chamada mais nova já respondeu
       setItens(r.itens);
       setTotal(r.total);
     } catch (e) {
+      if (id !== cargaId.current) return;
       toast.error((e as Error).message);
     } finally {
-      setCarregando(false);
+      if (id === cargaId.current) setCarregando(false);
     }
   }, [pasta, pagina, alias]);
 
@@ -49,13 +60,23 @@ function MailPage() {
     void carregar();
   }, [carregar]);
 
+  // UID de IMAP é por pasta: abrir(uid) só faz sentido para a pasta vigente
+  // no momento do clique. Trocar de aba invalida qualquer abertura pendente.
+  function limparAberto() {
+    abrirId.current++;
+    setAberto(null);
+  }
+
   async function abrir(uid: number) {
+    const id = ++abrirId.current;
     setRascunho(null);
     try {
       const e = await abrirEmail({ data: { pasta, uid }, headers: await cabecalhoAuth() });
+      if (id !== abrirId.current) return; // outro clique ou troca de aba venceu
       setAberto(e);
       setItens((xs) => xs.map((x) => (x.uid === uid ? { ...x, lido: true } : x)));
     } catch (e) {
+      if (id !== abrirId.current) return;
       toast.error((e as Error).message);
     }
   }
@@ -77,7 +98,7 @@ function MailPage() {
       onClick={() => {
         setPasta(p);
         setPagina(0);
-        setAberto(null);
+        limparAberto();
       }}
       className={`px-3 py-1.5 text-sm ${pasta === p ? "border-b-2 border-primary font-medium" : ""}`}
     >
@@ -112,7 +133,7 @@ function MailPage() {
         <button
           type="button"
           onClick={() => {
-            setAberto(null);
+            limparAberto();
             setRascunho({ de: alias ?? PADRAO, para: "", assunto: "", texto: "" });
           }}
           className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
@@ -152,7 +173,7 @@ function MailPage() {
             <button
               type="button"
               onClick={() => {
-                setAberto(null);
+                limparAberto();
                 setRascunho(null);
               }}
               className="flex items-center gap-1 p-3 text-sm md:hidden"
