@@ -23,11 +23,30 @@ function escapar(t: string): string {
   return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Um e-mail com uma imagem inline de poucos MB e milhares de `<img src="cid:x">`
+// repetidos (HTML em si pode ficar pequeno) explodiria para dezenas de GB se
+// cada referência virasse uma cópia base64 completa — derrubando a função que
+// serve o painel assim que um admin abrir o e-mail. Por isso há um teto para o
+// total de base64 embutido no documento inteiro; passado o teto, as próximas
+// referências ficam sem `src` (mesmo que fossem embutíveis).
+const LIMITE_EMBUTIDO_BASE64 = 5 * 1024 * 1024; // 5 MB de texto base64, total no documento
+
 function trocarCid(html: string, anexos: AnexoEmbutido[]): string {
+  const cacheBase64 = new Map<string, string>();
+  let usado = 0;
   return html.replace(/\bsrc\s*=\s*(["'])cid:([^"']+)\1/gi, (_m, aspas: string, cid: string) => {
     const a = anexos.find((x) => x.cid === cid);
     if (!a || !a.contentType.startsWith("image/")) return `src=${aspas}${aspas}`;
-    return `src=${aspas}data:${a.contentType};base64,${a.content.toString("base64")}${aspas}`;
+
+    let b64 = cacheBase64.get(cid);
+    if (b64 === undefined) {
+      b64 = a.content.toString("base64");
+      cacheBase64.set(cid, b64);
+    }
+
+    if (usado + b64.length > LIMITE_EMBUTIDO_BASE64) return `src=${aspas}${aspas}`;
+    usado += b64.length;
+    return `src=${aspas}data:${a.contentType};base64,${b64}${aspas}`;
   });
 }
 

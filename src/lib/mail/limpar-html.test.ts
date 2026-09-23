@@ -79,4 +79,19 @@ describe("corpoParaExibir", () => {
     expect(h).toContain("color:red");
     expect(h).toContain("text-align:center");
   });
+
+  it("muitas referências ao mesmo cid não estouram o documento (teto de embutido)", () => {
+    const conteudo = Buffer.alloc(500 * 1024, 1); // 500 KB por imagem
+    const N = 200; // 200 referências à mesma imagem: sem teto viraria ~136 MB
+    const html = Array.from({ length: N }, () => `<img src="cid:logo">`).join("");
+    const h = corpoParaExibir({
+      html,
+      anexos: [{ cid: "logo", contentType: "image/png", content: conteudo }],
+    });
+
+    const embutidas = (h.match(/data:image\/png;base64,/g) ?? []).length;
+    expect(embutidas).toBeGreaterThan(0);
+    expect(embutidas).toBeLessThan(N);
+    expect(h.length).toBeLessThan(10 * 1024 * 1024); // documento fica bem abaixo do total sem teto
+  });
 });
