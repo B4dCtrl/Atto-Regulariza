@@ -19,7 +19,7 @@ import { avisarErro } from "@/lib/api/avisar-erro.server";
 import { avisarNovoLead, avisarPedidoDeAtendente } from "@/lib/api/avisar-lead.server";
 import { iniciar, avancar, type Estado, type Envio } from "@/lib/conversa-triagem";
 import { PERGUNTAS, nomeDoProduto } from "@/lib/triagem";
-import { montarPayload, lerEntrada } from "@/lib/whatsapp-formato";
+import { montarPayload, lerEntrada, lerFalhasDeEntrega } from "@/lib/whatsapp-formato";
 import { ATENDIMENTO_PHONE } from "@/lib/brand";
 import { formaAlternativa } from "@/lib/telefone-br";
 import { gerarCodigo } from "@/lib/codigo-curto";
@@ -385,24 +385,24 @@ function chaveDaConversa(canal: Canal, de: string): string {
  * quem pediu atendente vira conversa a assumir, e aí o que importa é em que
  * pergunta parou — é o contexto que a pessoa não vai querer repetir.
  *
- * Sem await: o cliente não espera o nosso aviso.
+ * Devolve a promessa sem esperar: o cliente não espera o nosso aviso, mas
+ * quem chama aguarda antes de encerrar a função.
  */
-function avisarEquipe(estado: Estado, entrada: { de: string; canal: Canal }): void {
+function avisarEquipe(estado: Estado, entrada: { de: string; canal: Canal }): Promise<void> {
   const nome = estado.respostas.nome?.trim() || "Sem nome";
 
   if (estado.pediuHumano) {
     const pergunta = PERGUNTAS[estado.passo];
-    avisarPedidoDeAtendente({
+    return avisarPedidoDeAtendente({
       nome,
       telefone: entrada.canal === "instagram" ? `Instagram ${entrada.de}` : entrada.de,
       parouEm: pergunta ? pergunta.texto : "Antes de começar",
     });
-    return;
   }
 
   const r = estado.resultado;
-  if (!r) return;
-  avisarNovoLead({
+  if (!r) return Promise.resolve();
+  return avisarNovoLead({
     nome,
     cidade: r.cidade,
     cor: r.cor,
@@ -421,6 +421,13 @@ export async function receberWebhook(request: Request): Promise<Response> {
   // reenviar em loop; o que quebrar vira alerta no painel.
   try {
     const corpo = JSON.parse(corpoBruto) as unknown;
+
+    // Envio que a Meta aceitou e depois não entregou: sem isto, some calado.
+    for (const f of lerFalhasDeEntrega(corpo)) {
+      console.error("[whatsapp] entrega falhou", f.para, f.codigo, f.titulo);
+      await avisarErro("entrega pelo whatsapp", `${f.codigo ?? "?"} ${f.titulo} (para ${f.para})`);
+    }
+
     const entrada = interpretar(corpo);
     if (!entrada) return new Response("ok");
 
@@ -445,13 +452,14 @@ export async function receberWebhook(request: Request): Promise<Response> {
     const envios = [...passo.envios];
 
     let leadId: string | undefined;
+    let aviso: Promise<void> | undefined;
     if (passo.estado.encerrada && !anterior?.encerrada) {
       const codigo = gerarCodigo();
       if (passo.estado.resultado) {
         leadId = await gravarLead(chave, passo.estado, entrada.canal, codigo);
       }
       envios.push(convite(codigo));
-      avisarEquipe(passo.estado, entrada);
+      aviso = avisarEquipe(passo.estado, entrada);
     }
 
     await salvarEstado(chave, passo.estado, leadId);
@@ -459,6 +467,10 @@ export async function receberWebhook(request: Request): Promise<Response> {
     // Em ordem: a entrega respeita a ordem de chegada, e pergunta antes da
     // saudação confundiria.
     for (const envio of envios) await enviar(entrada.de, envio, entrada.canal);
+
+    // O aviso corre em paralelo com as respostas, mas a função só termina
+    // depois dele: na Vercel, o que fica pendente após a resposta é congelado.
+    await aviso;
 
     return new Response("ok");
   } catch (e) {

@@ -151,3 +151,41 @@ export function lerEntrada(corpo: unknown): Entrada | null {
 
   return { de, texto: "" };
 }
+
+export type FalhaDeEntrega = { para: string; codigo: number | null; titulo: string };
+
+/**
+ * Recibos de entrega que voltaram como falha.
+ *
+ * A Meta aceita o envio com 200 e só depois, num recibo separado, conta que
+ * não entregou. Sem ler isto, a mensagem some sem deixar rastro: o log mostra
+ * sucesso e o destinatário não recebe nada. Foi assim que o aviso da equipe
+ * ficou mudo sem nenhum erro registrado.
+ */
+export function lerFalhasDeEntrega(corpo: unknown): FalhaDeEntrega[] {
+  if (!corpo || typeof corpo !== "object") return [];
+
+  type Recibo = {
+    status?: string;
+    recipient_id?: string;
+    errors?: { code?: number; title?: string }[];
+  };
+  const entradas = (corpo as { entry?: unknown }).entry;
+  if (!Array.isArray(entradas)) return [];
+
+  const falhas: FalhaDeEntrega[] = [];
+  for (const entrada of entradas as { changes?: { value?: { statuses?: Recibo[] } }[] }[]) {
+    for (const mudanca of entrada?.changes ?? []) {
+      for (const r of mudanca?.value?.statuses ?? []) {
+        if (r?.status !== "failed") continue;
+        const erro = r.errors?.[0];
+        falhas.push({
+          para: r.recipient_id ?? "",
+          codigo: typeof erro?.code === "number" ? erro.code : null,
+          titulo: erro?.title ?? "sem detalhe",
+        });
+      }
+    }
+  }
+  return falhas;
+}

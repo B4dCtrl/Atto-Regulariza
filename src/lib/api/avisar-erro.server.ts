@@ -14,14 +14,18 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
  * O que NÃO cobre: erro no navegador do cliente. Para isso seria preciso um
  * coletor no front, e a decisão foi não trazer fornecedor novo agora.
  */
-export function avisarErro(origem: string, erro: unknown): void {
+export function avisarErro(origem: string, erro: unknown): Promise<void> {
   const detalhe = erro instanceof Error ? `${erro.name}: ${erro.message}` : String(erro);
 
-  // Sem await de propósito: o admin ser avisado não pode fazer o usuário
-  // esperar. O `catch` engole porque não há a quem reportar aqui.
-  void supabaseAdmin
-    .rpc("avisar_erro", { _origem: origem, _detalhe: detalhe })
-    .then(({ error }) => {
+  // Quem chama escolhe: sem await, o usuário não espera o admin ser avisado;
+  // com await, a função serverless não congela antes do aviso sair. O `catch`
+  // engole porque não há a quem reportar aqui.
+  return Promise.resolve(
+    supabaseAdmin.rpc("avisar_erro", { _origem: origem, _detalhe: detalhe }),
+  ).then(
+    ({ error }) => {
       if (error) console.error("[avisarErro] não foi possível avisar:", error.message);
-    });
+    },
+    (e) => console.error("[avisarErro] não foi possível avisar:", e),
+  );
 }

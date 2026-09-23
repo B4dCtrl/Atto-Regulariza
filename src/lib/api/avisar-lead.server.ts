@@ -11,16 +11,27 @@
  * exige um modelo aprovado por ela. Mudar o texto exige nova aprovação; mudar
  * o que vai nas variáveis, não.
  *
- * NUNCA lança e nunca atrasa quem chamou: é aviso. Uma falha ao avisar não
- * pode derrubar a resposta ao cliente, que é o que importa.
+ * NUNCA lança: é aviso. Uma falha ao avisar não pode derrubar a resposta ao
+ * cliente, que é o que importa. Devolve a promessa para quem chama aguardar
+ * antes de encerrar a função — na Vercel, o que fica pendente depois da
+ * resposta é congelado no meio.
  */
 
 import process from "node:process";
-import { ATENDIMENTO_PHONE } from "@/lib/brand";
 import { avisarErro } from "@/lib/api/avisar-erro.server";
 import type { Cor } from "@/lib/triagem";
 
 const HOST = "https://graph.facebook.com/v21.0";
+
+/**
+ * O (41) 98447-1404 como o WhatsApp o conhece: sem o nono dígito.
+ *
+ * A conta é anterior ao nono dígito, e as mensagens dela chegam de
+ * 554184471404. Mandando para a grafia longa, a Meta responde 200 e depois
+ * não entrega — o aviso sumia sem erro no log. O link público (`wa.me`)
+ * continua com a grafia longa em `brand.ts`, porque lá as duas funcionam.
+ */
+const DESTINO_DA_EQUIPE = "554184471404";
 
 /**
  * O modelo aprovado na Meta. Os nomes têm que bater com os de lá.
@@ -55,7 +66,7 @@ async function enviarModelo(modelo: Modelo, valores: string[]): Promise<void> {
 
   const corpo = {
     messaging_product: "whatsapp",
-    to: ATENDIMENTO_PHONE,
+    to: DESTINO_DA_EQUIPE,
     type: "template",
     template: {
       name: modelo,
@@ -77,11 +88,15 @@ async function enviarModelo(modelo: Modelo, valores: string[]): Promise<void> {
     body: JSON.stringify(corpo),
   });
 
+  const detalhe = await res.text().catch(() => "");
   if (!res.ok) {
-    const detalhe = await res.text().catch(() => "");
     console.error(`[aviso] ${modelo} recusado`, res.status, detalhe.slice(0, 300));
-    avisarErro(`aviso de ${modelo}`, `${res.status}: ${detalhe.slice(0, 200)}`);
+    await avisarErro(`aviso de ${modelo}`, `${res.status}: ${detalhe.slice(0, 200)}`);
+    return;
   }
+  // Aceito não é entregue: se falhar depois, o recibo chega no webhook com o
+  // mesmo id, e é por ele que se cruza um com o outro no log.
+  console.log(`[aviso] ${modelo} aceito`, detalhe.slice(0, 200));
 }
 
 /** Triagem concluída: quem é, de onde, como classificou e o que parece ser. */
@@ -90,8 +105,8 @@ export function avisarNovoLead(dados: {
   cidade: string;
   cor: Cor;
   produto: string | null;
-}): void {
-  void enviarModelo("lead_triagem", [
+}): Promise<void> {
+  return enviarModelo("lead_triagem", [
     dados.nome,
     dados.cidade,
     EMOJI[dados.cor],
@@ -104,10 +119,8 @@ export function avisarPedidoDeAtendente(dados: {
   nome: string;
   telefone: string;
   parouEm: string;
-}): void {
-  void enviarModelo("pedido_atendente", [
-    dados.nome,
-    dados.telefone,
-    dados.parouEm,
-  ]).catch((e) => console.error("[aviso] falha ao avisar pedido de atendente", e));
+}): Promise<void> {
+  return enviarModelo("pedido_atendente", [dados.nome, dados.telefone, dados.parouEm]).catch((e) =>
+    console.error("[aviso] falha ao avisar pedido de atendente", e),
+  );
 }

@@ -4,7 +4,7 @@ import { iniciar, avancar } from "./conversa-triagem";
 
 /** A pergunta de opções: hoje é a segunda, depois do nome. */
 const perguntaDeOpcoes = () => avancar(iniciar().estado, "Maria Silva").envios[0];
-import { montarPayload, lerEntrada, LIMITE } from "./whatsapp-formato";
+import { montarPayload, lerEntrada, lerFalhasDeEntrega, LIMITE } from "./whatsapp-formato";
 
 describe("montarPayload", () => {
   it("texto vira mensagem simples", () => {
@@ -127,5 +127,53 @@ describe("lerEntrada", () => {
   it("aguenta corpo malformado", () => {
     expect(lerEntrada({})).toBeNull();
     expect(lerEntrada(null)).toBeNull();
+  });
+});
+
+describe("lerFalhasDeEntrega", () => {
+  const recibo = (statuses: unknown[]) => ({
+    object: "whatsapp_business_account",
+    entry: [{ changes: [{ value: { statuses } }] }],
+  });
+
+  it("recibo de falha vira código, título e destinatário", () => {
+    const falhas = lerFalhasDeEntrega(
+      recibo([
+        {
+          id: "wamid.X",
+          status: "failed",
+          recipient_id: "5541984471404",
+          errors: [{ code: 131026, title: "Message undeliverable" }],
+        },
+      ]),
+    );
+    expect(falhas).toEqual([
+      { para: "5541984471404", codigo: 131026, titulo: "Message undeliverable" },
+    ]);
+  });
+
+  it("entregue e lido não são falha", () => {
+    expect(
+      lerFalhasDeEntrega(
+        recibo([
+          { status: "sent", recipient_id: "1" },
+          { status: "delivered", recipient_id: "1" },
+          { status: "read", recipient_id: "1" },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("mensagem de gente não tem falha de entrega", () => {
+    expect(
+      lerFalhasDeEntrega({
+        entry: [{ changes: [{ value: { messages: [{ from: "1", type: "text" }] } }] }],
+      }),
+    ).toEqual([]);
+  });
+
+  it("corpo estranho não quebra", () => {
+    expect(lerFalhasDeEntrega(null)).toEqual([]);
+    expect(lerFalhasDeEntrega({ entry: "x" })).toEqual([]);
   });
 });
