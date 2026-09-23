@@ -6,7 +6,7 @@ import { listarEmails, abrirEmail } from "@/lib/api/mail.functions";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import type { ResumoEmail, EmailAberto } from "@/lib/api/mail-imap.server";
 import { ENDERECOS, ROTULO, PADRAO, type Endereco } from "@/lib/mail/enderecos";
-import type { Pasta } from "@/lib/mail/validacao";
+import { POR_PAGINA, type Pasta } from "@/lib/mail/validacao";
 import { assuntoDeResposta, citar } from "@/lib/mail/resposta";
 import { ListaEmails } from "@/components/admin/mail/ListaEmails";
 import { LeitorEmail } from "@/components/admin/mail/LeitorEmail";
@@ -28,6 +28,10 @@ function MailPage() {
   const [carregando, setCarregando] = useState(false);
   const [aberto, setAberto] = useState<EmailAberto | null>(null);
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
+  // Chave do <EditorEmail>: "novo" fixo fazia um segundo "Escrever" reusar o
+  // estado (texto, destinatário) do rascunho anterior em vez de começar do
+  // zero, porque a key não mudava entre um rascunho novo e outro.
+  const rascunhoId = useRef(0);
 
   // Contadores de pedido em voo: IMAP demora segundos, e trocar de aba/filtro
   // ou clicar em dois e-mails rápido pode fazer a resposta mais lenta chegar
@@ -83,6 +87,7 @@ function MailPage() {
 
   function responder() {
     if (!aberto) return;
+    rascunhoId.current++;
     setRascunho({
       de: aberto.alias,
       para: aberto.responderPara,
@@ -134,6 +139,7 @@ function MailPage() {
           type="button"
           onClick={() => {
             limparAberto();
+            rascunhoId.current++;
             setRascunho({ de: alias ?? PADRAO, para: "", assunto: "", texto: "" });
           }}
           className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
@@ -150,14 +156,14 @@ function MailPage() {
           }`}
         >
           <ListaEmails itens={itens} selecionado={aberto?.uid ?? null} onAbrir={abrir} />
-          {total > 50 && (
+          {total > POR_PAGINA && (
             <div className="flex justify-between p-3 text-sm">
               <button type="button" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>
                 ← Mais novos
               </button>
               <button
                 type="button"
-                disabled={(pagina + 1) * 50 >= total}
+                disabled={(pagina + 1) * POR_PAGINA >= total}
                 onClick={() => setPagina(pagina + 1)}
               >
                 Mais antigos →
@@ -184,7 +190,7 @@ function MailPage() {
           {aberto && <LeitorEmail email={aberto} pasta={pasta} onResponder={responder} />}
           {rascunho && (
             <EditorEmail
-              key={rascunho.respondendo?.uid ?? "novo"}
+              key={rascunhoId.current}
               inicial={rascunho}
               onFechar={() => setRascunho(null)}
               onEnviado={() => {

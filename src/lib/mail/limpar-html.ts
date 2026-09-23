@@ -29,7 +29,10 @@ function escapar(t: string): string {
 // serve o painel assim que um admin abrir o e-mail. Por isso há um teto para o
 // total de base64 embutido no documento inteiro; passado o teto, as próximas
 // referências ficam sem `src` (mesmo que fossem embutíveis).
-const LIMITE_EMBUTIDO_BASE64 = 5 * 1024 * 1024; // 5 MB de texto base64, total no documento
+// A resposta de `abrirEmail` inteira (este HTML + o resto do JSON) precisa
+// caber no teto de 4,5 MB de resposta de função serverless da Vercel —
+// por isso o teto de base64 embutido é bem menor que isso.
+const LIMITE_EMBUTIDO_BASE64 = 2.5 * 1024 * 1024; // 2,5 MB de texto base64, total no documento
 
 function trocarCid(html: string, anexos: AnexoEmbutido[]): string {
   const cacheBase64 = new Map<string, string>();

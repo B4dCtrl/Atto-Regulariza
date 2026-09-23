@@ -36,6 +36,18 @@ describe("descobrirAlias", () => {
     expect(descobrirAlias({ to: ["outro@x.com"] })).toBe("contato@atoregulariza.com.br");
     expect(descobrirAlias({})).toBe("contato@atoregulariza.com.br");
   });
+
+  it("tira os < > do Delivered-To (cópia oculta)", () => {
+    expect(
+      descobrirAlias({ to: ["lista@x.com"], deliveredTo: ["<gabriel@atoregulariza.com.br>"] }),
+    ).toBe("gabriel@atoregulariza.com.br");
+  });
+
+  it("tira nome de exibição e < > do To", () => {
+    expect(descobrirAlias({ to: ['"Taís" <tais@atoregulariza.com.br>'] })).toBe(
+      "tais@atoregulariza.com.br",
+    );
+  });
 });
 
 describe("ehEndereco", () => {

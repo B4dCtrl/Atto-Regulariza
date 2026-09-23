@@ -2,7 +2,7 @@
 import process from "node:process";
 import { ImapFlow } from "imapflow";
 import { simpleParser, type AddressObject } from "mailparser";
-import type { Pasta } from "@/lib/mail/validacao";
+import { POR_PAGINA, type Pasta } from "@/lib/mail/validacao";
 import { corpoParaExibir } from "@/lib/mail/limpar-html";
 import { descobrirAlias, type Endereco } from "@/lib/mail/enderecos";
 
@@ -18,8 +18,10 @@ import { descobrirAlias, type Endereco } from "@/lib/mail/enderecos";
  * servidor.
  */
 
-const POR_PAGINA = 50;
-const LIMITE_ANEXO = 15 * 1024 * 1024;
+// Resposta de função serverless da Vercel estoura em 413 acima de 4,5 MB.
+// `baixarAnexo` devolve o anexo em base64 dentro de JSON (~1,33x o tamanho
+// cru, mais a moldura do JSON); 3 MB crus ficam bem abaixo do teto.
+const LIMITE_ANEXO = 3 * 1024 * 1024;
 // Mensagem inteira acima disto não é baixada/parseada: só os cabeçalhos
 // voltam, com um aviso no lugar do corpo. Protege a função serverless de
 // gastar memória/tempo com um anexo enorme só para abrir a tela.
@@ -242,12 +244,50 @@ export async function baixarAnexo(
   return comCaixa(async (c) => {
     const lock = await c.getMailboxLock(await caminho(c, pasta));
     try {
+      // Mesma checagem leve de `abrir`: uma mensagem gigante não é baixada
+      // por inteiro só para tentar extrair um anexo dela.
+      const resumo = await c.fetchOne(String(uid), { uid: true, size: true }, { uid: true });
+      if (!resumo || (resumo.size ?? 0) > LIMITE_ABERTURA) return null;
+
       const baixado = await c.download(String(uid), undefined, { uid: true });
       if (!baixado) return null;
       const e = await simpleParser(baixado.content);
       const a = e.attachments[indice];
       if (!a || a.size > LIMITE_ANEXO) return null;
       return { nome: a.filename ?? `anexo-${indice + 1}`, base64: a.content.toString("base64") };
+    } finally {
+      lock.release();
+    }
+  });
+}
+
+/**
+ * Só os cabeçalhos de conversa do e-mail original (Message-ID, References).
+ *
+ * `enviarEmailDaCaixa` usava `abrir()` para isto, o que baixava a mensagem
+ * inteira (podendo incluir anexos grandes) e ainda marcava como lida só para
+ * montar uma resposta — dois efeitos colaterais indesejados para quem só
+ * queria dois cabeçalhos. `envelope` já traz o Message-ID sem parsear nada.
+ */
+export async function cabecalhosDoOriginal(
+  pasta: Pasta,
+  uid: number,
+): Promise<{ messageId?: string; references: string[] } | null> {
+  return comCaixa(async (c) => {
+    const lock = await c.getMailboxLock(await caminho(c, pasta));
+    try {
+      const m = await c.fetchOne(
+        String(uid),
+        { uid: true, envelope: true, headers: ["references"] },
+        { uid: true },
+      );
+      if (!m) return null;
+      const texto = m.headers?.toString() ?? "";
+      // Cabeçalho pode ter continuação em várias linhas (dobra RFC 2822);
+      // junta tudo depois de "References:" até a próxima linha sem espaço.
+      const bloco = /references:\s*([\s\S]*?)\r?\n(?!\s)/i.exec(`${texto}\n`);
+      const references = bloco ? [...bloco[1].matchAll(/<[^>]+>/g)].map((r) => r[0]) : [];
+      return { messageId: m.envelope?.messageId, references };
     } finally {
       lock.release();
     }

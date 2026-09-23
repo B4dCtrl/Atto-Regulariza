@@ -11,6 +11,10 @@ import { ENDERECOS } from "./enderecos";
 export const PASTAS = ["entrada", "enviados"] as const;
 export type Pasta = (typeof PASTAS)[number];
 
+// Compartilhado entre o servidor (`listar`) e a tela (`/admin/mail`), para as
+// duas concordarem sobre quando mostrar o botão de "mais antigos".
+export const POR_PAGINA = 50;
+
 const uid = z.number().int().positive();
 
 export const schemaListar = z.object({

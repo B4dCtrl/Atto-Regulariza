@@ -38,13 +38,21 @@ export function ehEndereco(v: string): v is Endereco {
  * To nem Cc. Alias pessoal ganha de `contato@` quando os dois aparecem — a
  * pessoa quis falar com alguém específico.
  */
+// `Delivered-To` e cabeçalhos crus às vezes vêm como `<end@x.com>` ou
+// `"Nome" <end@x.com>` em vez do endereço puro — sem isto, `ehEndereco`
+// nunca bate e o e-mail cai em contato@ mesmo quando veio por um alias.
+function soEndereco(v: string): string {
+  const m = /<([^>]+)>/.exec(v);
+  return (m ? m[1] : v).trim().toLowerCase();
+}
+
 export function descobrirAlias(c: {
   to?: string[];
   cc?: string[];
   deliveredTo?: string[];
 }): Endereco {
   const vistos = [...(c.to ?? []), ...(c.cc ?? []), ...(c.deliveredTo ?? [])]
-    .map((e) => e.trim().toLowerCase())
+    .map(soEndereco)
     .filter(ehEndereco);
   return vistos.find((e) => e !== PADRAO) ?? (vistos[0] as Endereco | undefined) ?? PADRAO;
 }

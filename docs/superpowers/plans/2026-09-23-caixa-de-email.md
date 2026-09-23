@@ -17,7 +17,7 @@ Spec: [[2026-09-23-caixa-de-email-design]] (`docs/superpowers/specs/2026-09-23-c
 - Toda server function: `.middleware([requireSupabaseAuth])`, `.inputValidator(zod)`, e `await exigirAdmin(context.userId)` como primeira linha do handler — antes de qualquer conexão.
 - Nada de `dangerouslySetInnerHTML`. HTML de e-mail só em `<iframe sandbox="allow-popups allow-popups-to-escape-sandbox" srcDoc>`.
 - Pastas são lista fechada no servidor: `entrada` → INBOX, `enviados` → caixa com `specialUse === "\\Sent"`.
-- 50 e-mails por página. Limite de envio: 30 por hora por usuário. Até 10 destinatários, assunto até 200, texto até 20 000 caracteres. Anexo para download até 15 MB.
+- 50 e-mails por página. Limite de envio: 30 por hora por usuário. Até 10 destinatários, assunto até 200, texto até 20 000 caracteres. Anexo para download até 3 MB (resposta serverless da Vercel tem teto de 4,5 MB; 3 MB de anexo cru vira ~4 MB em base64+JSON).
 - Erro devolvido ao navegador é genérico; detalhe vai para `avisarErro`.
 - Comentários e textos de interface em PT-BR, no estilo do código em volta (comentário explica o porquê).
 - SQL de migração é colado no chat para o usuário rodar no SQL Editor (nunca só o link do arquivo).

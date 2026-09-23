@@ -5,6 +5,10 @@ import type { Pasta } from "@/lib/mail/validacao";
 import { baixarAnexoEmail } from "@/lib/api/mail.functions";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 
+// Mesmo teto de `LIMITE_ANEXO` no servidor: mostrar o botão de baixar para
+// um anexo que o servidor vai recusar só gastaria o clique do admin.
+const LIMITE_ANEXO = 3 * 1024 * 1024;
+
 /**
  * O e-mail aberto.
  *
@@ -49,16 +53,26 @@ export function LeitorEmail({
         </p>
         {email.anexos.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
-            {email.anexos.map((a) => (
-              <button
-                key={a.indice}
-                type="button"
-                onClick={() => baixar(a.indice)}
-                className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs hover:bg-surface"
-              >
-                <Download className="h-3 w-3" /> {a.nome} ({Math.ceil(a.tamanho / 1024)} KB)
-              </button>
-            ))}
+            {email.anexos.map((a) =>
+              a.tamanho > LIMITE_ANEXO ? (
+                <span
+                  key={a.indice}
+                  title="Anexo grande demais para baixar pelo painel"
+                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs text-muted-foreground opacity-60"
+                >
+                  {a.nome} ({Math.ceil(a.tamanho / 1024)} KB) — grande demais, abrir no webmail
+                </span>
+              ) : (
+                <button
+                  key={a.indice}
+                  type="button"
+                  onClick={() => baixar(a.indice)}
+                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs hover:bg-surface"
+                >
+                  <Download className="h-3 w-3" /> {a.nome} ({Math.ceil(a.tamanho / 1024)} KB)
+                </button>
+              ),
+            )}
           </div>
         )}
         {pasta === "entrada" && (

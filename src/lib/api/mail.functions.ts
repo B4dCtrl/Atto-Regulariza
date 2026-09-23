@@ -4,7 +4,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { exigirAdmin } from "@/lib/api/exigir-admin.server";
 import { avisarErro } from "@/lib/api/avisar-erro.server";
-import { listar, abrir, baixarAnexo, gravarEmEnviados } from "@/lib/api/mail-imap.server";
+import {
+  listar,
+  abrir,
+  baixarAnexo,
+  cabecalhosDoOriginal,
+  gravarEmEnviados,
+} from "@/lib/api/mail-imap.server";
 import { montarEEnviar } from "@/lib/api/mail-smtp.server";
 import { schemaListar, schemaAbrir, schemaAnexo, schemaEnviar } from "@/lib/mail/validacao";
 import { cabecalhosDeResposta } from "@/lib/mail/resposta";
@@ -67,7 +73,8 @@ export const baixarAnexoEmail = createServerFn({ method: "POST" })
       () => baixarAnexo(data.pasta, data.uid, data.indice),
       "Não foi possível baixar o anexo.",
     );
-    if (!a) throw new Error("Anexo não encontrado ou maior que 15 MB.");
+    if (!a)
+      throw new Error("Anexo não encontrado ou maior que 3 MB — abra pelo webmail da Hostinger.");
     return a;
   });
 
@@ -98,8 +105,8 @@ export const enviarEmailDaCaixa = createServerFn({ method: "POST" })
     let conversa: { inReplyTo?: string; references?: string[] } = {};
     if (data.respondendo) {
       const original = await protegido(
-        "abrir original",
-        () => abrir(data.respondendo!.pasta, data.respondendo!.uid),
+        "cabeçalhos do original",
+        () => cabecalhosDoOriginal(data.respondendo!.pasta, data.respondendo!.uid),
         "Não foi possível abrir o e-mail respondido.",
       );
       if (original) conversa = cabecalhosDeResposta(original);
