@@ -31,7 +31,7 @@ ALTER TABLE public.mail_envios ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin lê envios" ON public.mail_envios;
 CREATE POLICY "admin lê envios" ON public.mail_envios
   FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+  USING (public.is_admin());
 
 -- Sem política de INSERT/UPDATE/DELETE: com RLS ligada, isso fecha para todos
 -- menos service_role.
