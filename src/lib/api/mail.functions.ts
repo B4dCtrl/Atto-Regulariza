@@ -78,11 +78,17 @@ export const enviarEmailDaCaixa = createServerFn({ method: "POST" })
     await exigirAdmin(context.userId);
 
     const umaHoraAtras = new Date(Date.now() - 3_600_000).toISOString();
-    const { count } = await supabaseAdmin
+    const { count, error: erroLimite } = await supabaseAdmin
       .from("mail_envios")
       .select("id", { count: "exact", head: true })
       .eq("user_id", context.userId)
       .gte("enviado_em", umaHoraAtras);
+    // Falha ao contar não pode virar "sem limite": na dúvida, fecha — mesma
+    // regra de `exigirAdmin`.
+    if (erroLimite) {
+      await avisarErro("caixa de e-mail: limite de envio", erroLimite.message);
+      throw new Error("Não foi possível enviar agora. Tente de novo.");
+    }
     if ((count ?? 0) >= ENVIOS_POR_HORA) {
       throw new Error("Limite de 30 envios por hora atingido. Tente mais tarde.");
     }
