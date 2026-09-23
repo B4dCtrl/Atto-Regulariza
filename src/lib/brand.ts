@@ -63,6 +63,9 @@ export const WHATSAPP = {
   ),
 } as const;
 
+/** E-mail público de suporte. É alias da caixa contato@, lido em /admin/mail. */
+export const SUPORTE_EMAIL = "suporte@atoregulariza.com.br";
+
 export const HERO_VIDEO_LOCAL = "/flutuando-reg.mp4";
 export const HERO_VIDEO_FALLBACK =
   "https://videos.pexels.com/video-files/34030196/34030196-uhd_2560_1440_25fps.mp4";

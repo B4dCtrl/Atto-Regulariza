@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { SUPORTE_EMAIL } from "@/lib/brand";
 
 export function Footer() {
   return (
@@ -26,6 +27,9 @@ export function Footer() {
           <Link to="/entrar" className="hover:text-foreground">
             Entrar
           </Link>
+          <a href={`mailto:${SUPORTE_EMAIL}`} className="hover:text-foreground">
+            {SUPORTE_EMAIL}
+          </a>
         </nav>
         <p className="text-xs text-ink-soft">© 2026 Ato Regulariza · Feito no Brasil</p>
       </div>
