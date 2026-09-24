@@ -148,6 +148,34 @@ export async function listar(
   });
 }
 
+/**
+ * Quantos e-mails não lidos há na Caixa de entrada.
+ *
+ * Com `alias`, só os endereçados a ele — mesmo critério de `listar` (To, Cc ou
+ * Delivered-To, que cobre a cópia oculta). Sem `alias`, a caixa inteira. Só
+ * conta UIDs: nenhum cabeçalho nem corpo sai do servidor, e nada é marcado
+ * como lido.
+ */
+export async function contarNaoLidos(alias?: Endereco): Promise<number> {
+  return comCaixa(async (c) => {
+    const lock = await c.getMailboxLock("INBOX");
+    try {
+      const uids = await c.search(
+        {
+          seen: false,
+          ...(alias
+            ? { or: [{ to: alias }, { cc: alias }, { header: { "delivered-to": alias } }] }
+            : {}),
+        },
+        { uid: true },
+      );
+      return (uids || []).length;
+    } finally {
+      lock.release();
+    }
+  });
+}
+
 export type OpcoesAbrir = {
   /**
    * "Mostrar imagens": recebe as URLs das imagens remotas do HTML ORIGINAL
