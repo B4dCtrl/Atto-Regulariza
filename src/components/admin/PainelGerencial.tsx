@@ -159,8 +159,10 @@ export function PainelGerencial() {
               <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-soft">
                 <span>{d.movimento.leadsNovos} lead(s)</span>
                 <span>
-                  {d.movimento.contasNovas.cliente + d.movimento.contasNovas.profissional} conta(s)
-                  nova(s)
+                  {d.movimento.contasNovas.cliente +
+                    d.movimento.contasNovas.profissional +
+                    d.movimento.contasNovas.admin}{" "}
+                  conta(s) nova(s)
                 </span>
                 <span>
                   {d.movimento.acessos.cliente +

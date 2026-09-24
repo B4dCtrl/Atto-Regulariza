@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { registrarAcesso } from "@/lib/api/acessos";
 import { Kanban } from "@/components/admin/Kanban";
 import { PainelGerencial } from "@/components/admin/PainelGerencial";
+import { OQueESeu } from "@/components/admin/OQueESeu";
 import { Search, Bell, Plus, Loader2, User, Settings, LogOut, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -229,6 +230,9 @@ function AdminHome() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
+          {/* Os dois cartões carregam cada um por si, em paralelo: a caixa de
+              e-mail lenta atrasa só o pessoal, nunca o resumo da operação. */}
+          <OQueESeu />
           <Kanban filter={searchQuery} />
           <PainelGerencial />
         </div>
