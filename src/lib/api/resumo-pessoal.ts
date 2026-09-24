@@ -10,6 +10,27 @@
  * calado, e aqui têm teste.
  */
 
+import { ehEndereco, type Endereco } from "@/lib/mail/enderecos";
+
+/**
+ * O dono: o único login que conta os não lidos da caixa INTEIRA.
+ *
+ * Os outros admins entram com o alias deles (tais@, gabriel@…) e contam só o
+ * que chegou para eles. Qualquer outro e-mail — um admin futuro sem alias,
+ * por exemplo — não conta nada: a caixa inteira é informação do dono, e na
+ * dúvida o cartão mostra "indisponível".
+ */
+export const EMAIL_DONO = "ozanchet@gmail.com";
+
+/** Qual caixa contar para este login: um alias, a inteira ou nenhuma. */
+export function caixaDoAdmin(email: string | null | undefined): Endereco | "inteira" | null {
+  const e = email?.trim().toLowerCase();
+  if (!e) return null;
+  if (ehEndereco(e)) return e;
+  if (e === EMAIL_DONO) return "inteira";
+  return null;
+}
+
 export type ProcessoPessoal = {
   id: string;
   nome: string;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { assinaturaBriefing, decidirBriefing, INTERVALO_MINIMO_MS } from "./assinatura-briefing";
-import type { DadosGerenciais } from "./resumo-gerencial";
+import { inicioDaJanela, type DadosGerenciais } from "./resumo-gerencial";
 
 function dados(over: Partial<DadosGerenciais> = {}): DadosGerenciais {
   return {
@@ -75,6 +75,13 @@ describe("assinaturaBriefing", () => {
     expect(assinaturaBriefing(outro)).toBe(assinaturaBriefing(d));
   });
 
+  // Chat ativo não pode virar uma chamada de IA a cada 15 min.
+  it("ignora mensagens trocadas", () => {
+    const d = dados();
+    const outro = dados({ movimento: { ...d.movimento, mensagensTrocadas: 500 } });
+    expect(assinaturaBriefing(outro)).toBe(assinaturaBriefing(d));
+  });
+
   it("ignora o tempo passando sobre o mesmo processo parado", () => {
     const d = dados();
     const outro = dados({
@@ -102,7 +109,6 @@ describe("assinaturaBriefing", () => {
     ],
     ["processo novo", dados({ movimento: { ...base.movimento, processosNovos: 2 } })],
     ["documento novo", dados({ movimento: { ...base.movimento, documentosEnviados: 5 } })],
-    ["mensagem nova", dados({ movimento: { ...base.movimento, mensagensTrocadas: 11 } })],
     ["etapa concluída", dados({ movimento: { ...base.movimento, etapasConcluidas: 3 } })],
     ["lead recebido", dados({ movimento: { ...base.movimento, leadsNovos: 4 } })],
     [
@@ -131,6 +137,48 @@ describe("assinaturaBriefing", () => {
 
   it.each(mudancas)("muda quando há %s", (_nome, mudado) => {
     expect(assinaturaBriefing(mudado)).not.toBe(assinaturaBriefing(base));
+  });
+});
+
+describe("assinatura ao longo do dia", () => {
+  // Eventos espalhados pelos últimos 10 dias, incluindo alguns bem na borda
+  // da janela. Nada novo acontece durante o dia 24.
+  const eventos = [
+    "2026-09-14T10:00:00Z",
+    "2026-09-17T02:59:00Z", // 23h59 de 16/09 em SP: fora da janela
+    "2026-09-17T03:00:00Z", // meia-noite de 17/09 em SP: dentro
+    "2026-09-17T15:00:00Z", // seria expulso pela janela móvel às 12h de 24/09
+    "2026-09-20T12:00:00Z",
+    "2026-09-23T22:00:00Z",
+  ];
+
+  /** Coleta como o servidor faz: conta o que é >= início da janela. */
+  function coletar(agora: Date): DadosGerenciais {
+    const desde = inicioDaJanela(agora, 7);
+    const n = eventos.filter((e) => new Date(e) >= new Date(desde)).length;
+    const d = dados();
+    return {
+      ...d,
+      movimento: { ...d.movimento, documentosEnviados: n, processosNovos: n, leadsNovos: n },
+    };
+  }
+
+  it("não muda do começo ao fim do dia sem dado novo", () => {
+    const horas = [
+      "2026-09-24T03:00:00Z", // 00h em SP
+      "2026-09-24T12:00:00Z",
+      "2026-09-24T15:30:00Z",
+      "2026-09-24T21:00:00Z",
+      "2026-09-25T02:59:00Z", // 23h59 em SP
+    ];
+    const assinaturas = new Set(horas.map((h) => assinaturaBriefing(coletar(new Date(h)))));
+    expect(assinaturas.size).toBe(1);
+  });
+
+  it("só anda na virada do dia de São Paulo", () => {
+    const fimDoDia = assinaturaBriefing(coletar(new Date("2026-09-25T02:59:00Z")));
+    const diaSeguinte = assinaturaBriefing(coletar(new Date("2026-09-25T03:00:00Z")));
+    expect(diaSeguinte).not.toBe(fimDoDia);
   });
 });
 

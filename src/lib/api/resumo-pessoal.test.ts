@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { cumprimento, montarSaudacao, primeiroNome, type ProcessoPessoal } from "./resumo-pessoal";
+import {
+  caixaDoAdmin,
+  cumprimento,
+  montarSaudacao,
+  primeiroNome,
+  type ProcessoPessoal,
+} from "./resumo-pessoal";
 
 // 15h em São Paulo (UTC-3).
 const TARDE = new Date("2026-09-24T18:00:00Z");
@@ -92,5 +98,29 @@ describe("montarSaudacao", () => {
     expect(
       montarSaudacao({ agora: TARDE, nome: "Taís", naoLidos: 0, processos: [proc(2), proc(4)] }),
     ).toBe("Boa tarde, Taís. Você tem 2 processos em andamento.");
+  });
+});
+
+describe("caixaDoAdmin", () => {
+  it("alias da equipe conta só a própria caixa", () => {
+    expect(caixaDoAdmin("tais@atoregulariza.com.br")).toBe("tais@atoregulariza.com.br");
+    expect(caixaDoAdmin("  Gabriel@AtoRegulariza.com.br ")).toBe("gabriel@atoregulariza.com.br");
+  });
+
+  it("o dono conta a caixa inteira", () => {
+    expect(caixaDoAdmin("ozanchet@gmail.com")).toBe("inteira");
+    expect(caixaDoAdmin("OzanChet@Gmail.com")).toBe("inteira");
+  });
+
+  // Admin sem alias que não é o dono não vê o número da caixa inteira.
+  it("qualquer outro e-mail não conta nada", () => {
+    expect(caixaDoAdmin("outro.admin@gmail.com")).toBeNull();
+    expect(caixaDoAdmin("ozanchet@gmail.com.evil.com")).toBeNull();
+  });
+
+  it("sem e-mail, não conta nada", () => {
+    expect(caixaDoAdmin(null)).toBeNull();
+    expect(caixaDoAdmin(undefined)).toBeNull();
+    expect(caixaDoAdmin("  ")).toBeNull();
   });
 });

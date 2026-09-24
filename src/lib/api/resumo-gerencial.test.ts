@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { montarResumo, diasDesde, type DadosGerenciais } from "./resumo-gerencial";
+import {
+  montarResumo,
+  diasDesde,
+  diaSP,
+  inicioDaJanela,
+  type DadosGerenciais,
+} from "./resumo-gerencial";
 
 const AGORA = new Date("2026-08-22T12:00:00Z");
 
@@ -35,6 +41,29 @@ describe("diasDesde", () => {
 
   it("devolve null quando nunca aconteceu", () => {
     expect(diasDesde(null, AGORA)).toBeNull();
+  });
+});
+
+describe("diaSP", () => {
+  it("usa o calendário de São Paulo, não o UTC", () => {
+    expect(diaSP(new Date("2026-09-25T02:59:00Z"))).toBe("2026-09-24");
+    expect(diaSP(new Date("2026-09-25T03:00:00Z"))).toBe("2026-09-25");
+  });
+});
+
+describe("inicioDaJanela", () => {
+  it("é a meia-noite de SP de N dias atrás", () => {
+    expect(inicioDaJanela(new Date("2026-09-24T15:00:00Z"), 7)).toBe("2026-09-17T03:00:00.000Z");
+  });
+
+  it("é a mesma a qualquer hora do mesmo dia", () => {
+    const madrugada = inicioDaJanela(new Date("2026-09-24T03:00:00Z"), 7);
+    const noite = inicioDaJanela(new Date("2026-09-25T02:59:00Z"), 7);
+    expect(noite).toBe(madrugada);
+  });
+
+  it("atravessa a virada do mês", () => {
+    expect(inicioDaJanela(new Date("2026-10-03T12:00:00Z"), 7)).toBe("2026-09-26T03:00:00.000Z");
   });
 });
 

@@ -6,7 +6,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
-import { montarResumo, DIAS_PARADO, type DadosGerenciais } from "@/lib/api/resumo-gerencial";
+import {
+  montarResumo,
+  diaSP,
+  inicioDaJanela,
+  DIAS_PARADO,
+  type DadosGerenciais,
+} from "@/lib/api/resumo-gerencial";
 import { assinaturaBriefing, decidirBriefing } from "@/lib/api/assinatura-briefing";
 
 import { MODELO_IA, aceitaEsforco } from "@/lib/api/modelo-ia";
@@ -88,7 +94,7 @@ A fila vem ordenada da mais urgente para a menos urgente, com no máximo 6 itens
 
 /** Fuso de São Paulo, para o "dia" bater com o dia do usuário. */
 function hojeSP(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  return diaSP(new Date());
 }
 
 async function coletarDados(): Promise<DadosGerenciais> {
@@ -164,7 +170,12 @@ async function coletarDados(): Promise<DadosGerenciais> {
   //
   // `head: true` com `count: "exact"` traz só o número, sem as linhas: para
   // contar mensagens de uma operação ativa, buscar tudo seria desperdício.
-  const desde = new Date(agora - DIAS_MOVIMENTO * 86_400_000).toISOString();
+  //
+  // Janela ancorada na meia-noite de SP (ver `inicioDaJanela`): fixa durante
+  // o dia, para a assinatura do briefing só mudar com fato novo. Os limites de
+  // "parado" e "inativo" acima continuam móveis de propósito — um processo
+  // cruzar os 7 dias sem movimento É fato novo, e deve refazer o texto.
+  const desde = inicioDaJanela(new Date(agora), DIAS_MOVIMENTO);
   const contar = (tabela: "leads" | "properties" | "documents" | "messages") =>
     supabaseAdmin
       .from(tabela)
@@ -435,9 +446,19 @@ export const gerarBriefing = createServerFn({ method: "POST" })
     if (erroGravar) {
       // Mesma rede de segurança da leitura: sem a coluna, grava sem ela —
       // senão o texto nunca ficaria guardado e cada abertura chamaria a IA.
-      await supabaseAdmin
+      const { error: erroDeNovo } = await supabaseAdmin
         .from("briefings_admin")
         .upsert({ dia, texto, fila, alertas, gerado_em }, { onConflict: "dia" });
+      // Não gravou de jeito nenhum: devolve o horário original à linha
+      // reservada, como no erro da IA — senão o texto velho ficaria marcado
+      // como recente.
+      if (erroDeNovo && reserva) {
+        await supabaseAdmin
+          .from("briefings_admin")
+          .update({ gerado_em: reserva.anterior })
+          .eq("dia", dia)
+          .eq("gerado_em", reserva.marcado);
+      }
     }
 
     return { texto, fila, alertas, gerado_em, dados };

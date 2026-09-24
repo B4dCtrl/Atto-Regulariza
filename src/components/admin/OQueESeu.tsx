@@ -98,7 +98,7 @@ export function OQueESeu() {
                         {p.parado
                           ? `parado há ${p.diasParado} ${p.diasParado === 1 ? "dia" : "dias"}`
                           : p.diasParado === 0
-                            ? "movimentado hoje"
+                            ? "há menos de 1 dia"
                             : `há ${p.diasParado} ${p.diasParado === 1 ? "dia" : "dias"}`}
                       </span>
                     </Link>

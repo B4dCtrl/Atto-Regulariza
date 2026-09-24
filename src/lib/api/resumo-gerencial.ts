@@ -82,6 +82,28 @@ export type DadosGerenciais = {
   movimento: Movimento;
 };
 
+/** Data de hoje em São Paulo ("AAAA-MM-DD"), para o "dia" bater com o do usuário. */
+export function diaSP(agora: Date): string {
+  return agora.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+/**
+ * Início da janela do retrospecto: meia-noite de São Paulo, `dias` dias antes
+ * de hoje.
+ *
+ * Janela ANCORADA, e não "agora menos 7 dias": com a janela móvel, eventos
+ * antigos saíam dela a todo momento, as contagens mudavam sozinhas e a
+ * assinatura do briefing trocava a cada 15 min o dia inteiro — uma chamada de
+ * IA para contar nada de novo. Ancorada, ela só anda na virada do dia, que já
+ * abre uma linha nova no cache.
+ *
+ * UTC−3 fixo: o Brasil não tem horário de verão desde 2019.
+ */
+export function inicioDaJanela(agora: Date, dias: number): string {
+  const [a, m, d] = diaSP(agora).split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d - dias, 3, 0, 0)).toISOString();
+}
+
 /** Dias inteiros entre uma data e agora. Nulo quando nunca aconteceu. */
 export function diasDesde(iso: string | null, agora: Date): number | null {
   if (!iso) return null;

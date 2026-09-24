@@ -32,7 +32,10 @@ const porTexto = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
  * - acessos ao painel e pessoas que entraram — o próprio admin abrindo a tela
  *   registra acesso, e o texto seria refeito a cada abertura;
  * - datas de "último acesso" e de "desde" que só envelhecem — o tempo passar
- *   não é fato novo; quando o item se resolve, ele sai da lista e a lista muda.
+ *   não é fato novo; quando o item se resolve, ele sai da lista e a lista muda;
+ * - mensagens trocadas — com o chat ativo, cada mensagem refaria o texto a
+ *   cada 15 min o dia inteiro. O número segue no resumo e na tela; só não
+ *   dispara geração.
  *
  * Listas vão ORDENADAS: a ordem em que o banco devolve as linhas não é
  * garantida, e a mesma situação não pode gerar duas assinaturas.
@@ -58,7 +61,6 @@ export function dadosDaAssinatura(d: DadosGerenciais): string {
       leadsNovos: m.leadsNovos,
       processosNovos: m.processosNovos,
       documentosEnviados: m.documentosEnviados,
-      mensagensTrocadas: m.mensagensTrocadas,
       etapasConcluidas: m.etapasConcluidas,
     },
   };
