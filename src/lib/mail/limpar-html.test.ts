@@ -94,4 +94,31 @@ describe("corpoParaExibir", () => {
     expect(embutidas).toBeLessThan(N);
     expect(h.length).toBeLessThan(10 * 1024 * 1024); // documento fica bem abaixo do total sem teto
   });
+
+  it("botão de e-mail transacional mantém fundo, cantos e espaçamento", () => {
+    // O modelo do Supabase usa `background:` abreviado; sem ele o texto branco
+    // do botão sumia sobre o fundo claro.
+    const h = corpoParaExibir({
+      ...semAnexo,
+      html: `<a style="display:inline-block;background:#1A1A1A;color:#FFFFFF;padding:14px 26px;border-radius:999px;font-family:Arial,sans-serif;text-decoration:none;line-height:1.4">Confirmar</a>`,
+    });
+    expect(h).toContain("background:#1A1A1A");
+    expect(h).toContain("padding:14px 26px");
+    expect(h).toContain("border-radius:999px");
+    expect(h).toContain("display:inline-block");
+    expect(h).toContain("text-decoration:none");
+  });
+
+  it("background abreviado com url() continua bloqueado", () => {
+    const h = corpoParaExibir({
+      ...semAnexo,
+      html: `<td style="background:#fff url(https://rastreio.com/p.gif)">x</td>`,
+    });
+    expect(h).not.toContain("url(");
+  });
+
+  it("display:none é mantido (texto de pré-visualização continua escondido)", () => {
+    const h = corpoParaExibir({ ...semAnexo, html: `<div style="display:none">pre</div>` });
+    expect(h).toContain("display:none");
+  });
 });

@@ -53,6 +53,54 @@ function trocarCid(html: string, anexos: AnexoEmbutido[]): string {
   });
 }
 
+const COR = [/^[a-zA-Z]+$/, /^#[0-9a-fA-F]{3,8}$/, /^rgba?\([\d\s,.%]+\)$/];
+const MEDIDA = /^-?\d+(\.\d+)?(px|em|rem|%|pt)?$/;
+const MEDIDA_OU_AUTO = [MEDIDA, /^(auto|normal|none)$/];
+const ATE_QUATRO_MEDIDAS = [/^((-?\d+(\.\d+)?(px|em|rem|%|pt)?|auto)\s*){1,4}$/];
+const BORDA = [/^[\d\s.a-zA-Z#%-]+$/];
+
+const ESTILOS_PERMITIDOS: Record<string, RegExp[]> = {
+  color: COR,
+  background: COR,
+  "background-color": COR,
+  "text-align": [/^(left|right|center|justify)$/],
+  "vertical-align": [/^(top|middle|bottom|baseline)$/],
+  "font-size": [MEDIDA],
+  "font-weight": [/^(normal|bold|\d{3})$/],
+  "font-style": [/^(normal|italic)$/],
+  "font-family": [/^[\w\s,'"-]+$/],
+  "line-height": MEDIDA_OU_AUTO,
+  "letter-spacing": MEDIDA_OU_AUTO,
+  "text-decoration": [/^(none|underline|line-through)$/],
+  "text-transform": [/^(none|uppercase|lowercase|capitalize)$/],
+  "white-space": [/^(normal|nowrap|pre-wrap|pre-line)$/],
+  "word-break": [/^(normal|break-all|break-word)$/],
+  "overflow-wrap": [/^(normal|break-word|anywhere)$/],
+  display: [/^(none|block|inline|inline-block|table|table-row|table-cell)$/],
+  width: MEDIDA_OU_AUTO,
+  "max-width": MEDIDA_OU_AUTO,
+  "min-width": MEDIDA_OU_AUTO,
+  height: MEDIDA_OU_AUTO,
+  "max-height": MEDIDA_OU_AUTO,
+  padding: ATE_QUATRO_MEDIDAS,
+  "padding-top": ATE_QUATRO_MEDIDAS,
+  "padding-right": ATE_QUATRO_MEDIDAS,
+  "padding-bottom": ATE_QUATRO_MEDIDAS,
+  "padding-left": ATE_QUATRO_MEDIDAS,
+  margin: ATE_QUATRO_MEDIDAS,
+  "margin-top": ATE_QUATRO_MEDIDAS,
+  "margin-right": ATE_QUATRO_MEDIDAS,
+  "margin-bottom": ATE_QUATRO_MEDIDAS,
+  "margin-left": ATE_QUATRO_MEDIDAS,
+  "border-radius": ATE_QUATRO_MEDIDAS,
+  border: BORDA,
+  "border-top": BORDA,
+  "border-right": BORDA,
+  "border-bottom": BORDA,
+  "border-left": BORDA,
+  "border-collapse": [/^(collapse|separate)$/],
+};
+
 export function corpoParaExibir(o: {
   html?: string | false;
   text?: string;
@@ -75,24 +123,15 @@ export function corpoParaExibir(o: {
     allowedSchemes: ["http", "https", "mailto", "tel"],
     allowedSchemesByTag: { img: ["data"] },
     allowProtocolRelative: false,
-    // `style` é permitido (attribute allowlist acima), mas o VALOR não é
+    // `style` é permitido (lista de atributos acima), mas o VALOR não é
     // filtrado por padrão pelo sanitize-html — `url(...)` viraria pixel de
     // rastreio/exfiltração e `expression(...)` era execução de script no IE
-    // antigo. `allowedStyles` restringe a um conjunto fixo de propriedades
-    // visuais inofensivas, cada uma com regex que rejeita `url(`/`expression(`.
-    allowedStyles: {
-      "*": {
-        color: [/^[a-zA-Z]+$/, /^#[0-9a-fA-F]{3,8}$/, /^rgba?\([\d\s,.]+\)$/],
-        "background-color": [/^[a-zA-Z]+$/, /^#[0-9a-fA-F]{3,8}$/, /^rgba?\([\d\s,.]+\)$/],
-        "text-align": [/^(left|right|center|justify)$/],
-        "font-size": [/^\d+(\.\d+)?(px|em|rem|%)$/],
-        "font-weight": [/^(normal|bold|\d{3})$/],
-        "font-style": [/^(normal|italic)$/],
-        padding: [/^[\d\s.]+(px|em|rem|%)?$/],
-        margin: [/^[\d\s.]+(px|em|rem|%)?$/],
-        border: [/^[\d\s.a-zA-Z#]+$/],
-      },
-    },
+    // antigo. `allowedStyles` restringe a propriedades visuais, cada uma com
+    // regex sem parêntese (exceto `rgb()` só com números), o que barra
+    // `url(`/`expression(`. A lista cobre o que e-mail transacional usa de
+    // fato: sem `background` abreviado, o botão do modelo do Supabase perdia o
+    // fundo escuro e o texto branco sumia.
+    allowedStyles: { "*": ESTILOS_PERMITIDOS },
     transformTags: {
       a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer" }),
       img: (tagName, attribs) => {
