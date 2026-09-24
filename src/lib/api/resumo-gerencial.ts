@@ -10,6 +10,14 @@
  * texto, de modo que qualquer invenção fique visível.
  */
 
+/**
+ * Um processo sem movimento por mais dias que isto conta como parado.
+ *
+ * Fica aqui, e não na server function, porque o resumo pessoal do admin usa a
+ * mesma régua: "parado" tem de significar a mesma coisa nos dois cartões.
+ */
+export const DIAS_PARADO = 7;
+
 export type ProfissionalPendente = {
   nome: string;
   /** Quando entrou na fila de aprovação. */
@@ -47,8 +55,12 @@ export type ProfissionalInativo = {
 
 /** O que aconteceu no período — a parte retrospectiva do resumo. */
 export type Movimento = {
-  /** Contas criadas, por papel. */
-  contasNovas: { cliente: number; profissional: number };
+  /**
+   * Contas criadas, por papel. Conta com papel de admin em `user_roles` entra
+   * só em `admin`, mesmo que o perfil diga cliente — senão a equipe nova
+   * apareceria como cliente novo.
+   */
+  contasNovas: { cliente: number; profissional: number; admin: number };
   /** Entradas nos painéis, por painel. */
   acessos: { cliente: number; profissional: number; admin: number };
   /** Quantas pessoas distintas entraram. */
@@ -95,10 +107,10 @@ function curto(id: string): string {
 function linhasDeMovimento(m: Movimento): string[] {
   const partes: string[] = [];
 
-  const contas = m.contasNovas.cliente + m.contasNovas.profissional;
+  const contas = m.contasNovas.cliente + m.contasNovas.profissional + m.contasNovas.admin;
   if (contas > 0) {
     partes.push(
-      `Contas novas: ${contas} (${m.contasNovas.cliente} cliente(s), ${m.contasNovas.profissional} profissional(is))`,
+      `Contas novas: ${contas} (${m.contasNovas.cliente} cliente(s), ${m.contasNovas.profissional} profissional(is), ${m.contasNovas.admin} admin(s) da equipe)`,
     );
   }
 

@@ -6,7 +6,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import Anthropic from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
-import { montarResumo, type DadosGerenciais } from "@/lib/api/resumo-gerencial";
+import { montarResumo, DIAS_PARADO, type DadosGerenciais } from "@/lib/api/resumo-gerencial";
+import { assinaturaBriefing, decidirBriefing } from "@/lib/api/assinatura-briefing";
 
 import { MODELO_IA, aceitaEsforco } from "@/lib/api/modelo-ia";
 
@@ -50,8 +51,6 @@ const FORMATO_BRIEFING = {
   additionalProperties: false,
 } as const;
 
-/** Um processo sem movimento por mais dias que isto entra no resumo. */
-const DIAS_PARADO = 7;
 /** Profissional sem acessar o painel por mais dias que isto é sinalizado. */
 const DIAS_INATIVO = 5;
 /** Janela do retrospecto: "o que aconteceu" cobre este número de dias. */
@@ -181,7 +180,7 @@ async function coletarDados(): Promise<DadosGerenciais> {
     msgsNovas,
     etapasFeitas,
   ] = await Promise.all([
-    supabaseAdmin.from("profiles").select("role").gte("created_at", desde),
+    supabaseAdmin.from("profiles").select("id, role").gte("created_at", desde),
     supabaseAdmin.from("acessos").select("user_id, painel").gte("entrou_em", desde),
     contar("leads"),
     contar("properties"),
@@ -193,9 +192,24 @@ async function coletarDados(): Promise<DadosGerenciais> {
       .gte("completed_at", desde),
   ]);
 
-  const contasNovas = { cliente: 0, profissional: 0 };
+  // Admin não se reconhece pelo perfil — o papel mora em `user_roles`. Conta
+  // nova que é admin entra só como admin, senão a equipe recém-cadastrada
+  // apareceria como "cliente novo" no texto.
+  const idsNovos = (novasContas.data ?? []).map((c) => c.id);
+  const adminsNovos = new Set<string>();
+  if (idsNovos.length > 0) {
+    const { data: papeis } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin")
+      .in("user_id", idsNovos);
+    for (const r of papeis ?? []) adminsNovos.add(r.user_id);
+  }
+
+  const contasNovas = { cliente: 0, profissional: 0, admin: 0 };
   for (const c of novasContas.data ?? []) {
-    if (c.role === "profissional") contasNovas.profissional++;
+    if (adminsNovos.has(c.id)) contasNovas.admin++;
+    else if (c.role === "profissional") contasNovas.profissional++;
     else if (c.role === "cliente") contasNovas.cliente++;
   }
 
@@ -265,37 +279,88 @@ export const gerarBriefing = createServerFn({ method: "POST" })
 
     const dia = hojeSP();
     const dados = await coletarDados();
+    const assinatura = assinaturaBriefing(dados);
 
-    // Cache do dia. Os DADOS são sempre recém-lidos; só o texto vem guardado —
-    // assim os números na tela nunca ficam velhos, mesmo com o briefing de
-    // algumas horas atrás.
-    if (!data.forcar) {
-      const { data: cache } = await supabaseAdmin
+    // Os DADOS são sempre recém-lidos; só o texto vem guardado — assim os
+    // números na tela nunca ficam velhos. O texto é refeito quando o que ele
+    // descreve mudou (a assinatura), com um piso de 15 min entre gerações
+    // automáticas. Regra e testes em `assinatura-briefing.ts`.
+    //
+    // Se a coluna `assinatura` ainda não existir (código publicado antes da
+    // migração 20260924_briefing_assinatura.sql), a leitura cai para a forma
+    // antiga com assinatura nula: o texto passa a ser refeito no máximo a cada
+    // 15 min, em vez de a cada abertura.
+    const lerGuardado = async () => {
+      const comAssinatura = await supabaseAdmin
+        .from("briefings_admin")
+        .select("texto, fila, alertas, gerado_em, assinatura")
+        .eq("dia", dia)
+        .maybeSingle();
+      if (!comAssinatura.error) return comAssinatura.data;
+      const { data: linha } = await supabaseAdmin
         .from("briefings_admin")
         .select("texto, fila, alertas, gerado_em")
         .eq("dia", dia)
         .maybeSingle();
-      if (cache) {
-        return {
-          texto: cache.texto,
-          fila: cache.fila as ItemFila[],
-          alertas: cache.alertas as string[],
-          gerado_em: cache.gerado_em,
-          dados,
-        };
-      }
-    }
+      return linha ? { ...linha, assinatura: null } : null;
+    };
+    const doGuardado = (linha: NonNullable<Awaited<ReturnType<typeof lerGuardado>>>) => ({
+      texto: linha.texto,
+      fila: linha.fila as ItemFila[],
+      alertas: linha.alertas as string[],
+      gerado_em: linha.gerado_em,
+      dados,
+    });
 
-    const vazio = { texto: "", fila: [] as ItemFila[], alertas: [] as string[] };
+    const guardado = await lerGuardado();
+    const decisao = decidirBriefing({
+      forcar: data.forcar,
+      guardado,
+      assinaturaAtual: assinatura,
+      agora: new Date(),
+    });
+    if (decisao === "usar-guardado" && guardado) return doGuardado(guardado);
+
+    // Sem texto novo, o do dia (se houver) ainda é melhor que nenhum: ele vai
+    // junto com o aviso, e os números ao lado mostram o que mudou desde então.
+    const semTextoNovo = (erroIA: string): Briefing =>
+      guardado
+        ? { ...doGuardado(guardado), erroIA }
+        : { texto: "", fila: [], alertas: [], gerado_em: new Date().toISOString(), dados, erroIA };
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      return {
-        ...vazio,
-        gerado_em: new Date().toISOString(),
-        dados,
-        erroIA: "IA não configurada no servidor (ANTHROPIC_API_KEY ausente).",
-      };
+      return semTextoNovo("IA não configurada no servidor (ANTHROPIC_API_KEY ausente).");
+    }
+
+    // Concorrência: vários admins abrindo o painel juntos não podem disparar
+    // várias chamadas de IA. Quem vai gerar primeiro "reserva" a vez com um
+    // UPDATE condicional (compare-and-swap) em `gerado_em`: só passa se ela
+    // ainda for a que foi lida. O Postgres serializa os UPDATEs da mesma
+    // linha, então só um ganha; os outros voltam com o texto guardado — que,
+    // com `gerado_em` recém-reservado, está dentro do piso de 15 min de
+    // qualquer jeito.
+    //
+    // Limites, aceitos de propósito: (1) na PRIMEIRA geração do dia não há
+    // linha para reservar, e dois admins no mesmo segundo podem gerar os dois
+    // (o upsert final deixa um só); (2) durante os ~10 s da chamada, o texto
+    // antigo aparece com o horário da reserva. O botão "Atualizar" não
+    // reserva: é pedido explícito.
+    let reserva: { anterior: string; marcado: string } | null = null;
+    if (guardado && !data.forcar) {
+      const marcado = new Date().toISOString();
+      const { data: reservadas } = await supabaseAdmin
+        .from("briefings_admin")
+        .update({ gerado_em: marcado })
+        .eq("dia", dia)
+        .eq("gerado_em", guardado.gerado_em)
+        .select("dia");
+      if (!reservadas || reservadas.length === 0) {
+        // Outro admin chegou antes e está gerando (ou já gerou).
+        const atual = await lerGuardado();
+        return doGuardado(atual ?? guardado);
+      }
+      reserva = { anterior: guardado.gerado_em, marcado };
     }
 
     const resumo = montarResumo(dados, new Date());
@@ -345,21 +410,35 @@ export const gerarBriefing = createServerFn({ method: "POST" })
       console.error(`[briefing] falha ao chamar a IA após ${Date.now() - inicio}ms:`, e);
       avisarErro("briefing do painel", e);
 
+      // Devolve o horário original à linha reservada: sem isto, o texto velho
+      // ficaria marcado como recente e a próxima tentativa esperaria 15 min.
+      if (reserva) {
+        await supabaseAdmin
+          .from("briefings_admin")
+          .update({ gerado_em: reserva.anterior })
+          .eq("dia", dia)
+          .eq("gerado_em", reserva.marcado);
+      }
+
       const ehPrazo = e instanceof Anthropic.APIConnectionTimeoutError;
-      return {
-        ...vazio,
-        gerado_em: new Date().toISOString(),
-        dados,
-        erroIA: ehPrazo
+      return semTextoNovo(
+        ehPrazo
           ? "A análise demorou demais e foi interrompida. Tente de novo."
           : "Não foi possível gerar a análise agora.",
-      };
+      );
     }
 
     const gerado_em = new Date().toISOString();
-    await supabaseAdmin
+    const { error: erroGravar } = await supabaseAdmin
       .from("briefings_admin")
-      .upsert({ dia, texto, fila, alertas, gerado_em }, { onConflict: "dia" });
+      .upsert({ dia, texto, fila, alertas, gerado_em, assinatura }, { onConflict: "dia" });
+    if (erroGravar) {
+      // Mesma rede de segurança da leitura: sem a coluna, grava sem ela —
+      // senão o texto nunca ficaria guardado e cada abertura chamaria a IA.
+      await supabaseAdmin
+        .from("briefings_admin")
+        .upsert({ dia, texto, fila, alertas, gerado_em }, { onConflict: "dia" });
+    }
 
     return { texto, fila, alertas, gerado_em, dados };
   });

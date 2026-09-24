@@ -630,6 +630,7 @@ export type Database = {
           fila: Json;
           alertas: Json;
           gerado_em: string;
+          assinatura: string | null;
         };
         Insert: {
           dia?: string;
@@ -637,6 +638,7 @@ export type Database = {
           fila?: Json;
           alertas?: Json;
           gerado_em?: string;
+          assinatura?: string | null;
         };
         Update: {
           dia?: string;
@@ -644,6 +646,7 @@ export type Database = {
           fila?: Json;
           alertas?: Json;
           gerado_em?: string;
+          assinatura?: string | null;
         };
         Relationships: [];
       };

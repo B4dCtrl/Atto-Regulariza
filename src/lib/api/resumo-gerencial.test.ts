@@ -11,7 +11,7 @@ function dados(over: Partial<DadosGerenciais> = {}): DadosGerenciais {
     leadsSemResposta: [],
     profissionaisInativos: [],
     movimento: {
-      contasNovas: { cliente: 0, profissional: 0 },
+      contasNovas: { cliente: 0, profissional: 0, admin: 0 },
       acessos: { cliente: 0, profissional: 0, admin: 0 },
       pessoasQueEntraram: 0,
       leadsNovos: 0,
@@ -53,7 +53,7 @@ describe("montarResumo", () => {
     const texto = montarResumo(
       dados({
         movimento: {
-          contasNovas: { cliente: 3, profissional: 1 },
+          contasNovas: { cliente: 3, profissional: 1, admin: 2 },
           acessos: { cliente: 12, profissional: 4, admin: 9 },
           pessoasQueEntraram: 6,
           leadsNovos: 5,
@@ -65,7 +65,8 @@ describe("montarResumo", () => {
       }),
       AGORA,
     );
-    expect(texto).toContain("Contas novas: 4");
+    expect(texto).toContain("Contas novas: 6");
+    expect(texto).toContain("2 admin(s) da equipe");
     expect(texto).toContain("Acessos ao painel: 25 de 6 pessoa(s)");
     expect(texto).toContain("Leads recebidos: 5");
     expect(texto).toContain("Processos abertos: 2");
@@ -78,7 +79,7 @@ describe("montarResumo", () => {
     const texto = montarResumo(
       dados({
         movimento: {
-          contasNovas: { cliente: 0, profissional: 0 },
+          contasNovas: { cliente: 0, profissional: 0, admin: 0 },
           acessos: { cliente: 0, profissional: 0, admin: 0 },
           pessoasQueEntraram: 0,
           leadsNovos: 2,
