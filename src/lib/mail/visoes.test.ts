@@ -5,6 +5,7 @@ import {
   visaoPadrao,
   visaoParaContar,
   LIMITE_ATRIBUIDOS_NA_BUSCA,
+  LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA,
   VISOES,
   type Busca,
 } from "./visoes";
@@ -169,6 +170,33 @@ describe("buscaDaVisao", () => {
   it("limita as atribuições que entram na busca", () => {
     const ids = Array.from({ length: LIMITE_ATRIBUIDOS_NA_BUSCA + 50 }, (_, i) => `<${i}@x>`);
     expect(buscaDaVisao("entrada", TAIS, ids).or?.length).toBe(3 + LIMITE_ATRIBUIDOS_NA_BUSCA);
+  });
+
+  it("corta também pela soma de bytes, mesmo abaixo do teto por contagem", () => {
+    // Message-IDs de 250 bytes (o máximo do zod): bem menos que
+    // LIMITE_ATRIBUIDOS_NA_BUSCA cabe em LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA.
+    const grande = `<${"a".repeat(240)}@x>`; // 245 bytes
+    expect(Buffer.byteLength(grande, "utf8")).toBeLessThanOrEqual(250);
+    const quantosCabem = Math.floor(
+      LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA / Buffer.byteLength(grande, "utf8"),
+    );
+    expect(quantosCabem).toBeLessThan(LIMITE_ATRIBUIDOS_NA_BUSCA);
+    const ids = Array.from({ length: LIMITE_ATRIBUIDOS_NA_BUSCA }, () => grande);
+    const b = buscaDaVisao("entrada", TAIS, ids);
+    // 3 termos fixos do alias (to/cc/delivered-to) + os ids que couberam.
+    expect(b.or?.length).toBe(3 + quantosCabem);
+    expect(b.or?.length).toBeLessThan(3 + LIMITE_ATRIBUIDOS_NA_BUSCA);
+  });
+
+  it("nunca ultrapassa o teto de bytes somando os ids incluídos", () => {
+    const grande = `<${"a".repeat(240)}@x>`;
+    const ids = Array.from({ length: LIMITE_ATRIBUIDOS_NA_BUSCA }, () => grande);
+    const b = buscaDaVisao("entrada", TAIS, ids);
+    const idsIncluidos = (b.or ?? [])
+      .map((x) => x.header?.["message-id"])
+      .filter((x): x is string => Boolean(x));
+    const total = idsIncluidos.reduce((s, id) => s + Buffer.byteLength(id, "utf8"), 0);
+    expect(total).toBeLessThanOrEqual(LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA);
   });
 
   it.each<Pasta>(["entrada", "enviados"])(

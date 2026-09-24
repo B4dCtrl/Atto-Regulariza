@@ -121,6 +121,35 @@ O editor é texto simples. Formatação e anexo no envio ficam fora desta versã
 Anexo no envio, busca, pastas além de Entrada e Enviados, apagar e mover e-mail, "mostrar
 imagens", papel `equipe`, ligar e-mail ao cliente.
 
+## Caixa por pessoa (2026-09-25)
+
+Depois da versão acima, o filtro "Todos / Contato / Suporte / Gabriel / Taís / Lauro" virou
+**visões**: `todos` (a caixa inteira), `geral` (o que não foi mandado a nenhum alias pessoal —
+só `contato@`/`suporte@`) e uma por pessoa (o alias dela **mais** o que qualquer admin atribuiu
+a ela). A regra fica em `src/lib/mail/visoes.ts` (`visoesDaMensagem`, referência) e a busca IMAP
+que a implementa (`buscaDaVisao`), com teste de equivalência entre as duas.
+
+- **"Atribuir a…"**: qualquer admin passa um e-mail (entrada ou enviados) para o Gabriel, a Taís
+  ou o Lauro. Ele entra na caixa da pessoa com a etiqueta "com Taís", sem sair de onde já
+  estava — um e-mail do Geral atribuído à Taís aparece nos dois. A tabela
+  `public.mail_atribuicoes` guarda só o par Message-ID → pessoa; a chave é o Message-ID (lido no
+  servidor, nunca do navegador) e não o UID do IMAP, porque UID muda se a mensagem trocar de
+  pasta.
+- Atribuir também vale em **Enviados**: a visão da pessoa lá é "From o alias dela **ou**
+  atribuído a ela" — não só o From literal do design original.
+- **"O que é seu"** (cartão do painel) conta a mesma visão da caixa que a pessoa abre. Como a
+  contagem de não lidos é cacheada, uma atribuição nova pode levar até **~60 s** para aparecer
+  ali (a caixa de e-mail em si é sempre ao vivo).
+- **Limite da busca por atribuições**: cada atribuição vira um termo `HEADER Message-ID <...>`
+  dentro de um `OR` — a busca inteira sai numa linha só, e o Dovecot da Hostinger recusa linha
+  acima de 64 KB. Entram as até `LIMITE_ATRIBUIDOS_NA_BUSCA` (200) mais recentes, cortadas ainda
+  por `LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA` (40 KB somados) — o que vier primeiro. As atribuições
+  que ficam de fora continuam visíveis em "Todos", com a etiqueta.
+- **Busca do IMAP é por substring** (`TO`/`CC`/`FROM`/`HEADER` "contém", não "igual"). Um
+  endereço externo tipo `xtais@atoregulariza.com.br` casaria com o alias `tais@…`, mas o domínio
+  é nosso, então não acontece na prática; Message-IDs vêm entre `< >`, o que já torna a busca
+  por eles efetivamente exata.
+
 ## Rodapé do site
 
 Depois da caixa pronta, o rodapé público passa a mostrar `suporte@atoregulariza.com.br` como

@@ -39,11 +39,35 @@ const SETORES: Endereco[] = [PADRAO, "suporte@atoregulariza.com.br"];
  *
  * Cada atribuição vira um `HEADER Message-ID <...>` dentro de um OR — a busca
  * inteira sai numa linha de comando só, e o Dovecot da Hostinger recusa linha
- * acima de 64 KB. 200 ids de ~80 caracteres dão ~16 KB: folga de sobra para
- * uma caixa de pouco volume. As mais antigas além disso saem da visão da
- * pessoa (continuam em "Todos", com a etiqueta) — ver o relatório.
+ * acima de 64 KB. 200 ids é o teto por contagem; como um Message-ID pode ter
+ * até 250 bytes (`schemaMessageId`), 200 ids no pior caso dariam ~50 KB
+ * sozinhos — por isso `LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA` abaixo também corta
+ * por tamanho somado, o que manda primeiro. As que ficam de fora saem da
+ * visão da pessoa (continuam em "Todos", com a etiqueta) — ver o relatório.
  */
 export const LIMITE_ATRIBUIDOS_NA_BUSCA = 200;
+
+/**
+ * Teto, em bytes, da soma dos Message-IDs que entram na busca — além do teto
+ * por contagem acima. 40 KB deixa folga sob o limite de 64 KB do Dovecot
+ * mesmo somando o resto da busca (alias, `OR`, `HEADER Message-ID` por id).
+ * As mais recentes entram primeiro; a lista já chega ordenada por
+ * `atribuido_em DESC` do banco.
+ */
+export const LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA = 40_000;
+
+/** Corta a lista de ids (mais recentes primeiro) pela contagem e pelo tamanho. */
+function limitarAtribuidos(atribuidos: string[]): string[] {
+  const porContagem = atribuidos.slice(0, LIMITE_ATRIBUIDOS_NA_BUSCA);
+  const resultado: string[] = [];
+  let bytes = 0;
+  for (const id of porContagem) {
+    bytes += Buffer.byteLength(id, "utf8");
+    if (bytes > LIMITE_BYTES_ATRIBUIDOS_NA_BUSCA) break;
+    resultado.push(id);
+  }
+  return resultado;
+}
 
 /**
  * O que o imapflow entende como busca — só as chaves que usamos. Chaves no
@@ -77,9 +101,9 @@ function mandadoA(e: Endereco): Busca[] {
  */
 export function buscaDaVisao(pasta: Pasta, visao: Visao, atribuidos: string[] = []): Busca {
   if (visao === "todos") return { all: true };
-  const porId = atribuidos
-    .slice(0, LIMITE_ATRIBUIDOS_NA_BUSCA)
-    .map((id): Busca => ({ header: { "message-id": id } }));
+  const porId = limitarAtribuidos(atribuidos).map(
+    (id): Busca => ({ header: { "message-id": id } }),
+  );
 
   if (pasta === "enviados") {
     if (visao === "geral") return { or: SETORES.map((e) => ({ from: e })) };

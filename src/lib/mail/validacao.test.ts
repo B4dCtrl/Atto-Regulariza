@@ -54,7 +54,7 @@ describe("schemaMessageId", () => {
   it("recusa espaço, aspas, barra invertida e < > no meio", () => {
     expect(ok("<a b@x>")).toBe(false);
     expect(ok('<a"b@x>')).toBe(false);
-    expect(ok("<a\b@x>")).toBe(false);
+    expect(ok("<a\\b@x>")).toBe(false);
     expect(ok("<a<b@x>")).toBe(false);
     expect(ok("<a@x>\r\nBcc: y@z")).toBe(false);
   });

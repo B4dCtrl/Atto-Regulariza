@@ -102,6 +102,13 @@ function MailPage() {
     void carregar();
   }, [carregar]);
 
+  // `atribuir` chama isto depois de um `await`, quando pode já existir um
+  // `carregar` mais novo (pasta/visão/página mudou enquanto o salvamento
+  // estava em voo). Uma ref sempre atualizada evita que a closure antiga
+  // recarregue a lista velha por cima da visão nova.
+  const carregarRef = useRef(carregar);
+  carregarRef.current = carregar;
+
   // UID de IMAP é por pasta: abrir(uid) só faz sentido para a pasta vigente
   // no momento do clique. Trocar de aba invalida qualquer abertura pendente.
   function limparAberto() {
@@ -144,7 +151,12 @@ function MailPage() {
         headers: await cabecalhoAuth(),
       });
       if (id !== abrirId.current) return;
-      setAberto((atual) => (atual && atual.uid === uid ? e : atual));
+      // Mantém o `atribuido` do estado atual: se um "Atribuir a…" terminou
+      // enquanto as imagens carregavam, `e` veio com a etiqueta de antes e
+      // não pode apagar a mais nova.
+      setAberto((atual) =>
+        atual && atual.uid === uid ? { ...e, atribuido: atual.atribuido } : atual,
+      );
       setImagens("mostradas");
       if (e.imagensExternas > 0) {
         toast.info(
@@ -178,7 +190,7 @@ function MailPage() {
         atual && atual.uid === uid ? { ...atual, atribuido: r.atribuido } : atual,
       );
       toast.success(r.atribuido ? `Atribuído a ${ROTULO[r.atribuido]}.` : "Atribuição removida.");
-      void carregar();
+      void carregarRef.current();
     } catch (e) {
       if (id !== abrirId.current) return;
       toast.error((e as Error).message);
@@ -267,7 +279,10 @@ function MailPage() {
         >
           <ListaEmails
             itens={itens}
-            carregando={carregando}
+            // `!visao` cobre o instante entre montar e `minhaCaixa` responder:
+            // sem isso, a lista mostra "Nenhum e-mail aqui." antes mesmo de
+            // `carregar` começar (que só roda depois que `visao` existe).
+            carregando={carregando || !visao}
             selecionado={aberto?.uid ?? null}
             onAbrir={abrir}
           />

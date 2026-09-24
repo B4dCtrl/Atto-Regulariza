@@ -22,7 +22,7 @@
 CREATE TABLE IF NOT EXISTS public.mail_atribuicoes (
   message_id    text PRIMARY KEY
                 CHECK (
-                  char_length(message_id) BETWEEN 5 AND 500
+                  char_length(message_id) BETWEEN 5 AND 250
                   AND message_id ~ '^[!-~]+$'
                   AND message_id ~ '^<[^<>"[:space:]]+@[^<>"[:space:]]+>$'
                   -- Barra invertida fora do regex: dentro de colchete ela é
@@ -54,6 +54,13 @@ CREATE POLICY "admin lê atribuições" ON public.mail_atribuicoes
 -- Sem política de INSERT/UPDATE/DELETE: com RLS ligada, isso fecha para todos
 -- menos service_role.
 REVOKE ALL ON public.mail_atribuicoes FROM anon;
+
+-- `authenticated` ganha GRANT amplo por padrão no schema `public` (herdado do
+-- template do Supabase); sem isto, INSERT/UPDATE/DELETE ficariam só atrás da
+-- RLS (que já os bloqueia por não ter política), em vez de bloqueados nos
+-- dois níveis. Escreve apenas quem usa a service_role (a server function).
+REVOKE ALL ON public.mail_atribuicoes FROM authenticated;
+GRANT SELECT ON public.mail_atribuicoes TO authenticated;
 
 -- ----------------------------------------------------------------
 -- Verificação: deve mostrar rls_ligada = true, 1 política (SELECT) e 0 linhas

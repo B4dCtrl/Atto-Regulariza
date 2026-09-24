@@ -34,11 +34,16 @@ export const schemaAbrir = z.object({ pasta: z.enum(PASTAS), uid });
  * É a chave de `mail_atribuicoes` e vira termo de busca IMAP, então só ASCII
  * visível, sem aspas, barra invertida nem `< >` no meio — o mesmo CHECK da
  * tabela. Nunca vem do navegador: o servidor lê da mensagem e valida aqui.
+ *
+ * Teto de 250 (não 500+): mesmo com o corte por bytes em `buscaDaVisao`, um
+ * Message-ID absurdamente comprido sozinho já pesa demais numa busca IMAP de
+ * poucos ids — 250 mantém a linha do SEARCH longe do limite do Dovecot em
+ * qualquer combinação.
  */
 export const schemaMessageId = z
   .string()
   .min(5)
-  .max(500)
+  .max(250)
   .regex(/^[!-~]+$/)
   .regex(/^<[^<>"\\\s]+@[^<>"\\\s]+>$/);
 
