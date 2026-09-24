@@ -5,7 +5,11 @@ import { simpleParser, type AddressObject, type ParsedMail } from "mailparser";
 import { POR_PAGINA, type Pasta } from "@/lib/mail/validacao";
 import {
   corpoParaExibir,
+  corpoParaExibirDetalhado,
   extrairImagensExternas,
+  orcamentoDeImagens,
+  pesoNaResposta,
+  LIMITE_CORPO,
   type ImagemBaixada,
 } from "@/lib/mail/limpar-html";
 import { descobrirAlias, type Endereco } from "@/lib/mail/enderecos";
@@ -163,8 +167,41 @@ export async function abrir(
   if ("pronto" in lido) return lido.pronto;
 
   const { e } = lido;
-  const urls = e.html ? extrairImagensExternas(e.html) : [];
+  const anexosEmbutidos = e.attachments.map((a) => ({
+    cid: a.cid,
+    contentType: a.contentType,
+    content: a.content,
+  }));
+  const texto = e.text ?? "";
+
+  // Pesa o corpo SEM imagem nenhuma (nem cid): HTML limpo + `texto` que vão
+  // na resposta. Passou de `LIMITE_CORPO`, nem as imagens nem o corpo cabem
+  // nos 4,5 MB da Vercel — melhor um aviso do que um 413 na tela. Abaixo
+  // disso, as imagens ficam só com o que sobra (`orcamentoDeImagens`).
+  const semImagens = corpoParaExibirDetalhado({
+    html: e.html,
+    text: e.text,
+    anexos: anexosEmbutidos,
+    limiteEmbutido: 0,
+  });
+  const pesoCorpo = pesoNaResposta(semImagens.html) + pesoNaResposta(texto);
+  const grandeDemais = pesoCorpo > LIMITE_CORPO;
+
+  // Só baixa imagem se o corpo cabe — senão seria download jogado fora.
+  const urls = e.html && !grandeDemais ? extrairImagensExternas(e.html) : [];
   const externas = opcoes.imagens && urls.length > 0 ? await opcoes.imagens(urls) : undefined;
+
+  const orcamento = grandeDemais ? 0 : orcamentoDeImagens(pesoCorpo);
+  const corpo =
+    orcamento > 0
+      ? corpoParaExibirDetalhado({
+          html: e.html,
+          text: e.text,
+          anexos: anexosEmbutidos,
+          externas,
+          limiteEmbutido: orcamento,
+        })
+      : semImagens;
 
   const paraCompleto = enderecos(e.to);
   const ccCompleto = enderecos(e.cc);
@@ -183,20 +220,18 @@ export async function abrir(
     lido: true,
     temAnexo: anexosReais.length > 0,
     alias: descobrirAlias({ to: paraCompleto, cc: ccCompleto, deliveredTo }),
-    html: corpoParaExibir({
-      html: e.html,
-      text: e.text,
-      anexos: e.attachments.map((a) => ({
-        cid: a.cid,
-        contentType: a.contentType,
-        content: a.content,
-      })),
-      externas,
-    }),
-    // Depois de "Mostrar imagens", conta só as que não vieram (download
-    // falhou/recusado) — a tela usa isso para avisar.
-    imagensExternas: externas ? urls.filter((u) => !externas.has(u)).length : urls.length,
-    texto: e.text ?? "",
+    html: grandeDemais
+      ? corpoParaExibir({
+          text: "E-mail grande demais para exibir aqui — abra pelo webmail da Hostinger.",
+          anexos: [],
+        })
+      : corpo.html,
+    // Depois de "Mostrar imagens", conta as que não apareceram (download
+    // recusado/falho ou cortada pelo orçamento) — a tela usa isso para avisar.
+    imagensExternas: externas
+      ? urls.filter((u) => !corpo.externasEmbutidas.has(u)).length
+      : urls.length,
+    texto: grandeDemais ? "" : texto,
     anexos: e.attachments
       .map((a, indice) => ({ a, indice }))
       .filter(({ a }) => a.contentDisposition === "attachment")

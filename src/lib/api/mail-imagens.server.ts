@@ -163,6 +163,18 @@ export function enderecosResolvidosPermitidos(
   return lista.length > 0 && lista.every((e) => enderecoPermitido(e.address));
 }
 
+/**
+ * Respeita a família que o socket pediu (`family: 4 | 6`, ou "IPv4"/"IPv6");
+ * 0/ausente devolve todas.
+ */
+export function filtrarPorFamilia<T extends { family: number }>(
+  lista: T[],
+  familia?: number | string,
+): T[] {
+  const f = familia === "IPv4" ? 4 : familia === "IPv6" ? 6 : familia;
+  return f === 4 || f === 6 ? lista.filter((e) => e.family === f) : lista;
+}
+
 function nomePermitido(host: string): boolean {
   // Nome sem ponto (intranet, localhost) só resolve em rede interna.
   if (!host.includes(".")) return false;
@@ -225,13 +237,17 @@ const lookupSeguro: LookupFunction = (hostname, opcoes, callback) => {
   }
   dns.lookup(host, { all: true }, (erro, enderecos) => {
     if (erro) return callback(erro, "", 4);
+    // Valida TODOS antes de filtrar: um nome que resolve para um interno em
+    // qualquer família é recusado, mesmo que a família pedida seja outra.
     if (!enderecosResolvidosPermitidos(enderecos))
       return callback(new Error("endereço bloqueado"), "", 4);
+    const daFamilia = filtrarPorFamilia(enderecos, opcoes.family);
+    if (daFamilia.length === 0) return callback(new Error("sem endereço na família"), "", 4);
     // Com `autoSelectFamily` (padrão no Node 20+) o socket pede a lista toda.
     if (opcoes.all) {
-      (callback as unknown as (e: null, l: dns.LookupAddress[]) => void)(null, enderecos);
+      (callback as unknown as (e: null, l: dns.LookupAddress[]) => void)(null, daFamilia);
     } else {
-      callback(null, enderecos[0].address, enderecos[0].family);
+      callback(null, daFamilia[0].address, daFamilia[0].family);
     }
   });
 };

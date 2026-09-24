@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   enderecoPermitido,
   enderecosResolvidosPermitidos,
+  filtrarPorFamilia,
   urlPermitida,
   tipoPelaAssinatura,
 } from "./mail-imagens.server";
@@ -181,5 +182,23 @@ describe("tipoPelaAssinatura", () => {
     expect(tipoPelaAssinatura(Buffer.from("<!doctype html><p>oi"))).toBeNull();
     expect(tipoPelaAssinatura(Buffer.from("RIFF\0\0\0\0WAVEfmt "))).toBeNull();
     expect(tipoPelaAssinatura(Buffer.alloc(0))).toBeNull();
+  });
+});
+
+describe("filtrarPorFamilia", () => {
+  const lista = [
+    { address: "8.8.8.8", family: 4 },
+    { address: "2001:4860:4860::8888", family: 6 },
+  ];
+  it("sem família (ou 0) devolve todos", () => {
+    expect(filtrarPorFamilia(lista)).toEqual(lista);
+    expect(filtrarPorFamilia(lista, 0)).toEqual(lista);
+  });
+  it("filtra por 4/6 numérico ou por nome", () => {
+    expect(filtrarPorFamilia(lista, 4)).toEqual([lista[0]]);
+    expect(filtrarPorFamilia(lista, "IPv6")).toEqual([lista[1]]);
+  });
+  it("família sem endereço devolve vazio", () => {
+    expect(filtrarPorFamilia([lista[0]], 6)).toEqual([]);
   });
 });

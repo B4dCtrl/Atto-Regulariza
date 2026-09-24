@@ -76,14 +76,19 @@ function MailPage() {
   async function abrir(uid: number) {
     const id = ++abrirId.current;
     setRascunho(null);
-    setImagens("bloqueadas");
     try {
       const e = await abrirEmail({ data: { pasta, uid }, headers: await cabecalhoAuth() });
       if (id !== abrirId.current) return; // outro clique ou troca de aba venceu
       setAberto(e);
+      // Só aqui: se a abertura falhar, o e-mail anterior continua na tela e
+      // mantém o estado das imagens dele.
+      setImagens("bloqueadas");
       setItens((xs) => xs.map((x) => (x.uid === uid ? { ...x, lido: true } : x)));
     } catch (e) {
       if (id !== abrirId.current) return;
+      // Um "Mostrar imagens" do anterior que estava em voo teve a resposta
+      // descartada (este clique mudou `abrirId`): destrava o botão.
+      setImagens((s) => (s === "carregando" ? "bloqueadas" : s));
       toast.error((e as Error).message);
     }
   }

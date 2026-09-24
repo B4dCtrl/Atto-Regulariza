@@ -45,14 +45,47 @@ function escapar(t: string): string {
 // A resposta de `abrirEmail` inteira (este HTML + o resto do JSON) precisa
 // caber no teto de 4,5 MB de resposta de função serverless da Vercel —
 // por isso o teto de base64 embutido é bem menor que isso.
-const LIMITE_EMBUTIDO_BASE64 = 2.5 * 1024 * 1024; // 2,5 MB de texto base64, total no documento
+export const LIMITE_EMBUTIDO_BASE64 = 2.5 * 1024 * 1024; // 2,5 MB de texto base64, total no documento
 
-// Um só orçamento por documento, dividido entre imagens `cid:` e externas:
-// somadas, nunca passam de `LIMITE_EMBUTIDO_BASE64`.
-type Orcamento = { usado: number };
+// O teto de imagens sozinho não basta: o próprio HTML limpo pode ter MBs (a
+// mensagem vai até 25 MB) e `texto` repete o conteúdo na mesma resposta. Por
+// isso `abrir` pesa o corpo SEM imagens e:
+// - acima de `LIMITE_CORPO`, nem mostra (aviso para abrir no webmail);
+// - abaixo, dá às imagens só o que sobra até `LIMITE_RESPOSTA`.
+// Os 0,5 MB entre `LIMITE_RESPOSTA` e os 4,5 MB da Vercel ficam para o resto
+// do JSON (cabeçalhos, lista de anexos).
+export const LIMITE_CORPO = 3.5 * 1024 * 1024;
+export const LIMITE_RESPOSTA = 4 * 1024 * 1024;
+
+/**
+ * Quanto uma string pesa depois de serializada na resposta da server function
+ * (seroval/JSON), por cima: bytes UTF-8 mais o custo dos escapes — `<` vira
+ * `\x3C`, aspas/barra/quebra de linha ganham `\`, controle vira `\u00XX`.
+ */
+export function pesoNaResposta(s: string): number {
+  let extra = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 0x3c || c === 0x2028 || c === 0x2029) extra += 3;
+    else if (c === 0x22 || c === 0x5c || c === 0x0a || c === 0x0d || c === 0x09) extra += 1;
+    else if (c === 0x08 || c === 0x0c) extra += 1;
+    else if (c < 0x20) extra += 5;
+  }
+  return Buffer.byteLength(s, "utf8") + extra;
+}
+
+/** Orçamento de `data:` que ainda cabe na resposta, dado o peso do corpo sem imagens. */
+export function orcamentoDeImagens(pesoCorpo: number): number {
+  return Math.max(0, Math.min(LIMITE_EMBUTIDO_BASE64, LIMITE_RESPOSTA - pesoCorpo));
+}
+
+// Um só orçamento por documento, dividido entre imagens `cid:` e externas.
+// Conta a URI `data:` inteira (prefixo incluso), que é o quanto o HTML cresce
+// em relação à versão sem imagens — é essa a conta que `abrir` precisa.
+type Orcamento = { usado: number; limite: number };
 
 function cabe(orcamento: Orcamento, tamanho: number): boolean {
-  if (orcamento.usado + tamanho > LIMITE_EMBUTIDO_BASE64) return false;
+  if (orcamento.usado + tamanho > orcamento.limite) return false;
   orcamento.usado += tamanho;
   return true;
 }
@@ -69,8 +102,9 @@ function trocarCid(html: string, anexos: AnexoEmbutido[], orcamento: Orcamento):
       cacheBase64.set(cid, b64);
     }
 
-    if (!cabe(orcamento, b64.length)) return `src=${aspas}${aspas}`;
-    return `src=${aspas}data:${a.contentType};base64,${b64}${aspas}`;
+    const uri = `data:${a.contentType};base64,${b64}`;
+    if (!cabe(orcamento, uri.length)) return `src=${aspas}${aspas}`;
+    return `src=${aspas}${uri}${aspas}`;
   });
 }
 
@@ -145,18 +179,41 @@ export function extrairImagensExternas(html: string): string[] {
   return [...urls];
 }
 
-export function corpoParaExibir(o: {
+type EntradaCorpo = {
   html?: string | false;
   text?: string;
   anexos: AnexoEmbutido[];
   /** Imagens remotas já baixadas pelo servidor, pela URL original do `src`. */
   externas?: Map<string, ImagemBaixada>;
-}): string {
+  /**
+   * Quanto o HTML pode crescer com imagens embutidas (`cid:` + externas),
+   * nunca acima de `LIMITE_EMBUTIDO_BASE64`. `0` tira todas — é assim que
+   * `abrir` mede o corpo antes de decidir o orçamento.
+   */
+  limiteEmbutido?: number;
+};
+
+export function corpoParaExibir(o: EntradaCorpo): string {
+  return corpoParaExibirDetalhado(o).html;
+}
+
+/** Igual a `corpoParaExibir`, dizendo também quais externas entraram de fato. */
+export function corpoParaExibirDetalhado(o: EntradaCorpo): {
+  html: string;
+  externasEmbutidas: Set<string>;
+} {
+  const externasEmbutidas = new Set<string>();
   if (!o.html) {
-    return `<!doctype html><meta charset="utf-8">${ESTILO}<pre>${escapar(o.text ?? "")}</pre>`;
+    return {
+      html: `<!doctype html><meta charset="utf-8">${ESTILO}<pre>${escapar(o.text ?? "")}</pre>`,
+      externasEmbutidas,
+    };
   }
 
-  const orcamento: Orcamento = { usado: 0 };
+  const orcamento: Orcamento = {
+    usado: 0,
+    limite: Math.max(0, Math.min(o.limiteEmbutido ?? Infinity, LIMITE_EMBUTIDO_BASE64)),
+  };
   const cacheExternas = new Map<string, string>();
   // Uma externa liberada vira `data:` se couber no orçamento; qualquer outra
   // (não baixada, SVG, tipo estranho, orçamento esgotado) continua sem src.
@@ -168,8 +225,10 @@ export function corpoParaExibir(o: {
       b64 = img.content.toString("base64");
       cacheExternas.set(src, b64);
     }
-    if (!cabe(orcamento, b64.length)) return "";
-    return `data:${img.contentType.toLowerCase()};base64,${b64}`;
+    const uri = `data:${img.contentType.toLowerCase()};base64,${b64}`;
+    if (!cabe(orcamento, uri.length)) return "";
+    externasEmbutidas.add(src);
+    return uri;
   }
 
   const limpo = sanitizeHtml(trocarCid(o.html, o.anexos, orcamento), {
@@ -204,5 +263,5 @@ export function corpoParaExibir(o: {
     },
   });
 
-  return `<!doctype html><meta charset="utf-8">${ESTILO}${limpo}`;
+  return { html: `<!doctype html><meta charset="utf-8">${ESTILO}${limpo}`, externasEmbutidas };
 }
