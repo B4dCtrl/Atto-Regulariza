@@ -309,7 +309,13 @@ function CadastrarPage() {
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email: data.email,
       password: data.senha,
-      options: { data: { name: data.nome, first_login: true, intake } },
+      options: {
+        data: { name: data.nome, first_login: true, intake },
+        // Depois de confirmar o e-mail, a pessoa volta já logada. /entrar com
+        // ?de=painel a leva ao painel certo; sem isto o Supabase mandava para
+        // a página inicial, como se nada tivesse acontecido.
+        emailRedirectTo: `${window.location.origin}/entrar?de=painel`,
+      },
     });
 
     if (authErr) {
