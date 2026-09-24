@@ -32,6 +32,30 @@ describe("descobrirAlias", () => {
     ).toBe("tais@atoregulariza.com.br");
   });
 
+  it("prefere alias pessoal a suporte@ também", () => {
+    expect(
+      descobrirAlias({ to: ["suporte@atoregulariza.com.br"], cc: ["tais@atoregulariza.com.br"] }),
+    ).toBe("tais@atoregulariza.com.br");
+  });
+
+  it("Delivered-To contato@ não tira o e-mail da pessoa", () => {
+    expect(
+      descobrirAlias({
+        to: ["tais@atoregulariza.com.br"],
+        deliveredTo: ["contato@atoregulariza.com.br"],
+      }),
+    ).toBe("tais@atoregulariza.com.br");
+  });
+
+  it("suporte@ ainda ganha de contato@", () => {
+    expect(
+      descobrirAlias({
+        to: ["contato@atoregulariza.com.br"],
+        cc: ["suporte@atoregulariza.com.br"],
+      }),
+    ).toBe("suporte@atoregulariza.com.br");
+  });
+
   it("sem alias conhecido, contato@", () => {
     expect(descobrirAlias({ to: ["outro@x.com"] })).toBe("contato@atoregulariza.com.br");
     expect(descobrirAlias({})).toBe("contato@atoregulariza.com.br");

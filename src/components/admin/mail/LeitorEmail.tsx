@@ -4,6 +4,8 @@ import type { EmailAberto } from "@/lib/api/mail-imap.server";
 import type { Pasta } from "@/lib/mail/validacao";
 import { baixarAnexoEmail } from "@/lib/api/mail.functions";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
+import { PESSOAIS, ROTULO, type Pessoal } from "@/lib/mail/enderecos";
+import { EtiquetaAtribuido } from "./ListaEmails";
 
 // Mesmo teto de `LIMITE_ANEXO` no servidor: mostrar o botão de baixar para
 // um anexo que o servidor vai recusar só gastaria o clique do admin.
@@ -23,12 +25,16 @@ export function LeitorEmail({
   onResponder,
   imagens,
   onMostrarImagens,
+  atribuindo,
+  onAtribuir,
 }: {
   email: EmailAberto;
   pasta: Pasta;
   onResponder: () => void;
   imagens: EstadoImagens;
   onMostrarImagens: () => void;
+  atribuindo: boolean;
+  onAtribuir: (responsavel: Pessoal | null) => void;
 }) {
   async function baixar(indice: number) {
     try {
@@ -52,7 +58,28 @@ export function LeitorEmail({
   return (
     <article className="flex h-full flex-col">
       <header className="border-b border-border p-4">
-        <h2 className="text-lg font-semibold">{email.assunto}</h2>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h2 className="text-lg font-semibold">{email.assunto}</h2>
+          {/* Organização, não permissão: qualquer admin atribui, troca ou tira,
+              e o servidor lê o Message-ID da própria mensagem. */}
+          <div className="flex items-center gap-2">
+            {email.atribuido && <EtiquetaAtribuido pessoa={email.atribuido} />}
+            <select
+              aria-label="Atribuir a"
+              className="rounded border border-border bg-background px-2 py-1 text-xs disabled:opacity-60"
+              value={email.atribuido ?? ""}
+              disabled={atribuindo}
+              onChange={(e) => onAtribuir((e.target.value || null) as Pessoal | null)}
+            >
+              <option value="">{email.atribuido ? "Tirar atribuição" : "Atribuir a…"}</option>
+              {PESSOAIS.map((p) => (
+                <option key={p} value={p}>
+                  {ROTULO[p]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <p className="text-sm">{email.de}</p>
         <p className="text-xs text-muted-foreground">
           para {email.para.join(", ")} · {new Date(email.data).toLocaleString("pt-BR")}

@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { exigirAdmin } from "@/lib/api/exigir-admin.server";
 import { avisarErro } from "@/lib/api/avisar-erro.server";
 import { contarNaoLidos } from "@/lib/api/mail-imap.server";
+import { idsAtribuidosA } from "@/lib/api/mail-atribuicoes.server";
 import { DIAS_PARADO, diasDesde } from "@/lib/api/resumo-gerencial";
 import {
   caixaDoAdmin,
@@ -12,7 +13,8 @@ import {
   primeiroNome,
   type ProcessoPessoal,
 } from "@/lib/api/resumo-pessoal";
-import { ROTULO, type Endereco } from "@/lib/mail/enderecos";
+import { ROTULO, ehPessoal } from "@/lib/mail/enderecos";
+import { visaoParaContar, type Visao } from "@/lib/mail/visoes";
 
 /**
  * "O que é seu": o resumo pessoal de cada admin.
@@ -51,14 +53,20 @@ let ultimoAviso = 0;
 const VALIDADE_CONTAGEM_MS = 60_000;
 const contagens = new Map<string, { valor: number; ate: number }>();
 
-async function naoLidosOuNulo(userId: string, alias: Endereco | undefined): Promise<number | null> {
+// A contagem é da mesma visão que a pessoa abre na caixa: o alias MAIS o que
+// foi atribuído a ela. Uma consulta ao banco a mais, dentro do mesmo prazo.
+async function contar(visao: Visao): Promise<number> {
+  return contarNaoLidos(visao, ehPessoal(visao) ? await idsAtribuidosA(visao) : []);
+}
+
+async function naoLidosOuNulo(userId: string, visao: Visao): Promise<number | null> {
   const guardada = contagens.get(userId);
   if (guardada && guardada.ate > Date.now()) return guardada.valor;
 
   let prazo: ReturnType<typeof setTimeout> | undefined;
   try {
     const valor = await Promise.race([
-      contarNaoLidos(alias),
+      contar(visao),
       new Promise<never>((_, rejeitar) => {
         prazo = setTimeout(() => rejeitar(new Error("IMAP demorou demais")), PRAZO_IMAP_MS);
       }),
@@ -91,8 +99,9 @@ export const resumoPessoal = createServerFn({ method: "POST" })
 
     // O e-mail do registro de autenticação, não do perfil: o perfil é
     // editável pelo próprio usuário, o `auth.users` não. Alias (tais@,
-    // gabriel@…) conta só o que chegou para ele; o dono conta a caixa inteira;
-    // qualquer outro e-mail não conta — regra e testes em `caixaDoAdmin`.
+    // gabriel@…) conta a visão dele (alias + atribuídos); o dono conta a caixa
+    // inteira; qualquer outro e-mail não conta — regras e testes em
+    // `caixaDoAdmin` e `visaoParaContar`.
     //
     // A contagem IMAP (a parte lenta) começa assim que o e-mail chega, em
     // paralelo com as consultas ao banco abaixo.
@@ -100,9 +109,10 @@ export const resumoPessoal = createServerFn({ method: "POST" })
       .getUserById(context.userId)
       .then(({ data: u }) => caixaDoAdmin(u.user?.email))
       .catch(() => null);
-    const naoLidosP = caixaP.then((caixa) =>
-      caixa ? naoLidosOuNulo(context.userId, caixa === "inteira" ? undefined : caixa) : null,
-    );
+    const naoLidosP = caixaP.then((caixa) => {
+      const visao = visaoParaContar(caixa);
+      return visao ? naoLidosOuNulo(context.userId, visao) : null;
+    });
 
     const [caixa, naoLidos, perfil, props] = await Promise.all([
       caixaP,

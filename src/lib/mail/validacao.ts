@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ENDERECOS } from "./enderecos";
+import { ENDERECOS, PESSOAIS } from "./enderecos";
+import { VISOES } from "./visoes";
 
 /**
  * O que o navegador pode pedir às server functions da caixa.
@@ -20,10 +21,39 @@ const uid = z.number().int().positive();
 export const schemaListar = z.object({
   pasta: z.enum(PASTAS),
   pagina: z.number().int().min(0).max(1000),
-  alias: z.enum(ENDERECOS).optional(),
+  // Visão, não endereço: "contato@" como filtro batia em toda mensagem (o
+  // `Delivered-To` da caixa onde os aliases entregam) — ver `buscaDaVisao`.
+  visao: z.enum(VISOES),
 });
 
 export const schemaAbrir = z.object({ pasta: z.enum(PASTAS), uid });
+
+/**
+ * Message-ID como aparece no cabeçalho: `<parte-esquerda@parte-direita>`.
+ *
+ * É a chave de `mail_atribuicoes` e vira termo de busca IMAP, então só ASCII
+ * visível, sem aspas, barra invertida nem `< >` no meio — o mesmo CHECK da
+ * tabela. Nunca vem do navegador: o servidor lê da mensagem e valida aqui.
+ *
+ * Teto de 250 (não 500+): mesmo com o corte por bytes em `buscaDaVisao`, um
+ * Message-ID absurdamente comprido sozinho já pesa demais numa busca IMAP de
+ * poucos ids — 250 mantém a linha do SEARCH longe do limite do Dovecot em
+ * qualquer combinação.
+ */
+export const schemaMessageId = z
+  .string()
+  .min(5)
+  .max(250)
+  .regex(/^[!-~]+$/)
+  .regex(/^<[^<>"\\\s]+@[^<>"\\\s]+>$/);
+
+// `null` desfaz a atribuição. Só as três pessoas: contato@/suporte@ não são
+// "alguém" a quem entregar um e-mail.
+export const schemaAtribuir = z.object({
+  pasta: z.enum(PASTAS),
+  uid,
+  responsavel: z.enum(PESSOAIS).nullable(),
+});
 
 export const schemaAnexo = z.object({
   pasta: z.enum(PASTAS),
