@@ -1,4 +1,4 @@
-import { Download, Reply } from "lucide-react";
+import { Download, ImageOff, Reply } from "lucide-react";
 import { toast } from "sonner";
 import type { EmailAberto } from "@/lib/api/mail-imap.server";
 import type { Pasta } from "@/lib/mail/validacao";
@@ -15,14 +15,20 @@ const LIMITE_ANEXO = 3 * 1024 * 1024;
  * O corpo vai num iframe sem scripts e sem mesma origem: mesmo que algo
  * escape da limpeza do servidor, não roda e não alcança a sessão do admin.
  */
+export type EstadoImagens = "bloqueadas" | "carregando" | "mostradas";
+
 export function LeitorEmail({
   email,
   pasta,
   onResponder,
+  imagens,
+  onMostrarImagens,
 }: {
   email: EmailAberto;
   pasta: Pasta;
   onResponder: () => void;
+  imagens: EstadoImagens;
+  onMostrarImagens: () => void;
 }) {
   async function baixar(indice: number) {
     try {
@@ -85,6 +91,22 @@ export function LeitorEmail({
           </button>
         )}
       </header>
+      {/* Opt-in por e-mail: quem baixa é o servidor, então o remetente não
+          vê o navegador do admin nem sabe quando ele leu. */}
+      {email.imagensExternas > 0 && imagens !== "mostradas" && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-2 text-xs text-muted-foreground">
+          <ImageOff className="h-3.5 w-3.5 shrink-0" />
+          <span>Imagens externas bloqueadas para proteger sua privacidade.</span>
+          <button
+            type="button"
+            onClick={onMostrarImagens}
+            disabled={imagens === "carregando"}
+            className="font-medium text-foreground underline underline-offset-2 disabled:no-underline disabled:opacity-60"
+          >
+            {imagens === "carregando" ? "Carregando imagens…" : "Mostrar imagens"}
+          </button>
+        </div>
+      )}
       <iframe
         title="Conteúdo do e-mail"
         sandbox="allow-popups allow-popups-to-escape-sandbox"

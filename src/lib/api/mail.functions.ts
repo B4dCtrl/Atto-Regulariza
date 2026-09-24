@@ -12,6 +12,7 @@ import {
   gravarEmEnviados,
 } from "@/lib/api/mail-imap.server";
 import { montarEEnviar } from "@/lib/api/mail-smtp.server";
+import { baixarImagens } from "@/lib/api/mail-imagens.server";
 import { schemaListar, schemaAbrir, schemaAnexo, schemaEnviar } from "@/lib/mail/validacao";
 import { cabecalhosDeResposta } from "@/lib/mail/resposta";
 
@@ -58,6 +59,26 @@ export const abrirEmail = createServerFn({ method: "POST" })
       "abrir",
       () => abrir(data.pasta, data.uid),
       "Não foi possível abrir este e-mail.",
+    );
+    if (!e) throw new Error("E-mail não encontrado.");
+    return e;
+  });
+
+// "Mostrar imagens". As URLs saem do e-mail lido aqui no servidor, nunca do
+// navegador: a tela só diz qual e-mail, então não há como pedir ao servidor
+// que busque um endereço arbitrário. Sem tabela de limite por hora (como a de
+// envios): quem chama já é admin, e cada chamada tem teto próprio — 20
+// imagens, 1 MB cada, 2 MB no total, 8 s — o que não dá para transformar em
+// ataque de volume contra terceiros.
+export const abrirEmailComImagens = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(schemaAbrir)
+  .handler(async ({ data, context }) => {
+    await exigirAdmin(context.userId);
+    const e = await protegido(
+      "abrir com imagens",
+      () => abrir(data.pasta, data.uid, { imagens: baixarImagens }),
+      "Não foi possível carregar as imagens deste e-mail.",
     );
     if (!e) throw new Error("E-mail não encontrado.");
     return e;
