@@ -248,6 +248,36 @@ export type Database = {
         Update: { user_id?: string; lesson_id?: string; completed_at?: string };
         Relationships: [];
       };
+      mail_envios: {
+        Row: {
+          id: string;
+          user_id: string;
+          de: string;
+          para: string[];
+          assunto: string;
+          respondendo_message_id: string | null;
+          enviado_em: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          de: string;
+          para: string[];
+          assunto: string;
+          respondendo_message_id?: string | null;
+          enviado_em?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          de?: string;
+          para?: string[];
+          assunto?: string;
+          respondendo_message_id?: string | null;
+          enviado_em?: string;
+        };
+        Relationships: [];
+      };
       user_roles: {
         Row: {
           created_at: string;

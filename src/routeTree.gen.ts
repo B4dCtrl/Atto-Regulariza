@@ -18,6 +18,7 @@ import { Route as PerfilProfissionalRouteImport } from './routes/perfil-profissi
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as PainelProfissionalRouteImport } from './routes/painel-profissional'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as MailRouteImport } from './routes/mail'
 import { Route as InstitucionalRouteImport } from './routes/institucional'
 import { Route as GestaoRouteImport } from './routes/gestao'
 import { Route as EquipeRouteImport } from './routes/equipe'
@@ -35,6 +36,7 @@ import { Route as PrecosInstitucionalRouteImport } from './routes/precos/institu
 import { Route as FCodigoRouteImport } from './routes/f.$codigo'
 import { Route as CursosSlugRouteImport } from './routes/cursos/$slug'
 import { Route as AdminProcessosRouteImport } from './routes/admin/processos'
+import { Route as AdminMailRouteImport } from './routes/admin/mail'
 import { Route as AdminLeadsRouteImport } from './routes/admin/leads'
 import { Route as AdminFinanceiroRouteImport } from './routes/admin/financeiro'
 import { Route as AdminDocumentosPadraoRouteImport } from './routes/admin/documentos-padrao'
@@ -91,6 +93,11 @@ const PainelProfissionalRoute = PainelProfissionalRouteImport.update({
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
   path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MailRoute = MailRouteImport.update({
+  id: '/mail',
+  path: '/mail',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstitucionalRoute = InstitucionalRouteImport.update({
@@ -178,6 +185,11 @@ const AdminProcessosRoute = AdminProcessosRouteImport.update({
   path: '/processos',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMailRoute = AdminMailRouteImport.update({
+  id: '/mail',
+  path: '/mail',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLeadsRoute = AdminLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -252,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/mail': typeof MailRoute
   '/painel': typeof PainelRoute
   '/painel-profissional': typeof PainelProfissionalRoute
   '/perfil': typeof PerfilRoute
@@ -272,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/mail': typeof AdminMailRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/cursos/$slug': typeof CursosSlugRoute
   '/f/$codigo': typeof FCodigoRoute
@@ -291,6 +305,7 @@ export interface FileRoutesByTo {
   '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/mail': typeof MailRoute
   '/painel': typeof PainelRoute
   '/painel-profissional': typeof PainelProfissionalRoute
   '/perfil': typeof PerfilRoute
@@ -311,6 +326,7 @@ export interface FileRoutesByTo {
   '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/mail': typeof AdminMailRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/cursos/$slug': typeof CursosSlugRoute
   '/f/$codigo': typeof FCodigoRoute
@@ -332,6 +348,7 @@ export interface FileRoutesById {
   '/equipe': typeof EquipeRoute
   '/gestao': typeof GestaoRoute
   '/institucional': typeof InstitucionalRoute
+  '/mail': typeof MailRoute
   '/painel': typeof PainelRoute
   '/painel-profissional': typeof PainelProfissionalRoute
   '/perfil': typeof PerfilRoute
@@ -352,6 +369,7 @@ export interface FileRoutesById {
   '/admin/documentos-padrao': typeof AdminDocumentosPadraoRoute
   '/admin/financeiro': typeof AdminFinanceiroRoute
   '/admin/leads': typeof AdminLeadsRoute
+  '/admin/mail': typeof AdminMailRoute
   '/admin/processos': typeof AdminProcessosRoute
   '/cursos/$slug': typeof CursosSlugRoute
   '/f/$codigo': typeof FCodigoRoute
@@ -374,6 +392,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/gestao'
     | '/institucional'
+    | '/mail'
     | '/painel'
     | '/painel-profissional'
     | '/perfil'
@@ -394,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/documentos-padrao'
     | '/admin/financeiro'
     | '/admin/leads'
+    | '/admin/mail'
     | '/admin/processos'
     | '/cursos/$slug'
     | '/f/$codigo'
@@ -413,6 +433,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/gestao'
     | '/institucional'
+    | '/mail'
     | '/painel'
     | '/painel-profissional'
     | '/perfil'
@@ -433,6 +454,7 @@ export interface FileRouteTypes {
     | '/admin/documentos-padrao'
     | '/admin/financeiro'
     | '/admin/leads'
+    | '/admin/mail'
     | '/admin/processos'
     | '/cursos/$slug'
     | '/f/$codigo'
@@ -453,6 +475,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/gestao'
     | '/institucional'
+    | '/mail'
     | '/painel'
     | '/painel-profissional'
     | '/perfil'
@@ -473,6 +496,7 @@ export interface FileRouteTypes {
     | '/admin/documentos-padrao'
     | '/admin/financeiro'
     | '/admin/leads'
+    | '/admin/mail'
     | '/admin/processos'
     | '/cursos/$slug'
     | '/f/$codigo'
@@ -494,6 +518,7 @@ export interface RootRouteChildren {
   EquipeRoute: typeof EquipeRoute
   GestaoRoute: typeof GestaoRoute
   InstitucionalRoute: typeof InstitucionalRoute
+  MailRoute: typeof MailRoute
   PainelRoute: typeof PainelRoute
   PainelProfissionalRoute: typeof PainelProfissionalRoute
   PerfilRoute: typeof PerfilRoute
@@ -571,6 +596,13 @@ declare module '@tanstack/react-router' {
       path: '/painel'
       fullPath: '/painel'
       preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mail': {
+      id: '/mail'
+      path: '/mail'
+      fullPath: '/mail'
+      preLoaderRoute: typeof MailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/institucional': {
@@ -692,6 +724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProcessosRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/mail': {
+      id: '/admin/mail'
+      path: '/mail'
+      fullPath: '/admin/mail'
+      preLoaderRoute: typeof AdminMailRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/leads': {
       id: '/admin/leads'
       path: '/leads'
@@ -791,6 +830,7 @@ interface AdminRouteChildren {
   AdminDocumentosPadraoRoute: typeof AdminDocumentosPadraoRoute
   AdminFinanceiroRoute: typeof AdminFinanceiroRoute
   AdminLeadsRoute: typeof AdminLeadsRoute
+  AdminMailRoute: typeof AdminMailRoute
   AdminProcessosRoute: typeof AdminProcessosRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminProjetoIdRoute: typeof AdminProjetoIdRoute
@@ -808,6 +848,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDocumentosPadraoRoute: AdminDocumentosPadraoRoute,
   AdminFinanceiroRoute: AdminFinanceiroRoute,
   AdminLeadsRoute: AdminLeadsRoute,
+  AdminMailRoute: AdminMailRoute,
   AdminProcessosRoute: AdminProcessosRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminProjetoIdRoute: AdminProjetoIdRoute,
@@ -838,6 +879,7 @@ const rootRouteChildren: RootRouteChildren = {
   EquipeRoute: EquipeRoute,
   GestaoRoute: GestaoRoute,
   InstitucionalRoute: InstitucionalRoute,
+  MailRoute: MailRoute,
   PainelRoute: PainelRoute,
   PainelProfissionalRoute: PainelProfissionalRoute,
   PerfilRoute: PerfilRoute,

@@ -9,6 +9,7 @@ Allow: /
 # sessão, mas listar aqui evita que uma URL vazada vire resultado de busca.
 Disallow: /dashboard
 Disallow: /admin
+Disallow: /mail
 Disallow: /painel-profissional
 Disallow: /perfil
 Disallow: /perfil-profissional
