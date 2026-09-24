@@ -248,6 +248,27 @@ export type Database = {
         Update: { user_id?: string; lesson_id?: string; completed_at?: string };
         Relationships: [];
       };
+      mail_atribuicoes: {
+        Row: {
+          message_id: string;
+          responsavel: string;
+          atribuido_por: string | null;
+          atribuido_em: string;
+        };
+        Insert: {
+          message_id: string;
+          responsavel: string;
+          atribuido_por?: string | null;
+          atribuido_em?: string;
+        };
+        Update: {
+          message_id?: string;
+          responsavel?: string;
+          atribuido_por?: string | null;
+          atribuido_em?: string;
+        };
+        Relationships: [];
+      };
       mail_envios: {
         Row: {
           id: string;

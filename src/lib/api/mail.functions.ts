@@ -1,5 +1,6 @@
 // src/lib/api/mail.functions.ts
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { exigirAdmin } from "@/lib/api/exigir-admin.server";
@@ -10,10 +11,21 @@ import {
   baixarAnexo,
   cabecalhosDoOriginal,
   gravarEmEnviados,
+  type EmailAberto,
 } from "@/lib/api/mail-imap.server";
+import { atribuicoesDe, gravarAtribuicao, idsAtribuidosA } from "@/lib/api/mail-atribuicoes.server";
 import { montarEEnviar } from "@/lib/api/mail-smtp.server";
 import { baixarImagens } from "@/lib/api/mail-imagens.server";
-import { schemaListar, schemaAbrir, schemaAnexo, schemaEnviar } from "@/lib/mail/validacao";
+import {
+  schemaListar,
+  schemaAbrir,
+  schemaAnexo,
+  schemaAtribuir,
+  schemaEnviar,
+  schemaMessageId,
+} from "@/lib/mail/validacao";
+import { ehPessoal, type Pessoal } from "@/lib/mail/enderecos";
+import { visaoPadrao, type Visao } from "@/lib/mail/visoes";
 import { cabecalhosDeResposta } from "@/lib/mail/resposta";
 
 /**
@@ -38,16 +50,73 @@ async function protegido<T>(origem: string, fn: () => Promise<T>, mensagem: stri
   }
 }
 
+/**
+ * Etiquetas "com Taís". Falha do banco aqui não derruba a tela: a lista (ou o
+ * e-mail) sai sem etiqueta e o detalhe vai para o sino — a caixa continua
+ * utilizável com o Supabase fora do ar.
+ */
+async function etiquetas(ids: (string | undefined)[]): Promise<Map<string, Pessoal>> {
+  try {
+    return await atribuicoesDe(ids.filter((id): id is string => !!id));
+  } catch (e) {
+    await avisarErro("caixa de e-mail: ler atribuições", e);
+    return new Map();
+  }
+}
+
+async function comEtiqueta(e: EmailAberto): Promise<EmailAberto> {
+  const mapa = await etiquetas([e.messageId]);
+  return { ...e, atribuido: (e.messageId && mapa.get(e.messageId)) || null };
+}
+
+/**
+ * Com que visão a caixa abre para quem está logado.
+ *
+ * Decidido aqui, pelo e-mail do `auth.users` (que o usuário não edita), e não
+ * pelo navegador. É só o ponto de partida: a tela deixa trocar de visão.
+ */
+export const minhaCaixa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  // Nada vem do navegador: a entrada é vazia de propósito.
+  .inputValidator(z.object({}).strict().optional())
+  .handler(async ({ context }): Promise<{ visao: Visao }> => {
+    await exigirAdmin(context.userId);
+    const { data: u, error } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    // Sem o e-mail, "Todos": é admin, e abrir na caixa errada de outra pessoa
+    // seria pior do que abrir na caixa inteira.
+    if (error) return { visao: "todos" };
+    return { visao: visaoPadrao(u.user?.email) };
+  });
+
 export const listarEmails = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(schemaListar)
   .handler(async ({ data, context }) => {
     await exigirAdmin(context.userId);
-    return protegido(
+    // Visão de pessoa = mandado ao alias + atribuído a ela. Sem conseguir ler
+    // as atribuições, a lista não sai: mostrar a caixa da Taís sem o que foi
+    // passado a ela esconderia trabalho sem ninguém perceber.
+    const visao = data.visao;
+    const atribuidos = ehPessoal(visao)
+      ? await protegido(
+          "atribuições da visão",
+          () => idsAtribuidosA(visao),
+          "Não foi possível abrir a caixa agora.",
+        )
+      : [];
+    const r = await protegido(
       "listar",
-      () => listar(data.pasta, data.pagina, data.alias),
+      () => listar(data.pasta, data.pagina, visao, atribuidos),
       "Não foi possível abrir a caixa agora.",
     );
+    const mapa = await etiquetas(r.itens.map((m) => m.messageId));
+    return {
+      total: r.total,
+      itens: r.itens.map((m) => ({
+        ...m,
+        atribuido: (m.messageId && mapa.get(m.messageId)) || null,
+      })),
+    };
   });
 
 export const abrirEmail = createServerFn({ method: "POST" })
@@ -61,7 +130,38 @@ export const abrirEmail = createServerFn({ method: "POST" })
       "Não foi possível abrir este e-mail.",
     );
     if (!e) throw new Error("E-mail não encontrado.");
-    return e;
+    return comEtiqueta(e);
+  });
+
+/**
+ * "Atribuir a…": passa o e-mail para uma pessoa, troca ou (com `null`) tira.
+ *
+ * A tela só diz QUAL e-mail (pasta + UID); o Message-ID que vira chave é lido
+ * aqui, da própria mensagem na Hostinger. Se viesse do navegador, dava para
+ * gravar atribuição de um id qualquer — inclusive um que casasse com outras
+ * mensagens na busca da visão. Sem Message-ID válido, não há o que atribuir.
+ */
+export const atribuirEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(schemaAtribuir)
+  .handler(async ({ data, context }) => {
+    await exigirAdmin(context.userId);
+    const original = await protegido(
+      "atribuir: ler o e-mail",
+      () => cabecalhosDoOriginal(data.pasta, data.uid),
+      "Não foi possível atribuir este e-mail.",
+    );
+    if (!original) throw new Error("E-mail não encontrado.");
+    const id = schemaMessageId.safeParse(original.messageId);
+    if (!id.success) {
+      throw new Error("Este e-mail não tem um identificador válido — não dá para atribuir.");
+    }
+    await protegido(
+      "atribuir: gravar",
+      () => gravarAtribuicao(id.data, data.responsavel, context.userId),
+      "Não foi possível atribuir este e-mail.",
+    );
+    return { atribuido: data.responsavel };
   });
 
 // "Mostrar imagens". As URLs saem do e-mail lido aqui no servidor, nunca do
@@ -81,7 +181,7 @@ export const abrirEmailComImagens = createServerFn({ method: "POST" })
       "Não foi possível carregar as imagens deste e-mail.",
     );
     if (!e) throw new Error("E-mail não encontrado.");
-    return e;
+    return comEtiqueta(e);
   });
 
 export const baixarAnexoEmail = createServerFn({ method: "POST" })

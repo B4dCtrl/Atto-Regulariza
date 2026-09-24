@@ -12,7 +12,8 @@ import {
   LIMITE_CORPO,
   type ImagemBaixada,
 } from "@/lib/mail/limpar-html";
-import { descobrirAlias, type Endereco } from "@/lib/mail/enderecos";
+import { descobrirAlias, type Endereco, type Pessoal } from "@/lib/mail/enderecos";
+import { buscaDaVisao, type Visao } from "@/lib/mail/visoes";
 
 /**
  * A caixa contato@ na Hostinger, lida por IMAP.
@@ -44,6 +45,13 @@ export type ResumoEmail = {
   lido: boolean;
   temAnexo: boolean;
   alias: Endereco;
+  /** Cabeçalho Message-ID: a chave de `mail_atribuicoes`. */
+  messageId?: string;
+  /**
+   * A quem o e-mail foi atribuído ("com Taís"). Este módulo não fala com o
+   * banco: sai sempre nulo daqui e a server function preenche.
+   */
+  atribuido: Pessoal | null;
 };
 
 export type EmailAberto = ResumoEmail & {
@@ -52,7 +60,6 @@ export type EmailAberto = ResumoEmail & {
   imagensExternas: number;
   texto: string;
   anexos: { indice: number; nome: string; tipo: string; tamanho: number }[];
-  messageId?: string;
   references: string[];
   responderPara: string;
 };
@@ -95,17 +102,25 @@ function enderecos(a: AddressObject | AddressObject[] | undefined): string[] {
   return lista.flatMap((x) => x.value.map((v) => v.address ?? "")).filter(Boolean);
 }
 
+/**
+ * Uma página de uma visão (Todos, Geral, uma pessoa).
+ *
+ * Duas idas ao servidor, como antes das visões: a busca (`buscaDaVisao`)
+ * devolve só UIDs — todos os da visão, então `total` e a paginação são
+ * exatos — e o fetch traz o envelope só dos 50 da página. `atribuidos` são os
+ * Message-IDs atribuídos à pessoa da visão, lidos do banco pela server
+ * function; entram na mesma busca.
+ */
 export async function listar(
   pasta: Pasta,
   pagina: number,
-  alias?: Endereco,
+  visao: Visao,
+  atribuidos: string[] = [],
 ): Promise<{ itens: ResumoEmail[]; total: number }> {
   return comCaixa(async (c) => {
     const lock = await c.getMailboxLock(await caminho(c, pasta));
     try {
-      const busca = alias
-        ? { or: [{ to: alias }, { cc: alias }, { header: { "delivered-to": alias } }] }
-        : { all: true };
+      const busca = buscaDaVisao(pasta, visao, atribuidos);
       const uids = ((await c.search(busca, { uid: true })) || []).sort((a, b) => b - a);
       const pagUids = uids.slice(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA);
       if (pagUids.length === 0) return { itens: [], total: uids.length };
@@ -138,6 +153,8 @@ export async function listar(
           lido: m.flags?.has("\\Seen") ?? false,
           temAnexo: JSON.stringify(m.bodyStructure ?? {}).includes('"disposition":"attachment"'),
           alias: descobrirAlias({ to: para, cc, deliveredTo }),
+          messageId: env?.messageId || undefined,
+          atribuido: null,
         });
       }
       itens.sort((a, b) => b.uid - a.uid);
@@ -151,22 +168,17 @@ export async function listar(
 /**
  * Quantos e-mails não lidos há na Caixa de entrada.
  *
- * Com `alias`, só os endereçados a ele — mesmo critério de `listar` (To, Cc ou
- * Delivered-To, que cobre a cópia oculta). Sem `alias`, a caixa inteira. Só
- * conta UIDs: nenhum cabeçalho nem corpo sai do servidor, e nada é marcado
- * como lido.
+ * Mesmo critério da visão em `listar` (`buscaDaVisao`), para o número do
+ * cartão bater com o que a pessoa vê ao abrir a caixa. Só conta UIDs: nenhum
+ * cabeçalho nem corpo sai do servidor, e nada é marcado como lido.
  */
-export async function contarNaoLidos(alias?: Endereco): Promise<number> {
+export async function contarNaoLidos(visao: Visao, atribuidos: string[] = []): Promise<number> {
   return comCaixa(async (c) => {
     const lock = await c.getMailboxLock("INBOX");
     try {
+      // `seen` ao lado da busca da visão: chaves no mesmo objeto são E.
       const uids = await c.search(
-        {
-          seen: false,
-          ...(alias
-            ? { or: [{ to: alias }, { cc: alias }, { header: { "delivered-to": alias } }] }
-            : {}),
-        },
+        { seen: false, ...buscaDaVisao("entrada", visao, atribuidos) },
         { uid: true },
       );
       return (uids || []).length;
@@ -270,6 +282,7 @@ export async function abrir(
         tamanho: a.size,
       })),
     messageId: e.messageId,
+    atribuido: null,
     references: refs,
     responderPara: e.replyTo?.value[0]?.address ?? deQuem?.address ?? "",
   };
@@ -310,6 +323,8 @@ async function lerMensagem(
         lido: true,
         temAnexo: false,
         alias: descobrirAlias({ to: para, cc }),
+        messageId: env?.messageId || undefined,
+        atribuido: null,
       };
 
       if ((resumo.size ?? 0) > LIMITE_ABERTURA) {

@@ -26,6 +26,25 @@ export const ROTULO: Record<Endereco, string> = {
   "lauro@atoregulariza.com.br": "Lauro",
 };
 
+/**
+ * Os endereços de uma pessoa, não de um setor.
+ *
+ * São os únicos que viram "caixa de alguém" no painel e os únicos a quem um
+ * e-mail pode ser atribuído. contato@ e suporte@ são de todo mundo: o que
+ * chega só por eles é "Geral".
+ */
+export const PESSOAIS = [
+  "gabriel@atoregulariza.com.br",
+  "tais@atoregulariza.com.br",
+  "lauro@atoregulariza.com.br",
+] as const satisfies readonly Endereco[];
+
+export type Pessoal = (typeof PESSOAIS)[number];
+
+export function ehPessoal(v: string): v is Pessoal {
+  return (PESSOAIS as readonly string[]).includes(v);
+}
+
 export function ehEndereco(v: string): v is Endereco {
   return (ENDERECOS as readonly string[]).includes(v.trim().toLowerCase());
 }
@@ -36,7 +55,8 @@ export function ehEndereco(v: string): v is Endereco {
  * É o remetente padrão da resposta: quem escreveu para a Taís recebe a
  * resposta da Taís. `Delivered-To` cobre a cópia oculta, que não aparece em
  * To nem Cc. Alias pessoal ganha de `contato@` quando os dois aparecem — a
- * pessoa quis falar com alguém específico.
+ * pessoa quis falar com alguém específico. Pela mesma razão, alias pessoal
+ * ganha também de `suporte@`.
  */
 // `Delivered-To` e cabeçalhos crus às vezes vêm como `<end@x.com>` ou
 // `"Nome" <end@x.com>` em vez do endereço puro — sem isto, `ehEndereco`
@@ -54,5 +74,13 @@ export function descobrirAlias(c: {
   const vistos = [...(c.to ?? []), ...(c.cc ?? []), ...(c.deliveredTo ?? [])]
     .map(soEndereco)
     .filter(ehEndereco);
-  return vistos.find((e) => e !== PADRAO) ?? (vistos[0] as Endereco | undefined) ?? PADRAO;
+  // Pessoal antes de suporte@, suporte@ antes de contato@. Sem a primeira
+  // regra, "To: suporte@, Cc: tais@" caía em suporte@ e o e-mail ia para o
+  // "Geral" em vez da caixa da Taís — a mesma regra das visões da caixa.
+  return (
+    vistos.find(ehPessoal) ??
+    vistos.find((e) => e !== PADRAO) ??
+    (vistos[0] as Endereco | undefined) ??
+    PADRAO
+  );
 }

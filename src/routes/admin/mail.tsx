@@ -2,10 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, PenSquare, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { listarEmails, abrirEmail, abrirEmailComImagens } from "@/lib/api/mail.functions";
+import {
+  listarEmails,
+  abrirEmail,
+  abrirEmailComImagens,
+  atribuirEmail,
+  minhaCaixa,
+} from "@/lib/api/mail.functions";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import type { ResumoEmail, EmailAberto } from "@/lib/api/mail-imap.server";
-import { ENDERECOS, ROTULO, PADRAO, type Endereco } from "@/lib/mail/enderecos";
+import { ROTULO, PADRAO, ehPessoal, type Pessoal } from "@/lib/mail/enderecos";
+import { VISOES, ROTULO_VISAO, type Visao } from "@/lib/mail/visoes";
 import { POR_PAGINA, type Pasta } from "@/lib/mail/validacao";
 import { assuntoDeResposta, citar } from "@/lib/mail/resposta";
 import { ListaEmails } from "@/components/admin/mail/ListaEmails";
@@ -21,7 +28,9 @@ export const Route = createFileRoute("/admin/mail")({
 
 function MailPage() {
   const [pasta, setPasta] = useState<Pasta>("entrada");
-  const [alias, setAlias] = useState<Endereco | undefined>();
+  // Nulo até o servidor dizer de qual caixa esta pessoa é (`minhaCaixa`): a
+  // lista só carrega depois, para não piscar "Todos" antes da caixa dela.
+  const [visao, setVisao] = useState<Visao | null>(null);
   const [pagina, setPagina] = useState(0);
   const [itens, setItens] = useState<ResumoEmail[]>([]);
   const [total, setTotal] = useState(0);
@@ -29,6 +38,7 @@ function MailPage() {
   const [aberto, setAberto] = useState<EmailAberto | null>(null);
   const [imagens, setImagens] = useState<EstadoImagens>("bloqueadas");
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
+  const [atribuindo, setAtribuindo] = useState(false);
   // Chave do <EditorEmail>: "novo" fixo fazia um segundo "Escrever" reusar o
   // estado (texto, destinatário) do rascunho anterior em vez de começar do
   // zero, porque a key não mudava entre um rascunho novo e outro.
@@ -41,13 +51,40 @@ function MailPage() {
   // reabriria o e-mail errado sob a aba nova.
   const cargaId = useRef(0);
   const abrirId = useRef(0);
+  // Qual lista está na tela. Trocar de visão/aba/página esvazia a lista na
+  // hora: a da visão anterior não fica à mostra sob o nome da nova enquanto o
+  // IMAP responde. "Atualizar" (mesma chave) mantém a lista visível.
+  const chaveNaTela = useRef("");
+
+  useEffect(() => {
+    let vivo = true;
+    void (async () => {
+      try {
+        const r = await minhaCaixa({ headers: await cabecalhoAuth() });
+        if (vivo) setVisao((atual) => atual ?? r.visao);
+      } catch {
+        // Sem resposta, abre em "Todos" — todo admin pode ver a caixa inteira.
+        if (vivo) setVisao((atual) => atual ?? "todos");
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const carregar = useCallback(async () => {
+    if (!visao) return;
     const id = ++cargaId.current;
+    const chave = `${pasta}|${visao}|${pagina}`;
+    if (chave !== chaveNaTela.current) {
+      chaveNaTela.current = chave;
+      setItens([]);
+      setTotal(0);
+    }
     setCarregando(true);
     try {
       const r = await listarEmails({
-        data: { pasta, pagina, alias },
+        data: { pasta, pagina, visao },
         headers: await cabecalhoAuth(),
       });
       if (id !== cargaId.current) return; // uma chamada mais nova já respondeu
@@ -59,7 +96,7 @@ function MailPage() {
     } finally {
       if (id === cargaId.current) setCarregando(false);
     }
-  }, [pasta, pagina, alias]);
+  }, [pasta, pagina, visao]);
 
   useEffect(() => {
     void carregar();
@@ -123,6 +160,33 @@ function MailPage() {
     }
   }
 
+  // "Atribuir a…". Mesma disciplina de `mostrarImagens`: só aplica a resposta
+  // se o e-mail aberto ainda é o mesmo. Recarrega a lista porque a atribuição
+  // pode pôr ou tirar o e-mail da visão atual (e muda a etiqueta).
+  async function atribuir(responsavel: Pessoal | null) {
+    if (!aberto || atribuindo) return;
+    const id = abrirId.current;
+    const uid = aberto.uid;
+    setAtribuindo(true);
+    try {
+      const r = await atribuirEmail({
+        data: { pasta, uid, responsavel },
+        headers: await cabecalhoAuth(),
+      });
+      if (id !== abrirId.current) return;
+      setAberto((atual) =>
+        atual && atual.uid === uid ? { ...atual, atribuido: r.atribuido } : atual,
+      );
+      toast.success(r.atribuido ? `Atribuído a ${ROTULO[r.atribuido]}.` : "Atribuição removida.");
+      void carregar();
+    } catch (e) {
+      if (id !== abrirId.current) return;
+      toast.error((e as Error).message);
+    } finally {
+      setAtribuindo(false);
+    }
+  }
+
   function responder() {
     if (!aberto) return;
     rascunhoId.current++;
@@ -156,17 +220,19 @@ function MailPage() {
         {aba("entrada", "Entrada")}
         {aba("enviados", "Enviados")}
         <select
+          aria-label="Caixa"
           className="ml-2 rounded border border-border bg-background px-2 py-1 text-sm"
-          value={alias ?? ""}
+          value={visao ?? ""}
+          disabled={!visao}
           onChange={(e) => {
-            setAlias((e.target.value || undefined) as Endereco | undefined);
+            setVisao(e.target.value as Visao);
             setPagina(0);
           }}
         >
-          <option value="">Todos</option>
-          {ENDERECOS.map((e) => (
-            <option key={e} value={e}>
-              {ROTULO[e]}
+          {!visao && <option value="">Carregando…</option>}
+          {VISOES.map((v) => (
+            <option key={v} value={v}>
+              {ROTULO_VISAO[v]}
             </option>
           ))}
         </select>
@@ -178,7 +244,13 @@ function MailPage() {
           onClick={() => {
             limparAberto();
             rascunhoId.current++;
-            setRascunho({ de: alias ?? PADRAO, para: "", assunto: "", texto: "" });
+            // Na caixa de uma pessoa, escreve como ela; no Geral/Todos, contato@.
+            setRascunho({
+              de: visao && ehPessoal(visao) ? visao : PADRAO,
+              para: "",
+              assunto: "",
+              texto: "",
+            });
           }}
           className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
         >
@@ -193,7 +265,12 @@ function MailPage() {
             aberto || rascunho ? "hidden md:block" : ""
           }`}
         >
-          <ListaEmails itens={itens} selecionado={aberto?.uid ?? null} onAbrir={abrir} />
+          <ListaEmails
+            itens={itens}
+            carregando={carregando}
+            selecionado={aberto?.uid ?? null}
+            onAbrir={abrir}
+          />
           {total > POR_PAGINA && (
             <div className="flex justify-between p-3 text-sm">
               <button type="button" disabled={pagina === 0} onClick={() => setPagina(pagina - 1)}>
@@ -232,6 +309,8 @@ function MailPage() {
               onResponder={responder}
               imagens={imagens}
               onMostrarImagens={mostrarImagens}
+              atribuindo={atribuindo}
+              onAtribuir={atribuir}
             />
           )}
           {rascunho && (
