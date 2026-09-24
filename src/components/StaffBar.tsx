@@ -66,7 +66,9 @@ export function StaffBar() {
             telas COM dados existem as contas de teste. */}
         <Link to="/" className={linkCls}>Site</Link>
         <Link to="/admin" className={linkCls}>Back office</Link>
-        <Link to="/admin/mail" className={linkCls}>Mail</Link>
+        <Link to="/admin/mail" className={linkCls}>
+          Mail
+        </Link>
         <button
           onClick={sair}
           className="rounded-full px-3 py-1 text-red-500 transition-colors hover:bg-red-50"
