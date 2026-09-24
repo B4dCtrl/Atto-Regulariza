@@ -12,9 +12,22 @@ import sanitizeHtml from "sanitize-html";
  * Imagem externa perde o `src`: além de pixel de rastreio (avisa ao remetente
  * que e quando o e-mail foi aberto), a CSP do site já a bloquearia. Imagem
  * embutida no próprio e-mail (`cid:`) vira `data:` e aparece.
+ *
+ * "Mostrar imagens" é opcional e por e-mail: o SERVIDOR baixa as externas
+ * (ver `mail-imagens.server.ts`) e elas chegam aqui em `externas`, já como
+ * bytes, para virar `data:` também. Quem fica sabendo da abertura é só o
+ * nosso servidor, nunca o navegador do admin — e a CSP não precisa mudar.
  */
 
 export type AnexoEmbutido = { cid?: string; contentType: string; content: Buffer };
+export type ImagemBaixada = { contentType: string; content: Buffer };
+
+// Nunca SVG: é documento com script, não imagem. Só os formatos raster que
+// o navegador mostra sem interpretar nada.
+const TIPO_EXTERNA = /^image\/(png|jpeg|gif|webp)$/i;
+// 20 já cobre qualquer newsletter comum; acima disso o e-mail é um mosaico de
+// pixels de rastreio e baixar tudo só gastaria o tempo da função serverless.
+const MAX_EXTERNAS = 20;
 
 const ESTILO =
   "<style>body{font-family:system-ui,sans-serif;font-size:14px;line-height:1.5;color:#1f2937;margin:16px;word-wrap:break-word}img{max-width:100%;height:auto}pre{white-space:pre-wrap;font-family:inherit;margin:0}</style>";
@@ -34,9 +47,18 @@ function escapar(t: string): string {
 // por isso o teto de base64 embutido é bem menor que isso.
 const LIMITE_EMBUTIDO_BASE64 = 2.5 * 1024 * 1024; // 2,5 MB de texto base64, total no documento
 
-function trocarCid(html: string, anexos: AnexoEmbutido[]): string {
+// Um só orçamento por documento, dividido entre imagens `cid:` e externas:
+// somadas, nunca passam de `LIMITE_EMBUTIDO_BASE64`.
+type Orcamento = { usado: number };
+
+function cabe(orcamento: Orcamento, tamanho: number): boolean {
+  if (orcamento.usado + tamanho > LIMITE_EMBUTIDO_BASE64) return false;
+  orcamento.usado += tamanho;
+  return true;
+}
+
+function trocarCid(html: string, anexos: AnexoEmbutido[], orcamento: Orcamento): string {
   const cacheBase64 = new Map<string, string>();
-  let usado = 0;
   return html.replace(/\bsrc\s*=\s*(["'])cid:([^"']+)\1/gi, (_m, aspas: string, cid: string) => {
     const a = anexos.find((x) => x.cid === cid);
     if (!a || !a.contentType.startsWith("image/")) return `src=${aspas}${aspas}`;
@@ -47,8 +69,7 @@ function trocarCid(html: string, anexos: AnexoEmbutido[]): string {
       cacheBase64.set(cid, b64);
     }
 
-    if (usado + b64.length > LIMITE_EMBUTIDO_BASE64) return `src=${aspas}${aspas}`;
-    usado += b64.length;
+    if (!cabe(orcamento, b64.length)) return `src=${aspas}${aspas}`;
     return `src=${aspas}data:${a.contentType};base64,${b64}${aspas}`;
   });
 }
@@ -101,16 +122,57 @@ const ESTILOS_PERMITIDOS: Record<string, RegExp[]> = {
   "border-collapse": [/^(collapse|separate)$/],
 };
 
+/**
+ * URLs das imagens remotas do e-mail, na ordem em que aparecem, sem repetição.
+ *
+ * Lê com o mesmo parser do `sanitizeHtml` de `corpoParaExibir`: assim a URL
+ * listada aqui (entidades como `&amp;` já decodificadas) é exatamente a
+ * chave que `corpoParaExibir` vai procurar em `externas`.
+ */
+export function extrairImagensExternas(html: string): string[] {
+  const urls = new Set<string>();
+  sanitizeHtml(html, {
+    allowedTags: [],
+    allowedAttributes: {},
+    transformTags: {
+      img: (tagName, attribs) => {
+        const src = attribs.src ?? "";
+        if (urls.size < MAX_EXTERNAS && /^https?:\/\//i.test(src.trim())) urls.add(src);
+        return { tagName, attribs };
+      },
+    },
+  });
+  return [...urls];
+}
+
 export function corpoParaExibir(o: {
   html?: string | false;
   text?: string;
   anexos: AnexoEmbutido[];
+  /** Imagens remotas já baixadas pelo servidor, pela URL original do `src`. */
+  externas?: Map<string, ImagemBaixada>;
 }): string {
   if (!o.html) {
     return `<!doctype html><meta charset="utf-8">${ESTILO}<pre>${escapar(o.text ?? "")}</pre>`;
   }
 
-  const limpo = sanitizeHtml(trocarCid(o.html, o.anexos), {
+  const orcamento: Orcamento = { usado: 0 };
+  const cacheExternas = new Map<string, string>();
+  // Uma externa liberada vira `data:` se couber no orçamento; qualquer outra
+  // (não baixada, SVG, tipo estranho, orçamento esgotado) continua sem src.
+  function externaEmbutida(src: string): string {
+    const img = o.externas?.get(src);
+    if (!img || !TIPO_EXTERNA.test(img.contentType)) return "";
+    let b64 = cacheExternas.get(src);
+    if (b64 === undefined) {
+      b64 = img.content.toString("base64");
+      cacheExternas.set(src, b64);
+    }
+    if (!cabe(orcamento, b64.length)) return "";
+    return `data:${img.contentType.toLowerCase()};base64,${b64}`;
+  }
+
+  const limpo = sanitizeHtml(trocarCid(o.html, o.anexos, orcamento), {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "font", "center", "span"]),
     allowedAttributes: {
       "*": ["style", "align", "width", "height", "bgcolor", "color", "dir"],
@@ -137,7 +199,7 @@ export function corpoParaExibir(o: {
       img: (tagName, attribs) => {
         const src = attribs.src ?? "";
         const embutida = /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(src);
-        return { tagName, attribs: { ...attribs, src: embutida ? src : "" } };
+        return { tagName, attribs: { ...attribs, src: embutida ? src : externaEmbutida(src) } };
       },
     },
   });

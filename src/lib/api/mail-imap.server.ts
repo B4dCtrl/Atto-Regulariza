@@ -1,9 +1,13 @@
 // src/lib/api/mail-imap.server.ts
 import process from "node:process";
 import { ImapFlow } from "imapflow";
-import { simpleParser, type AddressObject } from "mailparser";
+import { simpleParser, type AddressObject, type ParsedMail } from "mailparser";
 import { POR_PAGINA, type Pasta } from "@/lib/mail/validacao";
-import { corpoParaExibir } from "@/lib/mail/limpar-html";
+import {
+  corpoParaExibir,
+  extrairImagensExternas,
+  type ImagemBaixada,
+} from "@/lib/mail/limpar-html";
 import { descobrirAlias, type Endereco } from "@/lib/mail/enderecos";
 
 /**
@@ -40,6 +44,8 @@ export type ResumoEmail = {
 
 export type EmailAberto = ResumoEmail & {
   html: string;
+  /** Imagens remotas (até 20) que ficaram bloqueadas no `html`. */
+  imagensExternas: number;
   texto: string;
   anexos: { indice: number; nome: string; tipo: string; tamanho: number }[];
   messageId?: string;
@@ -138,7 +144,84 @@ export async function listar(
   });
 }
 
-export async function abrir(pasta: Pasta, uid: number): Promise<EmailAberto | null> {
+export type OpcoesAbrir = {
+  /**
+   * "Mostrar imagens": recebe as URLs das imagens remotas do HTML ORIGINAL
+   * (o limpo já perdeu os `src`) e devolve as que conseguiu baixar. Roda
+   * depois de fechar o IMAP, para a conexão não ficar presa esperando a rede.
+   */
+  imagens?: (urls: string[]) => Promise<Map<string, ImagemBaixada>>;
+};
+
+export async function abrir(
+  pasta: Pasta,
+  uid: number,
+  opcoes: OpcoesAbrir = {},
+): Promise<EmailAberto | null> {
+  const lido = await lerMensagem(pasta, uid, !opcoes.imagens);
+  if (!lido) return null;
+  if ("pronto" in lido) return lido.pronto;
+
+  const { e } = lido;
+  const urls = e.html ? extrairImagensExternas(e.html) : [];
+  const externas = opcoes.imagens && urls.length > 0 ? await opcoes.imagens(urls) : undefined;
+
+  const paraCompleto = enderecos(e.to);
+  const ccCompleto = enderecos(e.cc);
+  const dt = e.headers.get("delivered-to");
+  const deliveredTo = (Array.isArray(dt) ? dt : dt ? [dt] : []).map(String);
+  const anexosReais = e.attachments.filter((a) => a.contentDisposition === "attachment");
+  const refs = e.references ? (Array.isArray(e.references) ? e.references : [e.references]) : [];
+  const deQuem = e.from?.value[0];
+
+  return {
+    uid,
+    de: e.from?.text ?? "(sem remetente)",
+    para: paraCompleto,
+    assunto: e.subject ?? "(sem assunto)",
+    data: (e.date ?? new Date()).toISOString(),
+    lido: true,
+    temAnexo: anexosReais.length > 0,
+    alias: descobrirAlias({ to: paraCompleto, cc: ccCompleto, deliveredTo }),
+    html: corpoParaExibir({
+      html: e.html,
+      text: e.text,
+      anexos: e.attachments.map((a) => ({
+        cid: a.cid,
+        contentType: a.contentType,
+        content: a.content,
+      })),
+      externas,
+    }),
+    // Depois de "Mostrar imagens", conta só as que não vieram (download
+    // falhou/recusado) — a tela usa isso para avisar.
+    imagensExternas: externas ? urls.filter((u) => !externas.has(u)).length : urls.length,
+    texto: e.text ?? "",
+    anexos: e.attachments
+      .map((a, indice) => ({ a, indice }))
+      .filter(({ a }) => a.contentDisposition === "attachment")
+      .map(({ a, indice }) => ({
+        indice,
+        nome: a.filename ?? `anexo-${indice + 1}`,
+        tipo: a.contentType,
+        tamanho: a.size,
+      })),
+    messageId: e.messageId,
+    references: refs,
+    responderPara: e.replyTo?.value[0]?.address ?? deQuem?.address ?? "",
+  };
+}
+
+/**
+ * A parte IMAP de `abrir`: baixa e parseia a mensagem, ou devolve a resposta
+ * pronta quando ela é grande demais. `marcarLida` é falso no "Mostrar
+ * imagens": a mensagem já foi aberta (e marcada) antes.
+ */
+async function lerMensagem(
+  pasta: Pasta,
+  uid: number,
+  marcarLida: boolean,
+): Promise<{ pronto: EmailAberto } | { e: ParsedMail } | null> {
   return comCaixa(async (c) => {
     const lock = await c.getMailboxLock(await caminho(c, pasta));
     try {
@@ -167,69 +250,28 @@ export async function abrir(pasta: Pasta, uid: number): Promise<EmailAberto | nu
       };
 
       if ((resumo.size ?? 0) > LIMITE_ABERTURA) {
-        await c.messageFlagsAdd(String(uid), ["\\Seen"], { uid: true });
+        if (marcarLida) await c.messageFlagsAdd(String(uid), ["\\Seen"], { uid: true });
         return {
-          ...base,
-          html: corpoParaExibir({
-            text: "Esta mensagem é grande demais para abrir aqui. Acesse o webmail da Hostinger para vê-la.",
+          pronto: {
+            ...base,
+            html: corpoParaExibir({
+              text: "Esta mensagem é grande demais para abrir aqui. Acesse o webmail da Hostinger para vê-la.",
+              anexos: [],
+            }),
+            imagensExternas: 0,
+            texto: "",
             anexos: [],
-          }),
-          texto: "",
-          anexos: [],
-          references: [],
-          responderPara: env?.from?.[0]?.address ?? "",
+            references: [],
+            responderPara: env?.from?.[0]?.address ?? "",
+          },
         };
       }
 
       const baixado = await c.download(String(uid), undefined, { uid: true });
       if (!baixado) return null;
       const e = await simpleParser(baixado.content);
-      await c.messageFlagsAdd(String(uid), ["\\Seen"], { uid: true });
-
-      const paraCompleto = enderecos(e.to);
-      const ccCompleto = enderecos(e.cc);
-      const dt = e.headers.get("delivered-to");
-      const deliveredTo = (Array.isArray(dt) ? dt : dt ? [dt] : []).map(String);
-      const anexosReais = e.attachments.filter((a) => a.contentDisposition === "attachment");
-      const refs = e.references
-        ? Array.isArray(e.references)
-          ? e.references
-          : [e.references]
-        : [];
-      const deQuem = e.from?.value[0];
-
-      return {
-        uid,
-        de: e.from?.text ?? "(sem remetente)",
-        para: paraCompleto,
-        assunto: e.subject ?? "(sem assunto)",
-        data: (e.date ?? new Date()).toISOString(),
-        lido: true,
-        temAnexo: anexosReais.length > 0,
-        alias: descobrirAlias({ to: paraCompleto, cc: ccCompleto, deliveredTo }),
-        html: corpoParaExibir({
-          html: e.html,
-          text: e.text,
-          anexos: e.attachments.map((a) => ({
-            cid: a.cid,
-            contentType: a.contentType,
-            content: a.content,
-          })),
-        }),
-        texto: e.text ?? "",
-        anexos: e.attachments
-          .map((a, indice) => ({ a, indice }))
-          .filter(({ a }) => a.contentDisposition === "attachment")
-          .map(({ a, indice }) => ({
-            indice,
-            nome: a.filename ?? `anexo-${indice + 1}`,
-            tipo: a.contentType,
-            tamanho: a.size,
-          })),
-        messageId: e.messageId,
-        references: refs,
-        responderPara: e.replyTo?.value[0]?.address ?? deQuem?.address ?? "",
-      };
+      if (marcarLida) await c.messageFlagsAdd(String(uid), ["\\Seen"], { uid: true });
+      return { e };
     } finally {
       lock.release();
     }

@@ -2,14 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, PenSquare, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { listarEmails, abrirEmail } from "@/lib/api/mail.functions";
+import { listarEmails, abrirEmail, abrirEmailComImagens } from "@/lib/api/mail.functions";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import type { ResumoEmail, EmailAberto } from "@/lib/api/mail-imap.server";
 import { ENDERECOS, ROTULO, PADRAO, type Endereco } from "@/lib/mail/enderecos";
 import { POR_PAGINA, type Pasta } from "@/lib/mail/validacao";
 import { assuntoDeResposta, citar } from "@/lib/mail/resposta";
 import { ListaEmails } from "@/components/admin/mail/ListaEmails";
-import { LeitorEmail } from "@/components/admin/mail/LeitorEmail";
+import { LeitorEmail, type EstadoImagens } from "@/components/admin/mail/LeitorEmail";
 import { EditorEmail, type Rascunho } from "@/components/admin/mail/EditorEmail";
 
 export const Route = createFileRoute("/admin/mail")({
@@ -27,6 +27,7 @@ function MailPage() {
   const [total, setTotal] = useState(0);
   const [carregando, setCarregando] = useState(false);
   const [aberto, setAberto] = useState<EmailAberto | null>(null);
+  const [imagens, setImagens] = useState<EstadoImagens>("bloqueadas");
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
   // Chave do <EditorEmail>: "novo" fixo fazia um segundo "Escrever" reusar o
   // estado (texto, destinatário) do rascunho anterior em vez de começar do
@@ -69,11 +70,13 @@ function MailPage() {
   function limparAberto() {
     abrirId.current++;
     setAberto(null);
+    setImagens("bloqueadas");
   }
 
   async function abrir(uid: number) {
     const id = ++abrirId.current;
     setRascunho(null);
+    setImagens("bloqueadas");
     try {
       const e = await abrirEmail({ data: { pasta, uid }, headers: await cabecalhoAuth() });
       if (id !== abrirId.current) return; // outro clique ou troca de aba venceu
@@ -81,6 +84,36 @@ function MailPage() {
       setItens((xs) => xs.map((x) => (x.uid === uid ? { ...x, lido: true } : x)));
     } catch (e) {
       if (id !== abrirId.current) return;
+      toast.error((e as Error).message);
+    }
+  }
+
+  // Mesma disciplina de `abrir`: não incrementa `abrirId`, só confere que
+  // nenhuma abertura/troca de aba aconteceu enquanto as imagens baixavam —
+  // senão o HTML de um e-mail apareceria sob o cabeçalho de outro.
+  async function mostrarImagens() {
+    if (!aberto || imagens === "carregando") return;
+    const id = abrirId.current;
+    const uid = aberto.uid;
+    setImagens("carregando");
+    try {
+      const e = await abrirEmailComImagens({
+        data: { pasta, uid },
+        headers: await cabecalhoAuth(),
+      });
+      if (id !== abrirId.current) return;
+      setAberto((atual) => (atual && atual.uid === uid ? e : atual));
+      setImagens("mostradas");
+      if (e.imagensExternas > 0) {
+        toast.info(
+          e.imagensExternas === 1
+            ? "1 imagem não pôde ser carregada."
+            : `${e.imagensExternas} imagens não puderam ser carregadas.`,
+        );
+      }
+    } catch (e) {
+      if (id !== abrirId.current) return;
+      setImagens("bloqueadas");
       toast.error((e as Error).message);
     }
   }
@@ -187,7 +220,15 @@ function MailPage() {
               <ArrowLeft className="h-4 w-4" /> Voltar
             </button>
           )}
-          {aberto && <LeitorEmail email={aberto} pasta={pasta} onResponder={responder} />}
+          {aberto && (
+            <LeitorEmail
+              email={aberto}
+              pasta={pasta}
+              onResponder={responder}
+              imagens={imagens}
+              onMostrarImagens={mostrarImagens}
+            />
+          )}
           {rascunho && (
             <EditorEmail
               key={rascunhoId.current}
