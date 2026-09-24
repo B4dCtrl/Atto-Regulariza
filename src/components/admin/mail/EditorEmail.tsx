@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ENDERECOS, ROTULO, type Endereco } from "@/lib/mail/enderecos";
 import { schemaEnviar } from "@/lib/mail/validacao";
@@ -26,6 +26,18 @@ export function EditorEmail({
 }) {
   const [r, setR] = useState(inicial);
   const [enviando, setEnviando] = useState(false);
+  const campoTexto = useRef<HTMLTextAreaElement>(null);
+
+  // O editor abre embaixo do e-mail, fora da vista: sem isto, "Responder"
+  // parecia não fazer nada. Leva o foco ao texto com o cursor no começo, acima
+  // da citação.
+  useEffect(() => {
+    const t = campoTexto.current;
+    if (!t) return;
+    t.scrollIntoView({ behavior: "smooth", block: "center" });
+    t.focus({ preventScroll: true });
+    t.setSelectionRange(0, 0);
+  }, []);
 
   async function enviar() {
     const entrada = {
@@ -81,6 +93,7 @@ export function EditorEmail({
         onChange={(e) => setR({ ...r, assunto: e.target.value })}
       />
       <textarea
+        ref={campoTexto}
         className={`${campo} min-h-[200px]`}
         maxLength={20_000}
         value={r.texto}
