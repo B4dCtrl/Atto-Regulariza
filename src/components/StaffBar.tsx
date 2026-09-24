@@ -57,7 +57,7 @@ export function StaffBar() {
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
           {isAdmin ? "Admin" : "Modo equipe"}
         </span>
-        {/* Só dois destinos.
+        {/* Três destinos: site, back office e a caixa de e-mail.
             "Preços" era uma página do site, alcançável por "Site". "Gestão"
             apontava para /gestao, que redireciona para /admin — o mesmo link
             duas vezes. "Painel cliente" e "Profissional" abriam as telas com o
@@ -66,6 +66,7 @@ export function StaffBar() {
             telas COM dados existem as contas de teste. */}
         <Link to="/" className={linkCls}>Site</Link>
         <Link to="/admin" className={linkCls}>Back office</Link>
+        <Link to="/admin/mail" className={linkCls}>Mail</Link>
         <button
           onClick={sair}
           className="rounded-full px-3 py-1 text-red-500 transition-colors hover:bg-red-50"

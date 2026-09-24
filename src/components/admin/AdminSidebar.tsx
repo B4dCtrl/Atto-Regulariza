@@ -117,7 +117,7 @@ export function AdminSidebar() {
   return (
     <aside className="group sticky top-0 h-screen w-16 shrink-0">
       <div
-        className="absolute inset-y-0 left-0 z-20 flex h-full w-16 flex-col overflow-hidden border-r border-border
+        className="absolute inset-y-0 left-0 z-20 flex h-full w-16 flex-col overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:none] border-r border-border
                    bg-background p-3 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
                    group-hover:w-60 group-hover:shadow-[8px_0_32px_-12px_oklch(0.16_0.01_60_/_0.18)]"
       >
@@ -198,8 +198,9 @@ export function AdminSidebar() {
           </div>
         </div>
 
-        {/* Bottom */}
-        <div className="mt-auto space-y-2">
+        {/* Rodapé do menu. O pb-16 deixa Sair acima da barra flutuante do admin,
+            que fica fixa no pé da tela e cobria o último item. */}
+        <div className="mt-auto space-y-2 pt-5 pb-16">
           <Link
             to="/perfil-profissional"
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-soft hover:bg-surface"
