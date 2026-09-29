@@ -3,7 +3,7 @@
 services:
   hermes:
     image: nousresearch/hermes-agent:latest
-    container_name: hermes-atto
+    container_name: hermes-ato
     restart: unless-stopped
     command: gateway run
     env_file: .env
