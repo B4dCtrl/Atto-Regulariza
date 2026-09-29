@@ -19,8 +19,16 @@
 
 ## 4. Configurar modelos por funcao
     docker compose exec -it hermes hermes model
-Gerente: Claude Sonnet. Triagem/rotinas: Haiku ou modelo gratis.
-Nao envie dados pessoais de clientes a modelos gratuitos.
+Escolha o provedor OpenRouter e um modelo com sufixo `:free` (a lista muda; veja
+openrouter.ai/models?q=free). Prefira modelos que suportem "tool calling", pois o Hermes
+depende disso. Use um modelo maior para o gerente e um menor para triagem/rotinas.
+
+### Limites e cuidados do OpenRouter gratuito
+- Limite baixo de requisicoes por minuto e por dia (sobe se voce colocar ~US$10 de credito,
+  que nao e gasto nos modelos `:free`).
+- Modelos gratuitos podem registrar/usar os dados para treino: NAO envie dados pessoais
+  de clientes (CPF, endereco, documentos). Com este setup, o Hermes fica so na equipe.
+- Qualidade e disponibilidade variam; configure um segundo modelo `:free` de reserva.
 
 ## Seguranca
 - Comece em modo rascunho: o Hermes responde so a EMAIL_ALLOWED_USERS (equipe).
