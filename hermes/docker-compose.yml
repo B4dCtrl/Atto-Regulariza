@@ -1,0 +1,16 @@
+# Hermes Agent (Nous Research) para o ATTO, pensado para VM Oracle Always Free (ARM).
+# Uso: cp .env.example .env && preencher && docker compose up -d
+services:
+  hermes:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes-atto
+    restart: unless-stopped
+    command: gateway run
+    env_file: .env
+    volumes:
+      - ./data:/opt/data # config, chaves, sessoes, skills e memoria
+    mem_limit: 4g
+    cpus: 2
+    # Sem "ports": o gateway de e-mail so faz conexoes de saida (IMAP/SMTP).
+    security_opt:
+      - no-new-privileges:true
