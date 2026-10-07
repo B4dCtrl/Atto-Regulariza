@@ -1,0 +1,9 @@
+{
+  "name": "composition",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "npx --yes hyperframes check",
+    "render": "npx --yes hyperframes render"
+  }
+}
