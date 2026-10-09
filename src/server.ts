@@ -62,6 +62,20 @@ async function tratarWhatsApp(request: Request, url: URL): Promise<Response | nu
   return new Response("method not allowed", { status: 405 });
 }
 
+/**
+ * Aviso de cadastro novo, chamado pelo gatilho do banco (pg_net). Fica aqui
+ * pelo mesmo motivo do webhook acima: não é página, e o banco espera um 200.
+ */
+const CAMINHO_AVISO_CADASTRO = "/api/aviso-cadastro";
+
+async function tratarAvisoDeCadastro(request: Request, url: URL): Promise<Response | null> {
+  if (url.pathname !== CAMINHO_AVISO_CADASTRO) return null;
+  if (request.method !== "POST") return new Response("method not allowed", { status: 405 });
+
+  const { receberAvisoDeCadastro } = await import("./lib/api/aviso-cadastro.server");
+  return receberAvisoDeCadastro(request);
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
@@ -69,6 +83,9 @@ export default {
 
       const doWhatsApp = await tratarWhatsApp(request, url);
       if (doWhatsApp) return doWhatsApp;
+
+      const doAviso = await tratarAvisoDeCadastro(request, url);
+      if (doAviso) return doAviso;
 
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
