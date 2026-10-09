@@ -41,7 +41,10 @@ const FORMATO_BRIEFING = {
         properties: {
           titulo: { type: "string", description: "O que fazer." },
           motivo: { type: "string", description: "Por que é urgente." },
-          destino: { type: "string", enum: ["aprovacoes", "processos", "leads"] },
+          destino: {
+            type: "string",
+            enum: ["aprovacoes", "processos", "leads", "profissionais"],
+          },
         },
         required: ["titulo", "motivo", "destino"],
         additionalProperties: false,
@@ -89,6 +92,9 @@ REGRAS:
 - NUNCA estime nem complete o que falta.
 - Escreva em português do Brasil, direto, sem saudação e sem despedida.
 - O briefing tem no máximo 4 frases.
+- Profissional sem acessar e SEM processos não é pendência: não entra na fila. Sem caso na mão, não há cliente esperando por ele.
+- Profissional sem acessar e COM processos entra na fila como "Cobrar <nome>, que tem N processo(s) sem andamento", com destino "profissionais".
+- Nunca sugira ativar ou desativar profissional: essa decisão não cabe ao briefing.
 
 A fila vem ordenada da mais urgente para a menos urgente, com no máximo 6 itens.`;
 

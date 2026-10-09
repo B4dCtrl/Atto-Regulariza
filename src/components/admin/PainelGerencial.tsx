@@ -8,6 +8,12 @@ const DESTINO: Record<string, string> = {
   aprovacoes: "/admin/aprovacoes",
   processos: "/admin/processos",
   leads: "/admin/leads",
+  profissionais: "/admin/aprovacoes",
+};
+
+/** Profissional em questão já está aprovado: abre a aba de aprovados, não a de pendentes. */
+const BUSCA: Record<string, Record<string, string>> = {
+  profissionais: { filtro: "aprovado" },
 };
 
 /**
@@ -117,6 +123,7 @@ export function PainelGerencial() {
                       para /entrar: clicar numa tarefa deslogava o admin. */}
                   <Link
                     to={DESTINO[item.destino] ?? "/admin/processos"}
+                    search={BUSCA[item.destino] as never}
                     className="flex gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-surface"
                   >
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground text-[10px] font-medium text-background">
