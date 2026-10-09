@@ -58,14 +58,33 @@ export const Route = createFileRoute("/dashboard")({
       },
     ],
   }),
-  beforeLoad: async () => {
+  // `?verComo=<processo>`: o admin abre o painel de um cliente exatamente como
+  // ele aparece para a pessoa, só para leitura.
+  validateSearch: (busca: Record<string, unknown>): { verComo?: string } =>
+    typeof busca.verComo === "string" && /^[0-9a-f-]{36}$/i.test(busca.verComo)
+      ? { verComo: busca.verComo }
+      : {},
+  beforeLoad: async ({ search }) => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar", search: { de: "painel" } });
     // Admin/profissional podem abrir o painel do cliente (ex.: prévia pela StaffBar).
     // Sem imóvel, cai no estado vazio — sem redirecionar para fora.
-    return { userId: session.user.id };
+
+    // `verComo` só vale para admin. Para qualquer outro, o parâmetro é
+    // ignorado — e a RLS não deixaria ler o processo alheio de todo jeito.
+    let verComo: string | null = null;
+    if (search.verComo) {
+      const { data: papel } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (papel) verComo = search.verComo;
+    }
+    return { userId: session.user.id, verComo };
   },
   component: DashboardPage,
 });
@@ -113,7 +132,9 @@ const navItems = [
 ];
 
 function DashboardContent() {
-  const { userId } = Route.useRouteContext();
+  const { userId, verComo } = Route.useRouteContext();
+  /** Admin vendo como o cliente: tudo igual, nada que grave em nome dele. */
+  const somenteLeitura = Boolean(verComo);
   const [showTourDialog, setShowTourDialog] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
   /** Protocolo inicial de documentos, logo depois do tutorial. */
@@ -153,12 +174,20 @@ function DashboardContent() {
     async function load() {
       // 1. Encontra o imóvel deste cliente
       let propData = (
-        await supabase.from("properties").select("*").eq("client_id", userId).limit(1).maybeSingle()
+        verComo
+          ? await supabase.from("properties").select("*").eq("id", verComo).maybeSingle()
+          : await supabase
+              .from("properties")
+              .select("*")
+              .eq("client_id", userId)
+              .limit(1)
+              .maybeSingle()
       ).data;
 
       // 1b. Self-heal: sem imóvel mas com intake nos metadados (cadastro com
       // confirmação de e-mail) → monta o processo agora, no navegador.
-      if (!cancelled && !propData) {
+      // Nunca na visão do admin: o intake lido seria o do próprio admin.
+      if (!cancelled && !propData && !verComo) {
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -216,11 +245,12 @@ function DashboardContent() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
-  /* Registra a entrada uma vez por montagem da tela. */
+  }, [userId, verComo]);
+  /* Registra a entrada uma vez por montagem da tela. Admin espiando não
+     conta como acesso do cliente: o painel gerencial mede isso. */
   useEffect(() => {
-    registrarAcesso("cliente");
-  }, []);
+    if (!somenteLeitura) registrarAcesso("cliente");
+  }, [somenteLeitura]);
 
   /* ── Realtime subscriptions ── */
   useEffect(() => {
@@ -334,6 +364,9 @@ function DashboardContent() {
      Disparado pelo wizard via /dashboard?welcome=1 (confiável). Caso o parâmetro
      não esteja presente, recai sobre a flag first_login dos metadados. */
   useEffect(() => {
+    // Na visão do admin, nem tutorial nem a flag first_login — que seria a
+    // do admin, não a do cliente.
+    if (somenteLeitura) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("welcome") === "1") {
       setShowTutorial(true);
@@ -347,7 +380,7 @@ function DashboardContent() {
         supabase.auth.updateUser({ data: { first_login: false } });
       }
     });
-  }, []);
+  }, [somenteLeitura]);
 
   /* ── Quantas tarefas o cliente ainda deve ──
      A barra lateral aparece em todas as seções; a caixa "O que falta de você"
@@ -560,6 +593,10 @@ function DashboardContent() {
 
   const hasProfessional = !!professional;
   const clientName = property?.client_name ?? "Cliente";
+  /** Na visão do admin, a lista de documentos filtra como o banco filtra o cliente. */
+  const comoCliente = somenteLeitura
+    ? { processoEntregue: property?.status === "entregue" }
+    : undefined;
   const clientInitials = initialsOf(clientName);
   /** Processo ainda sem diagnóstico: aguardando equipe analisar o cadastro. */
   const awaitingDiagnosis = !property?.assigned_professional_id && progress === 0;
@@ -602,6 +639,22 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-surface/50 text-foreground">
+      {somenteLeitura && (
+        <div className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-foreground px-4 py-2 text-xs text-background">
+          <span>
+            Você está vendo o painel de <strong>{clientName}</strong> como ele vê. Só leitura.
+          </span>
+          {verComo && (
+            <Link
+              to="/admin/projeto/$id"
+              params={{ id: verComo }}
+              className="rounded-full bg-background/15 px-3 py-0.5 hover:bg-background/25"
+            >
+              Voltar ao processo
+            </Link>
+          )}
+        </div>
+      )}
       <AnimatePresence>
         {showTutorial && (
           <FirstTimeTutorial
@@ -873,14 +926,17 @@ function DashboardContent() {
                     </div>
 
                     <div className="space-y-4">
-                      <UploadDocumento
-                        propertyId={property.id}
-                        origem="cliente"
-                        onEnviado={() => setRecargaDocs((n) => n + 1)}
-                      />
+                      {!somenteLeitura && (
+                        <UploadDocumento
+                          propertyId={property.id}
+                          origem="cliente"
+                          onEnviado={() => setRecargaDocs((n) => n + 1)}
+                        />
+                      )}
                       <DocumentList
                         propertyId={property.id}
                         origem="cliente"
+                        comoCliente={comoCliente}
                         recarregarToken={recargaDocs}
                       />
                     </div>
@@ -900,6 +956,7 @@ function DashboardContent() {
                         <div className="mt-3">
                           <TarefasDoCliente
                             propertyId={propertyId}
+                            somenteLeitura={somenteLeitura}
                             recarregarToken={recargaDocs}
                             onMudou={() => setRecargaDocs((n) => n + 1)}
                           />
@@ -1002,6 +1059,7 @@ function DashboardContent() {
                   <DocumentosDoProfissional
                     propertyId={property.id}
                     recarregarToken={recargaDocs}
+                    comoCliente={comoCliente}
                   />
                 </div>
               </motion.div>
@@ -1020,6 +1078,7 @@ function DashboardContent() {
                   <DocumentosDoProfissional
                     propertyId={property.id}
                     recarregarToken={recargaDocs}
+                    comoCliente={comoCliente}
                   />
 
                   <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
@@ -1029,14 +1088,17 @@ function DashboardContent() {
                     </div>
 
                     <div className="space-y-4">
-                      <UploadDocumento
-                        propertyId={property.id}
-                        origem="cliente"
-                        onEnviado={() => setRecargaDocs((n) => n + 1)}
-                      />
+                      {!somenteLeitura && (
+                        <UploadDocumento
+                          propertyId={property.id}
+                          origem="cliente"
+                          onEnviado={() => setRecargaDocs((n) => n + 1)}
+                        />
+                      )}
                       <DocumentList
                         propertyId={property.id}
                         origem="cliente"
+                        comoCliente={comoCliente}
                         recarregarToken={recargaDocs}
                       />
                     </div>
@@ -1203,42 +1265,48 @@ function DashboardContent() {
                     )}
 
                     {/* Input */}
-                    <form
-                      onSubmit={sendMessage}
-                      className="flex items-center gap-2 border-t border-border p-4"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => askAI(false)}
-                        disabled={askingAI}
-                        title="Perguntar à Assistente IA"
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20 hover:bg-accent/20 disabled:opacity-40 transition-colors"
+                    {somenteLeitura ? (
+                      <div className="border-t border-border p-4 text-center text-xs text-ink-soft">
+                        Visão do cliente, só para leitura. Para responder, use “Trabalhar no caso”.
+                      </div>
+                    ) : (
+                      <form
+                        onSubmit={sendMessage}
+                        className="flex items-center gap-2 border-t border-border p-4"
                       >
-                        {askingAI ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
-                      </button>
-                      <input
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="Escreva uma mensagem…"
-                        className="flex-1 rounded-full bg-surface px-5 py-2.5 text-sm outline-none placeholder:text-ink-soft/60"
-                        disabled={sendingMsg}
-                      />
-                      <button
-                        type="submit"
-                        disabled={sendingMsg || !chatInput.trim()}
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
-                      >
-                        {sendingMsg ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </button>
-                    </form>
+                        <button
+                          type="button"
+                          onClick={() => askAI(false)}
+                          disabled={askingAI}
+                          title="Perguntar à Assistente IA"
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent ring-1 ring-accent/20 hover:bg-accent/20 disabled:opacity-40 transition-colors"
+                        >
+                          {askingAI ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4" />
+                          )}
+                        </button>
+                        <input
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          placeholder="Escreva uma mensagem…"
+                          className="flex-1 rounded-full bg-surface px-5 py-2.5 text-sm outline-none placeholder:text-ink-soft/60"
+                          disabled={sendingMsg}
+                        />
+                        <button
+                          type="submit"
+                          disabled={sendingMsg || !chatInput.trim()}
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background disabled:opacity-40"
+                        >
+                          {sendingMsg ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </section>
               </motion.div>

@@ -20,10 +20,13 @@ export function TarefasDoCliente({
   propertyId,
   recarregarToken = 0,
   onMudou,
+  somenteLeitura = false,
 }: {
   propertyId: string;
   recarregarToken?: number;
   onMudou?: () => void;
+  /** Admin vendo como o cliente: mostra as tarefas, sem o envio. */
+  somenteLeitura?: boolean;
 }) {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -101,7 +104,7 @@ export function TarefasDoCliente({
               </button>
             )}
 
-            {temEnvio && expandida && (
+            {temEnvio && expandida && !somenteLeitura && (
               <div className="mt-3">
                 {/* O tipo já vem definido pela pendência: o cliente não escolhe.
                     Assim que o arquivo chega, o gatilho no banco fecha a tarefa. */}

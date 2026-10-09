@@ -36,6 +36,7 @@ export function DocumentList({
   podeLiberar = false,
   origem,
   textoVazio = "Nenhum documento enviado ainda.",
+  comoCliente,
   recarregarToken = 0,
 }: {
   propertyId: string;
@@ -46,6 +47,12 @@ export function DocumentList({
   /** Só os documentos de um lado — o cliente vê os dele e os do profissional separados. */
   origem?: DocumentOrigem;
   textoVazio?: string;
+  /**
+   * Admin vendo o painel do cliente: aplica aqui a mesma regra que o banco
+   * aplica ao cliente (can_read_document). Sem isto o admin, que lê tudo, via
+   * peças internas e documentos removidos que o cliente não vê.
+   */
+  comoCliente?: { processoEntregue: boolean };
   recarregarToken?: number;
 }) {
   const [docs, setDocs] = useState<DocumentoComVersao[]>([]);
@@ -74,14 +81,27 @@ export function DocumentList({
   /** Último histórico pedido — descarta resposta que chega fora de ordem. */
   const historicoPedidoRef = useRef<string | null>(null);
 
+  /** Primitivo, para o useCallback não refazer a cada objeto novo. Nulo = visão da equipe. */
+  const entregueComoCliente = comoCliente ? comoCliente.processoEntregue : null;
+
   const carregar = useCallback(() => {
     setCarregando(true);
     setErro(null);
     listarDocumentos(propertyId)
-      .then((lista) => setDocs(origem ? lista.filter((d) => d.origem === origem) : lista))
+      .then((lista) => {
+        let visiveis = origem ? lista.filter((d) => d.origem === origem) : lista;
+        if (entregueComoCliente !== null) {
+          visiveis = visiveis.filter(
+            (d) =>
+              !d.deleted_at &&
+              (d.origem === "cliente" || !!d.liberado_cliente_em || entregueComoCliente),
+          );
+        }
+        setDocs(visiveis);
+      })
       .catch((e: Error) => setErro(e.message))
       .finally(() => setCarregando(false));
-  }, [propertyId, origem]);
+  }, [propertyId, origem, entregueComoCliente]);
 
   useEffect(() => {
     carregar();
