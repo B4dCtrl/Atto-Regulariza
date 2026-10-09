@@ -376,10 +376,15 @@ function ProfissionalPage() {
 
     // Os designados a mim e, para o admin, o caso pedido na URL — que pode não
     // ser dele. Sem isto o admin abria o painel e via só a própria lista.
+    //
+    // Admin acompanha TODOS os casos em andamento (a RLS já lhe dá acesso), não
+    // só os dele — é a porta "Acompanhar casos" da barra flutuante.
     async function loadProcs() {
-      const { data } = await supabase.from("properties").select("*")
-        .eq("assigned_professional_id", userId)
-        .order("updated_at", { ascending: false });
+      const consulta = supabase.from("properties").select("*");
+      const { data } = await (isAdmin
+        ? consulta.neq("status", "entregue")
+        : consulta.eq("assigned_professional_id", userId)
+      ).order("updated_at", { ascending: false });
       const lista = (data ?? []).map((p) => propToProc(p as PropertyRow));
       if (isAdmin && caso && !lista.some((p) => p.id === caso)) {
         const { data: extra } = await supabase.from("properties").select("*").eq("id", caso).maybeSingle();
@@ -1036,7 +1041,9 @@ function ProfissionalPage() {
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <div className="text-[10px] uppercase tracking-widest text-ink-soft">Em andamento</div>
-                  <h2 className="font-serif text-2xl tracking-tight">Meus processos</h2>
+                  <h2 className="font-serif text-2xl tracking-tight">
+                    {isAdmin ? "Todos os casos" : "Meus processos"}
+                  </h2>
                 </div>
                 <span className="text-xs text-ink-soft">{myProcs.length} processo{myProcs.length !== 1 ? "s" : ""}</span>
               </div>
