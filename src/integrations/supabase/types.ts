@@ -465,6 +465,7 @@ export type Database = {
           current_version_id: string | null;
           created_by: string | null;
           deleted_at: string | null;
+          liberado_cliente_em: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -481,6 +482,7 @@ export type Database = {
           current_version_id?: string | null;
           created_by?: string | null;
           deleted_at?: string | null;
+          liberado_cliente_em?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -497,6 +499,7 @@ export type Database = {
           current_version_id?: string | null;
           created_by?: string | null;
           deleted_at?: string | null;
+          liberado_cliente_em?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -985,6 +988,13 @@ export type Database = {
       restaurar_documento: {
         Args: {
           _document_id: string;
+        };
+        Returns: boolean;
+      };
+      liberar_documento_ao_cliente: {
+        Args: {
+          _document_id: string;
+          _liberar: boolean;
         };
         Returns: boolean;
       };

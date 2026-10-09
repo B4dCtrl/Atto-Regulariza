@@ -1104,6 +1104,7 @@ function ProfissionalPage() {
                       propertyId={docsProcId}
                       mostrarHistorico
                       podeExcluir
+                      podeLiberar
                       recarregarToken={recargaDocs}
                     />
                   </div>
@@ -1674,6 +1675,7 @@ function ProfissionalPage() {
                     propertyId={selectedId}
                     mostrarHistorico
                     podeExcluir
+                    podeLiberar
                     recarregarToken={recargaDocs}
                   />
                 </div>

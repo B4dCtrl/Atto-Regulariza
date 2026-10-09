@@ -35,6 +35,8 @@ export interface DocumentoComVersao {
    * interface marcá-lo, senão o profissional não distingue ativo de removido.
    */
   deleted_at: string | null;
+  /** Peça do profissional já liberada ao cliente; nulo = só a equipe vê. */
+  liberado_cliente_em: string | null;
   versao: VersaoResumo | null;
 }
 
@@ -85,7 +87,8 @@ export async function listarDocumentos(propertyId: string): Promise<DocumentoCom
     .from("documents")
     .select(
       `
-      id, property_id, name, kind, origem, status, created_at, deleted_at, current_version_id,
+      id, property_id, name, kind, origem, status, created_at, deleted_at, liberado_cliente_em,
+      current_version_id,
       versoes:document_versions!document_versions_document_id_fkey (
         id, version_number, original_name, mime_type, size_bytes, created_at, uploaded_by
       )
@@ -117,6 +120,7 @@ export async function listarDocumentos(propertyId: string): Promise<DocumentoCom
       status: d.status,
       created_at: d.created_at,
       deleted_at: d.deleted_at,
+      liberado_cliente_em: d.liberado_cliente_em,
       versao: vigente,
     };
   });
@@ -199,4 +203,18 @@ export async function excluirDocumento(documentId: string): Promise<void> {
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", documentId);
   if (error) throw new Error("Não foi possível remover o documento.");
+}
+
+/**
+ * Libera (ou recolhe) uma peça do profissional para o cliente ver.
+ *
+ * Vai por RPC porque, ao liberar, o banco também acende o sino do cliente —
+ * e quem pode liberar (admin ou profissional do caso) é checado lá dentro.
+ */
+export async function liberarAoCliente(documentId: string, liberar: boolean): Promise<void> {
+  const { error } = await supabase.rpc("liberar_documento_ao_cliente", {
+    _document_id: documentId,
+    _liberar: liberar,
+  });
+  if (error) throw new Error("Não foi possível mudar o que o cliente vê.");
 }
