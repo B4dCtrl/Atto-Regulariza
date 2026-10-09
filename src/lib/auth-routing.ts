@@ -50,6 +50,18 @@ export async function resolveLandingPath(userId: string): Promise<LandingPath> {
     .eq("client_id", userId)
     .limit(1)
     .maybeSingle();
+  if (imovel) return "/dashboard";
 
-  return imovel ? "/dashboard" : "/cadastrar";
+  // Sem imóvel, mas com o wizard já respondido: é quem se cadastrou com
+  // confirmação de e-mail. Sem sessão no cadastro, o processo não pôde ser
+  // criado ali; o intake ficou nos metadados e o painel o monta no 1º acesso
+  // (self-heal em dashboard.tsx). Mandá-lo ao wizard fazia o cliente
+  // responder tudo de novo a cada login, como se estivesse em loop.
+  //
+  // Ler `user_metadata` aqui não fere a regra acima: ele só escolhe entre
+  // duas telas do próprio cliente, não concede papel nenhum.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.user_metadata?.intake ? "/dashboard" : "/cadastrar";
 }

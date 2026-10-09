@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { SeletorLocalidade } from "@/components/forms/SeletorLocalidade";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveLandingPath } from "@/lib/auth-routing";
 import { createClientIntakeBrowser, type IntakeData } from "@/lib/client-intake";
 import { respostasDoCaso, converterCaso } from "@/lib/api/caso.server";
 import { intakeDaTriagem } from "@/lib/triagem-para-intake";
@@ -17,13 +18,20 @@ export const Route = createFileRoute("/cadastrar")({
     const c = String(busca.caso ?? "").toUpperCase();
     return /^[A-Z2-9]{6}$/.test(c) ? { caso: c } : {};
   },
-  // "Criar conta" = conta nova. Encerra qualquer sessão ativa para não cair em
-  // loop com o login anterior; o formulário aparece sempre limpo.
+  // "Criar conta" = conta nova: quem já tem conta completa sai da sessão e vê o
+  // formulário limpo.
+  //
+  // A exceção é quem foi MANDADO para cá por resolveLandingPath: conta sem
+  // imóvel (entrou pelo Google). Deslogá-la aqui criava o loop — o wizard
+  // pedia a conta de novo, o signUp recusava o e-mail já cadastrado, o login
+  // devolvia para cá, e assim por diante.
   beforeLoad: async () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    if (session) await supabase.auth.signOut();
+    if (!session) return;
+    if ((await resolveLandingPath(session.user.id)) === "/cadastrar") return;
+    await supabase.auth.signOut();
   },
   component: CadastrarPage,
 });
