@@ -45,6 +45,16 @@ function rotulo(mapa: Record<string, string>, id: string | null): string {
   return mapa[id] ?? id;
 }
 
+/** Tipo do imóvel como a equipe lê ("casa" → "Casa"). */
+export function rotuloDoTipo(id: string | null): string {
+  return rotulo(TIPO, id);
+}
+
+/** Situação como a equipe lê ("sem_habite" → "Sem habite-se / averbação"). */
+export function rotuloDaSituacao(id: string | null): string {
+  return rotulo(SITUACAO, id);
+}
+
 /** [cliente, imóvel, situação, objetivo, contato] — vazio vira "—" no envio. */
 export function valoresDoAviso(p: CadastroParaAviso): string[] {
   const local = [p.city, p.state].filter(Boolean).join("/");

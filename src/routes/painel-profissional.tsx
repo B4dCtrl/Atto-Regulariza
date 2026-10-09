@@ -19,6 +19,7 @@ import { chatAssistant } from "@/lib/api/assistant.functions";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
 import { ChecklistDocumentos } from "@/components/documentos/ChecklistDocumentos";
+import { ProcessosSemAtribuicao } from "@/components/profissional/ProcessosSemAtribuicao";
 import {
   carregarEtapas,
   marcarEtapa,
@@ -1036,6 +1037,8 @@ function ProfissionalPage() {
                 </div>
               )}
             </section>
+
+            <ProcessosSemAtribuicao />
 
           </motion.div>
             )}

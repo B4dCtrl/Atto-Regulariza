@@ -4,7 +4,8 @@ import { registrarAcesso } from "@/lib/api/acessos";
 import { Kanban } from "@/components/admin/Kanban";
 import { PainelGerencial } from "@/components/admin/PainelGerencial";
 import { OQueESeu } from "@/components/admin/OQueESeu";
-import { Search, Bell, Plus, Loader2, User, Settings, LogOut, X } from "lucide-react";
+import { Search, Plus, Loader2, User, Settings, LogOut, X } from "lucide-react";
+import { SinoNotificacoes } from "@/components/notificacoes/SinoNotificacoes";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/")({
@@ -149,14 +150,12 @@ function AdminHome() {
             </button>
           )}
 
-          {/* Sino */}
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/admin/processos" })}
-            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background hover:bg-surface transition-colors"
-          >
-            <Bell className="h-4 w-4 text-ink-soft" />
-          </button>
+          {/* Sino de verdade. Antes era só um ícone que levava à lista de
+              processos: erro de servidor, lead da triagem, cadastro novo e
+              pedido de profissional eram gravados e ninguém os via. */}
+          <SinoNotificacoes
+            onAbrirProcesso={(id) => navigate({ to: "/admin/projeto/$id", params: { id } })}
+          />
 
           {/* Novo processo */}
           <button
