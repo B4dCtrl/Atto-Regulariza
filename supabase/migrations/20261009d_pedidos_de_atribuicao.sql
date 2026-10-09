@@ -93,7 +93,9 @@ BEGIN
     RAISE EXCEPTION 'Só profissional aprovado pode pedir processos';
   END IF;
 
-  SELECT coalesce(nullif(p.city, ''), 'cidade não informada')
+  -- Sem aspas vazias de propósito: o separador de comandos do SQL Editor do
+  -- Supabase se perde com elas dentro de função e corta o comando no meio.
+  SELECT coalesce(CASE WHEN length(p.city) > 0 THEN p.city END, 'cidade não informada')
   INTO v_cidade
   FROM public.properties p
   WHERE p.id = _property_id AND p.assigned_professional_id IS NULL;
@@ -139,7 +141,8 @@ BEGIN
   INSERT INTO public.notifications (user_id, property_id, tipo, titulo, corpo)
   SELECT pa.profissional_id, NULL, 'aprovacao',
          'Processo designado a outro profissional',
-         'O caso em ' || coalesce(nullif(NEW.city, ''), 'cidade não informada')
+         'O caso em ' || coalesce(CASE WHEN length(NEW.city) > 0 THEN NEW.city END,
+                                  'cidade não informada')
            || ' que você pediu foi para outra pessoa.'
   FROM public.pedidos_atribuicao pa
   WHERE pa.property_id = NEW.id
