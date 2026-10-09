@@ -76,6 +76,25 @@ type MessageRow = Tables<"messages">;
 type ProfileRow = Tables<"profiles">;
 
 /** Iniciais a partir de um nome ("Maria Silva" → "MS"). */
+/**
+ * Foto do profissional, ou as iniciais quando ele ainda não pôs foto.
+ *
+ * O círculo vem de quem chama (tamanho e cor mudam por lugar); aqui só o
+ * conteúdo. A foto mora num bucket público — ver 20260910_foto_de_perfil.
+ */
+function FotoOuIniciais({ perfil }: { perfil: ProfileRow | null }) {
+  if (perfil?.avatar_url) {
+    return (
+      <img
+        src={perfil.avatar_url}
+        alt={perfil.name ?? "Seu especialista"}
+        className="h-full w-full rounded-full object-cover"
+      />
+    );
+  }
+  return <>{perfil?.initials ?? initialsOf(perfil?.name)}</>;
+}
+
 function initialsOf(name?: string | null): string {
   if (!name) return "—";
   const parts = name.trim().split(/\s+/);
@@ -928,8 +947,8 @@ function DashboardContent() {
                         <>
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3">
-                              <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background text-xs">
-                                {professional?.initials ?? initialsOf(professional?.name)}
+                              <div className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-foreground text-background text-xs">
+                                <FotoOuIniciais perfil={professional} />
                               </div>
                               <div>
                                 <div className="text-sm font-medium">
@@ -1042,10 +1061,8 @@ function DashboardContent() {
                   <div className="flex h-full flex-col">
                     {/* Header */}
                     <div className="flex items-center gap-3 border-b border-border px-6 py-4">
-                      <div className="grid h-10 w-10 place-items-center rounded-full bg-foreground text-background text-sm">
-                        {hasProfessional
-                          ? (professional?.initials ?? initialsOf(professional?.name))
-                          : "…"}
+                      <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-foreground text-background text-sm">
+                        {hasProfessional ? <FotoOuIniciais perfil={professional} /> : "…"}
                       </div>
                       <div>
                         <div className="font-medium">
@@ -1241,8 +1258,8 @@ function DashboardContent() {
                     <div className="text-xs text-ink-soft mb-1">Responsável pelo processo</div>
                     <h2 className="font-serif text-2xl tracking-tight mb-6">Seu especialista</h2>
                     <div className="flex items-center gap-4 mb-6">
-                      <div className="grid h-16 w-16 place-items-center rounded-full bg-foreground text-background text-xl">
-                        {professional?.initials ?? initialsOf(professional?.name)}
+                      <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-full bg-foreground text-background text-xl">
+                        <FotoOuIniciais perfil={professional} />
                       </div>
                       <div>
                         <div className="text-lg font-medium">{professional?.name}</div>
