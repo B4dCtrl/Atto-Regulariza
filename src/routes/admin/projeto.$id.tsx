@@ -70,6 +70,8 @@ function ProjetoPage() {
   const [advancing, setAdvancing] = useState(false);
   const [professionals, setProfessionals] = useState<ProfileRow[]>([]);
   const [assigning, setAssigning] = useState(false);
+  /** Recusa do banco ao designar, mostrada embaixo do seletor. */
+  const [erroDesignar, setErroDesignar] = useState<string | null>(null);
 
   useEffect(() => {
     loadAll();
@@ -93,6 +95,9 @@ function ProjetoPage() {
       .from("profiles")
       .select("*")
       .eq("role", "profissional")
+      // Só quem pode receber processo: o banco recusa profissional não
+      // aprovado, e oferecê-lo aqui fazia a designação falhar calada.
+      .eq("approval_status", "aprovado")
       .order("name");
     if (data) setProfessionals(data as ProfileRow[]);
   }
@@ -159,6 +164,7 @@ function ProjetoPage() {
   async function assignProfessional(profId: string | null) {
     if (!property) return;
     setAssigning(true);
+    setErroDesignar(null);
 
     const patch: Partial<PropertyRow> = {
       assigned_professional_id: profId,
@@ -166,11 +172,28 @@ function ProjetoPage() {
     };
 
     // Ao designar pela 1ª vez (ainda em "entrada"/sem andamento), inicia a análise.
-    if (profId && property.status === "entrada") {
+    const iniciaAnalise = Boolean(profId) && property.status === "entrada";
+    if (iniciaAnalise) {
       const { stage, progress } = STATUS_MAP["analise"];
       patch.status = "analise";
       patch.current_stage = stage;
       patch.progress = progress;
+    }
+
+    // O processo primeiro, e conferindo a resposta. Antes o erro era ignorado:
+    // o banco recusava (profissional não aprovado, trava de documentos), mas
+    // as etapas avançavam e a mensagem "Olá! Sou…" saía mesmo assim — o
+    // cliente recebia uma apresentação a cada tentativa, de quem nunca assumiu.
+    const { error } = await supabase.from("properties").update(patch).eq("id", propertyId);
+    if (error) {
+      setErroDesignar(error.message);
+      setAssigning(false);
+      loadAll();
+      return;
+    }
+
+    if (iniciaAnalise) {
+      const { stage } = STATUS_MAP["analise"];
       for (let i = 0; i < STAGE_LABELS.length; i++) {
         await supabase
           .from("process_stages")
@@ -183,8 +206,6 @@ function ProjetoPage() {
           .eq("stage_number", i + 1);
       }
     }
-
-    await supabase.from("properties").update(patch).eq("id", propertyId);
 
     // Mensagem automática avisando o cliente que um especialista assumiu.
     if (profId) {
@@ -462,8 +483,16 @@ function ProjetoPage() {
               if (property.assigned_professional_id) {
                 return (
                   <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-foreground text-background text-xs">
-                      {assigned?.initials ?? "—"}
+                    <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-foreground text-background text-xs">
+                      {assigned?.avatar_url ? (
+                        <img
+                          src={assigned.avatar_url}
+                          alt={assigned.name ?? "Profissional"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        (assigned?.initials ?? "—")
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">
@@ -512,6 +541,11 @@ function ProjetoPage() {
                     <div className="flex items-center gap-2 text-[11px] text-ink-soft">
                       <Loader2 className="h-3 w-3 animate-spin" /> Designando…
                     </div>
+                  )}
+                  {erroDesignar && (
+                    <p role="alert" className="rounded-xl bg-red-50 p-2.5 text-[11px] text-red-700">
+                      Não foi possível designar: {erroDesignar}
+                    </p>
                   )}
                 </>
               );

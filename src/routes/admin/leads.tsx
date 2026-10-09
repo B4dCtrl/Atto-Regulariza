@@ -165,6 +165,8 @@ function LeadsPage() {
       .select("id, name")
       .eq("role", "profissional")
       .eq("active", true)
+      // Não aprovado o banco recusa; oferecer aqui só gerava erro.
+      .eq("approval_status", "aprovado")
       .order("name")
       .then(({ data }) => setPros(data ?? []));
   }, []);
