@@ -31,6 +31,7 @@ import { registrarAcesso } from "@/lib/api/acessos";
 import { cabecalhoAuth } from "@/integrations/supabase/auth-headers";
 import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
+import { DocumentosDoProfissional } from "@/components/cliente/DocumentosDoProfissional";
 import { TarefasDoCliente } from "@/components/cliente/TarefasDoCliente";
 import { listarPendencias } from "@/lib/api/pendencias";
 import { supabase } from "@/integrations/supabase/client";
@@ -446,9 +447,12 @@ function DashboardContent() {
     }
 
     setProfissionalAcaminho(true);
-    timerCobrancaRef.current = setTimeout(() => {
-      void supabase.rpc("cobrar_resposta", { _property_id: propertyId });
-    }, 3 * 60 * 1000);
+    timerCobrancaRef.current = setTimeout(
+      () => {
+        void supabase.rpc("cobrar_resposta", { _property_id: propertyId });
+      },
+      3 * 60 * 1000,
+    );
     timerIaRef.current = setTimeout(() => void askAI(true), 5 * 60 * 1000);
   };
 
@@ -855,7 +859,11 @@ function DashboardContent() {
                         origem="cliente"
                         onEnviado={() => setRecargaDocs((n) => n + 1)}
                       />
-                      <DocumentList propertyId={property.id} recarregarToken={recargaDocs} />
+                      <DocumentList
+                        propertyId={property.id}
+                        origem="cliente"
+                        recarregarToken={recargaDocs}
+                      />
                     </div>
                   </section>
 
@@ -970,6 +978,13 @@ function DashboardContent() {
                     </section>
                   </div>
                 </div>
+
+                <div className="mt-6">
+                  <DocumentosDoProfissional
+                    propertyId={property.id}
+                    recarregarToken={recargaDocs}
+                  />
+                </div>
               </motion.div>
             )}
 
@@ -982,21 +997,32 @@ function DashboardContent() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
-                  <div className="mb-5">
-                    <div className="text-xs text-ink-soft">Central de documentos</div>
-                    <h2 className="font-serif text-2xl tracking-tight">Todos os documentos</h2>
-                  </div>
+                <div className="space-y-6">
+                  <DocumentosDoProfissional
+                    propertyId={property.id}
+                    recarregarToken={recargaDocs}
+                  />
 
-                  <div className="space-y-4">
-                    <UploadDocumento
-                      propertyId={property.id}
-                      origem="cliente"
-                      onEnviado={() => setRecargaDocs((n) => n + 1)}
-                    />
-                    <DocumentList propertyId={property.id} recarregarToken={recargaDocs} />
-                  </div>
-                </section>
+                  <section className="rounded-3xl bg-background ring-1 ring-border p-6 sm:p-8">
+                    <div className="mb-5">
+                      <div className="text-xs text-ink-soft">Central de documentos</div>
+                      <h2 className="font-serif text-2xl tracking-tight">Seus documentos</h2>
+                    </div>
+
+                    <div className="space-y-4">
+                      <UploadDocumento
+                        propertyId={property.id}
+                        origem="cliente"
+                        onEnviado={() => setRecargaDocs((n) => n + 1)}
+                      />
+                      <DocumentList
+                        propertyId={property.id}
+                        origem="cliente"
+                        recarregarToken={recargaDocs}
+                      />
+                    </div>
+                  </section>
+                </div>
               </motion.div>
             )}
 

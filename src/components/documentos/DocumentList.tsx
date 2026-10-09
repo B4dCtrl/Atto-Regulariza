@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FileText, History, Loader2, Trash2, Inbox, Undo2 } from "lucide-react";
+import { Eye, EyeOff, FileText, History, Loader2, Trash2, Inbox, Undo2 } from "lucide-react";
 import {
   listarDocumentos,
   listarVersoes,
   excluirDocumento,
+  liberarAoCliente,
   restaurarDocumento,
   type DocumentoComVersao,
   type VersaoResumo,
 } from "@/lib/api/documentos";
-import { rotuloDoKind } from "@/lib/document-kinds";
+import { rotuloDoKind, type DocumentOrigem } from "@/lib/document-kinds";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,11 +33,19 @@ export function DocumentList({
   /** Histórico é conversa interna: só profissional e admin. */
   mostrarHistorico = false,
   podeExcluir = false,
+  podeLiberar = false,
+  origem,
+  textoVazio = "Nenhum documento enviado ainda.",
   recarregarToken = 0,
 }: {
   propertyId: string;
   mostrarHistorico?: boolean;
   podeExcluir?: boolean;
+  /** Equipe: botão que mostra ao cliente uma peça do profissional. */
+  podeLiberar?: boolean;
+  /** Só os documentos de um lado — o cliente vê os dele e os do profissional separados. */
+  origem?: DocumentOrigem;
+  textoVazio?: string;
   recarregarToken?: number;
 }) {
   const [docs, setDocs] = useState<DocumentoComVersao[]>([]);
@@ -60,6 +69,8 @@ export function DocumentList({
   const [docParaExcluir, setDocParaExcluir] = useState<DocumentoComVersao | null>(null);
   /** Id em restauração — trava o botão para não disparar duas vezes. */
   const [restaurando, setRestaurando] = useState<string | null>(null);
+  /** Id em liberação — mesmo motivo de `restaurando`. */
+  const [liberando, setLiberando] = useState<string | null>(null);
   /** Último histórico pedido — descarta resposta que chega fora de ordem. */
   const historicoPedidoRef = useRef<string | null>(null);
 
@@ -67,10 +78,10 @@ export function DocumentList({
     setCarregando(true);
     setErro(null);
     listarDocumentos(propertyId)
-      .then(setDocs)
+      .then((lista) => setDocs(origem ? lista.filter((d) => d.origem === origem) : lista))
       .catch((e: Error) => setErro(e.message))
       .finally(() => setCarregando(false));
-  }, [propertyId]);
+  }, [propertyId, origem]);
 
   useEffect(() => {
     carregar();
@@ -131,6 +142,19 @@ export function DocumentList({
     }
   }
 
+  async function alternarLiberacao(d: DocumentoComVersao) {
+    setLiberando(d.id);
+    setErroAcao(null);
+    try {
+      await liberarAoCliente(d.id, !d.liberado_cliente_em);
+      carregar();
+    } catch (e) {
+      setErroAcao(e instanceof Error ? e.message : "Não foi possível mudar o que o cliente vê.");
+    } finally {
+      setLiberando(null);
+    }
+  }
+
   // Spinner só na primeira carga. Nas recargas (após um envio) a lista antiga
   // continua visível: trocá-la por um spinner faria o conteúdo sumir e voltar,
   // com salto de layout, a cada arquivo enviado.
@@ -150,7 +174,7 @@ export function DocumentList({
     return (
       <div className="rounded-2xl bg-surface/50 p-8 text-center">
         <Inbox className="mx-auto h-6 w-6 text-ink-soft" />
-        <p className="mt-2 text-sm text-ink-soft">Nenhum documento enviado ainda.</p>
+        <p className="mt-2 text-sm text-ink-soft">{textoVazio}</p>
       </div>
     );
   }
@@ -211,6 +235,36 @@ export function DocumentList({
                     <Undo2 className="h-3 w-3" />
                   )}
                   Restaurar
+                </button>
+              )}
+
+              {/* Peça do profissional nasce interna. O botão diz o estado
+                  atual e, ao clicar, inverte: liberar acende o sino do
+                  cliente; recolher só tira da vista dele. */}
+              {podeLiberar && d.origem === "profissional" && !d.deleted_at && (
+                <button
+                  type="button"
+                  disabled={liberando === d.id}
+                  onClick={() => alternarLiberacao(d)}
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] disabled:opacity-50 ${
+                    d.liberado_cliente_em
+                      ? "bg-accent/10 text-accent hover:bg-accent/15"
+                      : "text-ink-soft hover:bg-surface"
+                  }`}
+                  title={
+                    d.liberado_cliente_em
+                      ? "O cliente já vê este arquivo. Clique para recolher."
+                      : "Só a equipe vê este arquivo. Clique para mostrar ao cliente."
+                  }
+                >
+                  {liberando === d.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : d.liberado_cliente_em ? (
+                    <Eye className="h-3 w-3" />
+                  ) : (
+                    <EyeOff className="h-3 w-3" />
+                  )}
+                  {d.liberado_cliente_em ? "Visível ao cliente" : "Liberar ao cliente"}
                 </button>
               )}
 
