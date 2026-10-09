@@ -461,6 +461,15 @@ function ProjetoPage() {
           {/* Avançar etapa */}
           <div className="rounded-2xl bg-background ring-1 ring-border p-5 space-y-3">
             <h3 className="font-medium text-sm">Ações do processo</h3>
+            {/* A mesma área de trabalho do profissional: etapas, conferência
+                de documentos, pendências, conversa e edição dos dados do
+                cliente. Funciona mesmo sem o caso estar designado ao admin. */}
+            <button
+              onClick={() => navigate({ to: "/painel-profissional", search: { caso: propertyId } })}
+              className="w-full rounded-xl bg-accent py-2.5 text-sm text-accent-foreground hover:opacity-90 transition-opacity"
+            >
+              Trabalhar no caso
+            </button>
             <button
               onClick={advanceStage}
               disabled={isLast || advancing}

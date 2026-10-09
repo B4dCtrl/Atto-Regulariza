@@ -20,6 +20,7 @@ import { UploadDocumento } from "@/components/documentos/UploadDocumento";
 import { DocumentList } from "@/components/documentos/DocumentList";
 import { ChecklistDocumentos } from "@/components/documentos/ChecklistDocumentos";
 import { ProcessosSemAtribuicao } from "@/components/profissional/ProcessosSemAtribuicao";
+import { EditarDadosCliente } from "@/components/profissional/EditarDadosCliente";
 import {
   carregarEtapas,
   marcarEtapa,
@@ -50,23 +51,42 @@ export const Route = createFileRoute("/painel-profissional")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  // `?caso=<id>` abre um processo direto na área de trabalho. É como o admin
+  // entra num caso que não está designado a ele (o botão "Trabalhar no caso").
+  validateSearch: (busca: Record<string, unknown>): { caso?: string } =>
+    typeof busca.caso === "string" && /^[0-9a-f-]{36}$/i.test(busca.caso)
+      ? { caso: busca.caso }
+      : {},
   beforeLoad: async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw redirect({ to: "/entrar", search: { de: "painel" } });
 
-    // Só profissional APROVADO entra. Antes bastava ter sessão — qualquer cliente
-    // logado abria o painel. A RLS já barra os dados, mas a rota não pode expor a
-    // interface interna nem sugerir acesso que a pessoa não tem.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, approval_status")
-      .eq("id", session.user.id)
-      .maybeSingle();
+    // Só profissional APROVADO entra — ou admin. Antes bastava ter sessão:
+    // qualquer cliente logado abria o painel. A RLS já barra os dados, mas a
+    // rota não pode expor a interface interna nem sugerir acesso que a pessoa
+    // não tem. O admin entra para trabalhar nos casos junto (a RLS já lhe dá
+    // leitura e escrita em todos).
+    const [{ data: profile }, { data: papelAdmin }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("role, approval_status")
+        .eq("id", session.user.id)
+        .maybeSingle(),
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "admin")
+        .maybeSingle(),
+    ]);
+    const isAdmin = Boolean(papelAdmin);
 
-    if (profile?.role !== "profissional") throw redirect({ to: "/dashboard" });
-    if (profile.approval_status !== "aprovado") throw redirect({ to: "/analise-cadastro" });
+    if (!isAdmin) {
+      if (profile?.role !== "profissional") throw redirect({ to: "/dashboard" });
+      if (profile.approval_status !== "aprovado") throw redirect({ to: "/analise-cadastro" });
+    }
 
-    return { userId: session.user.id };
+    return { userId: session.user.id, isAdmin };
   },
   component: PaginaProfissional,
 });
@@ -88,6 +108,8 @@ interface MockProcess {
   type: string;
   area: number;
   situation: string;
+  /** Quem está designado. Difere do usuário quando o admin abre um caso alheio. */
+  assignedTo: string | null;
 }
 
 interface FieldDef {
@@ -197,6 +219,7 @@ function propToProc(p: PropertyRow): MockProcess {
     type: p.tipo_imovel ?? p.objetivo ?? "Regularização",
     area: 0,
     situation: p.situacao ?? p.notes ?? "—",
+    assignedTo: p.assigned_professional_id,
   };
 }
 
@@ -219,7 +242,8 @@ function PaginaProfissional() {
 }
 
 function ProfissionalPage() {
-  const { userId } = Route.useRouteContext();
+  const { userId, isAdmin } = Route.useRouteContext();
+  const { caso } = Route.useSearch();
   const navigate = useNavigate();
 
   // Diz ao chat do cliente que há alguém aqui. Sem isto a assistente responde
@@ -229,6 +253,8 @@ function ProfissionalPage() {
   const [selectedId,   setSelectedId]   = useState<string | null>(null);
   const [activeStage,  setActiveStage]  = useState(1);
   const [rightTab,     setRightTab]     = useState<RightTab>("chat");
+  /** Sobe depois de editar os dados do cliente, para a lista ler de novo. */
+  const [recargaProcs, setRecargaProcs] = useState(0);
   const [chatInput,    setChatInput]    = useState("");
   const [askingAI,     setAskingAI]     = useState(false);
   const [pendencyInput,    setPendencyInput]    = useState("");
@@ -348,11 +374,18 @@ function ProfissionalPage() {
         setProfProfile({ name: "Profissional", initials: "··", registro: "" });
       });
 
-    function loadProcs() {
-      supabase.from("properties").select("*")
+    // Os designados a mim e, para o admin, o caso pedido na URL — que pode não
+    // ser dele. Sem isto o admin abria o painel e via só a própria lista.
+    async function loadProcs() {
+      const { data } = await supabase.from("properties").select("*")
         .eq("assigned_professional_id", userId)
-        .order("updated_at", { ascending: false })
-        .then(({ data }) => { if (data) setProcesses(data.map((p) => propToProc(p as PropertyRow))); });
+        .order("updated_at", { ascending: false });
+      const lista = (data ?? []).map((p) => propToProc(p as PropertyRow));
+      if (isAdmin && caso && !lista.some((p) => p.id === caso)) {
+        const { data: extra } = await supabase.from("properties").select("*").eq("id", caso).maybeSingle();
+        if (extra) lista.unshift(propToProc(extra as PropertyRow));
+      }
+      setProcesses(lista);
     }
     loadProcs();
 
@@ -361,7 +394,18 @@ function ProfissionalPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "properties" }, loadProcs)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [userId]);
+  }, [userId, isAdmin, caso, recargaProcs]);
+
+  /* Abre o caso da URL uma vez, assim que ele estiver na lista. */
+  const casoAberto = useRef<string | null>(null);
+  useEffect(() => {
+    if (!caso || casoAberto.current === caso) return;
+    if (!processes.some((p) => p.id === caso)) return;
+    casoAberto.current = caso;
+    setMainSection("processos");
+    openProcess(caso);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caso, processes]);
 
   /* Registra a entrada uma vez por montagem da tela. */
   useEffect(() => {
@@ -1595,16 +1639,28 @@ function ProfissionalPage() {
                       <Mail className="h-3 w-3 shrink-0" />
                       <span className="truncate">{selectedProc?.clientEmail}</span>
                     </div>
-                    <button
-                      onClick={() => {
-                        if (selectedId && window.confirm("Recusar este caso? Ele volta para a equipe redistribuir.")) {
-                          declineProcess(selectedId);
-                        }
-                      }}
-                      className="mt-2 w-full rounded-lg border border-border py-1.5 text-[11px] text-ink-soft hover:border-red-300 hover:text-red-500 transition-colors"
-                    >
-                      Recusar caso
-                    </button>
+                    {selectedId && (
+                      <div className="pt-1.5">
+                        <EditarDadosCliente
+                          propertyId={selectedId}
+                          onSalvo={() => setRecargaProcs((n) => n + 1)}
+                        />
+                      </div>
+                    )}
+                    {/* Recusar é de quem está designado. O admin que abriu um
+                        caso alheio tiraria o profissional sem querer. */}
+                    {selectedProc?.assignedTo === userId && (
+                      <button
+                        onClick={() => {
+                          if (selectedId && window.confirm("Recusar este caso? Ele volta para a equipe redistribuir.")) {
+                            declineProcess(selectedId);
+                          }
+                        }}
+                        className="mt-2 w-full rounded-lg border border-border py-1.5 text-[11px] text-ink-soft hover:border-red-300 hover:text-red-500 transition-colors"
+                      >
+                        Recusar caso
+                      </button>
+                    )}
                   </div>
 
                   {/* Timeline / stage progress */}

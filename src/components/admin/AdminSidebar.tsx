@@ -17,6 +17,7 @@ import {
   Flag,
   ClipboardCheck,
   Mail,
+  Hammer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -27,6 +28,8 @@ const mainItems = [
   { to: "/admin/mail", label: "E-mail", icon: Mail },
   { to: "/admin/analise", label: "Em análise", icon: ClipboardCheck },
   { to: "/admin/processos", label: "Processos", icon: Briefcase },
+  // Para quem é admin e também atende: os casos designados a ele.
+  { to: "/painel-profissional", label: "Área de trabalho", icon: Hammer },
   { to: "/admin/clientes", label: "Clientes", icon: Users },
   { to: "/admin/documentos", label: "Documentos", icon: FolderOpen },
 ] as const;
