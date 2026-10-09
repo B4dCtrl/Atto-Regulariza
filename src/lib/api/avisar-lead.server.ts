@@ -41,7 +41,7 @@ const DESTINO_DA_EQUIPE = "554184471404";
  * é registro de atendimento, que é o que ele de fato é — e o que a categoria
  * de utilidade cobre.
  */
-type Modelo = "lead_triagem" | "pedido_atendente";
+type Modelo = "lead_triagem" | "pedido_atendente" | "novo_cadastro";
 
 /** Cor da triagem como a equipe vê no celular: sem ler, só de bater o olho. */
 const EMOJI: Record<Cor, string> = {
@@ -122,5 +122,12 @@ export function avisarPedidoDeAtendente(dados: {
 }): Promise<void> {
   return enviarModelo("pedido_atendente", [dados.nome, dados.telefone, dados.parouEm]).catch((e) =>
     console.error("[aviso] falha ao avisar pedido de atendente", e),
+  );
+}
+
+/** Cliente terminou o cadastro no site: o processo dele acabou de nascer. */
+export function avisarNovoCadastro(valores: string[]): Promise<void> {
+  return enviarModelo("novo_cadastro", valores).catch((e) =>
+    console.error("[aviso] falha ao avisar novo cadastro", e),
   );
 }
