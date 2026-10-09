@@ -37,14 +37,17 @@ BEGIN
   BEGIN
     INSERT INTO public.notifications (user_id, property_id, tipo, titulo, corpo)
     SELECT ur.user_id, NEW.id, 'lead',
-           'Novo cadastro no site' ||
-             CASE WHEN coalesce(NEW.city, '') <> ''
-                  THEN ' — ' || NEW.city || coalesce('/' || nullif(NEW.state, ''), '')
-                  ELSE '' END,
+           -- Sem aspas vazias de propósito: o separador de comandos do SQL
+           -- Editor do Supabase se perde com elas e corta a função no meio.
+           -- concat_ws pula o que é nulo, e CASE sem ELSE devolve nulo.
+           concat_ws(' — ', 'Novo cadastro no site',
+             CASE WHEN length(NEW.city) > 0 THEN
+               concat_ws('/', NEW.city, CASE WHEN length(NEW.state) > 0 THEN NEW.state END)
+             END),
            left(concat_ws(' · ',
-             nullif(NEW.client_name, ''),
-             nullif(NEW.client_email, ''),
-             nullif(NEW.objetivo, '')
+             CASE WHEN length(NEW.client_name) > 0 THEN NEW.client_name END,
+             CASE WHEN length(NEW.client_email) > 0 THEN NEW.client_email END,
+             CASE WHEN length(NEW.objetivo) > 0 THEN NEW.objetivo END
            ), 500)
     FROM public.user_roles ur
     WHERE ur.role = 'admin';

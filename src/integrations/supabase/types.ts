@@ -451,6 +451,33 @@ export type Database = {
           },
         ];
       };
+      pedidos_atribuicao: {
+        Row: {
+          id: string;
+          property_id: string;
+          profissional_id: string;
+          status: "pendente" | "aceito" | "recusado";
+          criado_em: string;
+          decidido_em: string | null;
+        };
+        Insert: {
+          id?: string;
+          property_id: string;
+          profissional_id: string;
+          status?: "pendente" | "aceito" | "recusado";
+          criado_em?: string;
+          decidido_em?: string | null;
+        };
+        Update: {
+          id?: string;
+          property_id?: string;
+          profissional_id?: string;
+          status?: "pendente" | "aceito" | "recusado";
+          criado_em?: string;
+          decidido_em?: string | null;
+        };
+        Relationships: [];
+      };
       documents: {
         Row: {
           id: string;
@@ -988,6 +1015,25 @@ export type Database = {
       restaurar_documento: {
         Args: {
           _document_id: string;
+        };
+        Returns: boolean;
+      };
+      processos_sem_atribuicao: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          tipo_imovel: string | null;
+          situacao: string | null;
+          objetivo: string | null;
+          city: string | null;
+          state: string | null;
+          criado_em: string;
+          ja_pedi: boolean;
+        }[];
+      };
+      solicitar_atribuicao: {
+        Args: {
+          _property_id: string;
         };
         Returns: boolean;
       };

@@ -17,6 +17,10 @@ import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/admin/aprovacoes")({
   head: () => ({ meta: [{ title: "Aprovações — Gestão Regulariza" }] }),
+  // `?filtro=aprovado` chega do briefing quando o assunto é um profissional
+  // já aprovado — abrir em "Pendentes" mostrava uma lista sem ele.
+  validateSearch: (busca: Record<string, unknown>): { filtro?: "aprovado" | "recusado" } =>
+    busca.filtro === "aprovado" || busca.filtro === "recusado" ? { filtro: busca.filtro } : {},
   component: AprovacoesPage,
 });
 
@@ -30,7 +34,8 @@ const FILTROS: { key: Filtro; label: string }[] = [
 ];
 
 function AprovacoesPage() {
-  const [filtro, setFiltro] = useState<Filtro>("pendente");
+  const { filtro: filtroInicial } = Route.useSearch();
+  const [filtro, setFiltro] = useState<Filtro>(filtroInicial ?? "pendente");
   const [rows, setRows] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);

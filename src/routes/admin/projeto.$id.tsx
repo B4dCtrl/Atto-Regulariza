@@ -14,6 +14,7 @@ import {
   Send,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { listarPedidosDoProcesso, type PedidoComProfissional } from "@/lib/api/pedidos-atribuicao";
 import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/admin/projeto/$id")({
@@ -70,6 +71,8 @@ function ProjetoPage() {
   const [advancing, setAdvancing] = useState(false);
   const [professionals, setProfessionals] = useState<ProfileRow[]>([]);
   const [assigning, setAssigning] = useState(false);
+  /** Profissionais que pediram este processo pelo painel deles. */
+  const [pedidos, setPedidos] = useState<PedidoComProfissional[]>([]);
   /** Recusa do banco ao designar, mostrada embaixo do seletor. */
   const [erroDesignar, setErroDesignar] = useState<string | null>(null);
 
@@ -102,7 +105,12 @@ function ProjetoPage() {
     if (data) setProfessionals(data as ProfileRow[]);
   }
 
+  async function loadPedidos() {
+    setPedidos(await listarPedidosDoProcesso(propertyId));
+  }
+
   async function loadAll() {
+    loadPedidos();
     setLoading(true);
     const [{ data: p }, { data: s }, { data: d }, { data: m }] = await Promise.all([
       supabase.from("properties").select("*").eq("id", propertyId).single(),
@@ -514,6 +522,31 @@ function ProjetoPage() {
               }
               return (
                 <>
+                  {pedidos.length > 0 && (
+                    <div className="space-y-1.5 rounded-xl bg-accent/5 p-3 ring-1 ring-accent/20">
+                      <div className="text-[11px] font-medium text-accent">
+                        {pedidos.length === 1
+                          ? "1 profissional pediu este processo"
+                          : `${pedidos.length} profissionais pediram este processo`}
+                      </div>
+                      {pedidos.map((pd) => (
+                        <div key={pd.id} className="flex items-center gap-2 text-xs">
+                          <span className="min-w-0 flex-1 truncate font-medium">{pd.nome}</span>
+                          <span className="shrink-0 text-ink-soft">
+                            {new Date(pd.criado_em).toLocaleDateString("pt-BR")}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={assigning}
+                            onClick={() => assignProfessional(pd.profissional_id)}
+                            className="shrink-0 rounded-full bg-foreground px-2.5 py-1 text-[11px] text-background hover:bg-foreground/90 disabled:opacity-50"
+                          >
+                            Designar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {professionals.length === 0 ? (
                     <p className="text-[11px] text-ink-soft">
                       Nenhum profissional cadastrado ainda. Eles aparecem aqui após criar conta em
