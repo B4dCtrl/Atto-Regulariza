@@ -66,6 +66,14 @@ export function StaffBar() {
             telas COM dados existem as contas de teste. */}
         <Link to="/" className={linkCls}>Site</Link>
         <Link to="/admin" className={linkCls}>Back office</Link>
+        {/* Área de trabalho do profissional, aberta para o admin com todos
+            os casos em andamento: etapas, documentos, conversa e dados do
+            cliente, sem precisar estar designado. */}
+        {isAdmin && (
+          <Link to="/painel-profissional" className={linkCls}>
+            Acompanhar casos
+          </Link>
+        )}
         <Link to="/admin/mail" className={linkCls}>
           Mail
         </Link>
