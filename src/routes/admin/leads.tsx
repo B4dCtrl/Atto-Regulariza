@@ -1,9 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Plus, X, Building2, Clock, MapPin, Check, AlertTriangle, Search } from "lucide-react";
+import {
+  Plus,
+  X,
+  Building2,
+  Clock,
+  MapPin,
+  Check,
+  AlertTriangle,
+  Search,
+  ExternalLink,
+  FileText,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { DetalheTriagem, type DadosTriagem } from "@/components/admin/DetalheTriagem";
+import { ChecklistDocumentos } from "@/components/documentos/ChecklistDocumentos";
 import type { Cor, Produto, Respostas } from "@/lib/triagem";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -118,6 +130,15 @@ function LeadsPage() {
   const [busca, setBusca] = useState("");
   const [notes, setNotes] = useState("");
   const [pros, setPros] = useState<{ id: string; name: string | null }[]>([]);
+  /**
+   * O processo deste lead, achado pelo e-mail — o mesmo elo que `assignPro`
+   * usa. `undefined` enquanto procura; `null` quando o lead ainda não virou
+   * processo (veio da triagem e não se cadastrou, por exemplo).
+   */
+  const [processo, setProcesso] = useState<
+    { id: string; assigned_professional_id: string | null } | null | undefined
+  >(undefined);
+  const [atribuindo, setAtribuindo] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [nl, setNl] = useState({
     name: "",
@@ -148,6 +169,30 @@ function LeadsPage() {
       .then(({ data }) => setPros(data ?? []));
   }, []);
 
+  const leadAberto = selectedLead?.id;
+  const emailAberto = selectedLead?.email;
+  useEffect(() => {
+    setProcesso(undefined);
+    if (!leadAberto) return;
+    if (!emailAberto) {
+      setProcesso(null);
+      return;
+    }
+    let ativo = true;
+    supabase
+      .from("properties")
+      .select("id, assigned_professional_id")
+      .eq("client_email", emailAberto)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (ativo) setProcesso(data ?? null);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [leadAberto, emailAberto]);
+
   const update = async (id: string, patch: Partial<Lead>) => {
     const dbPatch: Record<string, unknown> = {};
     if (patch.status) dbPatch.status = patch.status;
@@ -176,64 +221,80 @@ function LeadsPage() {
   };
   // Atribuir profissional = converter o lead em PROCESSO (imóvel) designado a ele
   // e abrir o ambiente de tratamento. O profissional passa a ver no painel dele.
-  async function assignPro(proId: string) {
-    if (!selectedLead || !proId) return;
+  //
+  // `abrirCaso` = false é a TROCA de profissional num lead já atribuído: muda
+  // o responsável e fica no painel, sem mexer na fase do lead.
+  async function assignPro(proId: string, abrirCaso = true) {
+    if (!selectedLead || !proId || atribuindo) return;
     const pro = pros.find((p) => p.id === proId);
-
-    // Idempotência: já há processo para este e-mail?
-    const { data: existing } = await supabase
-      .from("properties")
-      .select("id")
-      .eq("client_email", selectedLead.email)
-      .limit(1)
-      .maybeSingle();
-
-    let propId = existing?.id as string | undefined;
-    if (!propId) {
-      const tipo = selectedLead.propertyType !== "—" ? selectedLead.propertyType : "";
-      const propName = `${tipo ? tipo.charAt(0).toUpperCase() + tipo.slice(1) : "Imóvel"}${selectedLead.city ? ` — ${selectedLead.city}` : ""}`;
-      const { data: prop, error } = await supabase
+    setAtribuindo(true);
+    try {
+      // Idempotência: já há processo para este e-mail?
+      const { data: existing } = await supabase
         .from("properties")
-        .insert({
-          name: propName,
-          city: selectedLead.city || null,
-          state: selectedLead.state || null,
-          status: "analise",
-          current_stage: 1,
-          progress: 10,
-          assigned_professional_id: proId,
-          client_name: selectedLead.name,
-          client_email: selectedLead.email,
-          client_phone: selectedLead.phone || null,
-          tipo_imovel: tipo || null,
-          situacao: selectedLead.situation !== "—" ? selectedLead.situation : null,
-          notes: selectedLead.notes || null,
-        })
         .select("id")
-        .single();
-      if (error || !prop) {
-        alert(`Erro ao criar processo: ${error?.message ?? "desconhecido"}`);
-        return;
-      }
-      propId = prop.id;
-      const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
-      await supabase.from("process_stages").insert(
-        STAGE_LABELS.map((label, i) => ({
-          property_id: propId,
-          stage_number: i + 1,
-          label,
-          state: i === 0 ? "active" : "pending",
-        })),
-      );
-    } else {
-      await supabase
-        .from("properties")
-        .update({ assigned_professional_id: proId })
-        .eq("id", propId);
-    }
+        .eq("client_email", selectedLead.email)
+        .limit(1)
+        .maybeSingle();
 
-    await update(selectedLead.id, { status: "atribuido", professionalName: pro?.name ?? null });
-    navigate({ to: "/admin/projeto/$id", params: { id: propId } });
+      let propId = existing?.id as string | undefined;
+      if (!propId) {
+        const tipo = selectedLead.propertyType !== "—" ? selectedLead.propertyType : "";
+        const propName = `${tipo ? tipo.charAt(0).toUpperCase() + tipo.slice(1) : "Imóvel"}${selectedLead.city ? ` — ${selectedLead.city}` : ""}`;
+        const { data: prop, error } = await supabase
+          .from("properties")
+          .insert({
+            name: propName,
+            city: selectedLead.city || null,
+            state: selectedLead.state || null,
+            status: "analise",
+            current_stage: 1,
+            progress: 10,
+            assigned_professional_id: proId,
+            client_name: selectedLead.name,
+            client_email: selectedLead.email,
+            client_phone: selectedLead.phone || null,
+            tipo_imovel: tipo || null,
+            situacao: selectedLead.situation !== "—" ? selectedLead.situation : null,
+            notes: selectedLead.notes || null,
+          })
+          .select("id")
+          .single();
+        if (error || !prop) {
+          alert(`Erro ao criar processo: ${error?.message ?? "desconhecido"}`);
+          return;
+        }
+        propId = prop.id;
+        const STAGE_LABELS = ["Cadastro", "Análise", "Profissional", "Tramitação", "Entrega"];
+        await supabase.from("process_stages").insert(
+          STAGE_LABELS.map((label, i) => ({
+            property_id: propId,
+            stage_number: i + 1,
+            label,
+            state: i === 0 ? "active" : "pending",
+          })),
+        );
+      } else {
+        const { error } = await supabase
+          .from("properties")
+          .update({ assigned_professional_id: proId })
+          .eq("id", propId);
+        if (error) {
+          alert(`Erro ao atribuir: ${error.message}`);
+          return;
+        }
+      }
+
+      setProcesso({ id: propId, assigned_professional_id: proId });
+      const fase: LeadStatus =
+        selectedLead.status === "ativo" || selectedLead.status === "atribuido"
+          ? selectedLead.status
+          : "atribuido";
+      await update(selectedLead.id, { status: fase, professionalName: pro?.name ?? null });
+      if (abrirCaso) navigate({ to: "/admin/projeto/$id", params: { id: propId } });
+    } finally {
+      setAtribuindo(false);
+    }
   }
   async function createManualLead() {
     if (!nl.name.trim() || !nl.email.trim()) return;
@@ -413,7 +474,7 @@ function LeadsPage() {
         )}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="grid gap-5 lg:grid-cols-[1fr_420px]">
         {/* Lead list */}
         <div className="space-y-2">
           {filtered.length === 0 && (
@@ -519,6 +580,17 @@ function LeadsPage() {
                 <div>
                   <h3 className="font-serif text-xl tracking-tight">{selectedLead.name}</h3>
                   <div className="mt-0.5 text-xs text-ink-soft">{selectedLead.email}</div>
+                  {processo && (
+                    <button
+                      onClick={() =>
+                        navigate({ to: "/admin/projeto/$id", params: { id: processo.id } })
+                      }
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-xs text-background hover:bg-foreground/90"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Abrir caso do cliente
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={() => setSelectedLead(null)}
@@ -559,18 +631,49 @@ function LeadsPage() {
                 </div>
               )}
 
-              {/* Professional */}
-              {selectedLead.professionalName && (
-                <div className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2.5 text-xs">
-                  <div className="grid h-6 w-6 place-items-center rounded-full bg-foreground text-background text-[10px] font-medium">
-                    {selectedLead.professionalName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .slice(0, 2)
-                      .join("")}
-                  </div>
-                  <span className="text-ink-soft">Atribuído a</span>
-                  <span className="font-medium">{selectedLead.professionalName}</span>
+              {/* Documentos que o cliente mandou: é a triagem documental. Abre
+                  cada arquivo, marca como conferido e pede o que falta — o
+                  pedido vira tarefa no painel do cliente. */}
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium">
+                  <FileText className="h-3.5 w-3.5" />
+                  Documentos do cliente
+                </div>
+                {processo === undefined ? (
+                  <p className="text-xs text-ink-soft">Procurando o processo…</p>
+                ) : processo ? (
+                  <ChecklistDocumentos propertyId={processo.id} stageNumber={1} />
+                ) : (
+                  <p className="rounded-xl bg-surface p-3 text-xs leading-relaxed text-ink-soft">
+                    Ainda não há processo para este lead, então não há documentos. Ele nasce quando
+                    o cliente se cadastra no site com este e-mail, ou quando você atribui um
+                    profissional.
+                  </p>
+                )}
+              </div>
+
+              {/* Profissional: atribuído, com troca a qualquer momento. */}
+              {(selectedLead.status === "atribuido" || selectedLead.status === "ativo") && (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium">Profissional responsável</div>
+                  <select
+                    value={processo?.assigned_professional_id ?? ""}
+                    disabled={atribuindo || !processo}
+                    onChange={(e) => assignPro(e.target.value, false)}
+                    className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30 disabled:opacity-60"
+                  >
+                    <option value="" disabled>
+                      {selectedLead.professionalName ?? "Selecione um profissional…"}
+                    </option>
+                    {pros.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name ?? "(sem nome)"}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-ink-soft">
+                    Trocar aqui passa o caso para outro profissional na hora.
+                  </p>
                 </div>
               )}
 
@@ -607,6 +710,7 @@ function LeadsPage() {
                     <div className="text-xs font-medium">Atribuir profissional</div>
                     <select
                       defaultValue=""
+                      disabled={atribuindo}
                       onChange={(e) => assignPro(e.target.value)}
                       className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-foreground/30"
                     >
