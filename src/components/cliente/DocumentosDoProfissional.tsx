@@ -14,9 +14,11 @@ import { DocumentList } from "@/components/documentos/DocumentList";
 export function DocumentosDoProfissional({
   propertyId,
   recarregarToken,
+  comoCliente,
 }: {
   propertyId: string;
   recarregarToken: number;
+  comoCliente?: { processoEntregue: boolean };
 }) {
   return (
     <section className="rounded-3xl bg-background p-6 ring-1 ring-border sm:p-8">
@@ -33,6 +35,7 @@ export function DocumentosDoProfissional({
         propertyId={propertyId}
         origem="profissional"
         textoVazio="Assim que o profissional preparar um documento do seu caso, ele aparece aqui."
+        comoCliente={comoCliente}
         recarregarToken={recarregarToken}
       />
     </section>

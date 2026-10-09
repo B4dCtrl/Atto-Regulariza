@@ -208,6 +208,24 @@ function ClientesPage() {
                   </button>
                 </div>
 
+                {/* O id aqui é o do processo (a lista vem de properties). */}
+                <div className="mb-5 grid grid-cols-2 gap-2">
+                  <Link
+                    to="/dashboard"
+                    search={{ verComo: selected.id }}
+                    className="rounded-xl bg-foreground py-2 text-center text-xs text-background hover:bg-foreground/90"
+                  >
+                    Ver como o cliente
+                  </Link>
+                  <Link
+                    to="/painel-profissional"
+                    search={{ caso: selected.id }}
+                    className="rounded-xl border border-border py-2 text-center text-xs text-ink-soft hover:bg-surface"
+                  >
+                    Trabalhar no caso
+                  </Link>
+                </div>
+
                 <dl className="space-y-3 text-sm">
                   <div className="flex items-center gap-2 text-ink-soft">
                     <Mail className="h-3.5 w-3.5 shrink-0" />

@@ -471,6 +471,12 @@ function ProjetoPage() {
               Trabalhar no caso
             </button>
             <button
+              onClick={() => navigate({ to: "/dashboard", search: { verComo: propertyId } })}
+              className="w-full rounded-xl border border-border py-2.5 text-sm text-ink-soft hover:bg-surface transition-colors"
+            >
+              Ver como o cliente
+            </button>
+            <button
               onClick={advanceStage}
               disabled={isLast || advancing}
               className="w-full rounded-xl bg-foreground py-2.5 text-sm text-background hover:opacity-80 disabled:opacity-40 transition-opacity"
