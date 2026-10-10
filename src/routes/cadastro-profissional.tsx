@@ -3,6 +3,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, Loader2, AlertCircle, Eye, EyeOff, Briefcase, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { dominioRecebeEmail } from "@/lib/api/email-dominio.functions";
+import { avisoDominioInexistente } from "@/lib/email-dominio";
 
 export const Route = createFileRoute("/cadastro-profissional")({
   head: () => ({
@@ -54,6 +56,18 @@ function CadastroProfissionalPage() {
     }
     setLoading(true);
     setError(null);
+
+    // Domínio que não recebe e-mail (digitado errado, inventado) não cria
+    // conta: o link de confirmação nunca chegaria. Na dúvida, segue.
+    const { recebe, dominio } = await dominioRecebeEmail({ data: { email: email } }).catch(() => ({
+      recebe: null,
+      dominio: null,
+    }));
+    if (recebe === false) {
+      setError(dominio ? avisoDominioInexistente(dominio) : "Confira o e-mail digitado.");
+      setLoading(false);
+      return;
+    }
 
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email,
