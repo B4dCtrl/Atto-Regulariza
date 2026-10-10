@@ -68,6 +68,7 @@ function ProcessosPage() {
     supabase
       .from("properties")
       .select("*")
+      .is("desativado_em", null)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) setProperties(data);

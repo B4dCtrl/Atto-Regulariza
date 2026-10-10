@@ -382,7 +382,7 @@ function ProfissionalPage() {
     async function loadProcs() {
       const consulta = supabase.from("properties").select("*");
       const { data } = await (isAdmin
-        ? consulta.neq("status", "entregue")
+        ? consulta.neq("status", "entregue").is("desativado_em", null)
         : consulta.eq("assigned_professional_id", userId)
       ).order("updated_at", { ascending: false });
       const lista = (data ?? []).map((p) => propToProc(p as PropertyRow));

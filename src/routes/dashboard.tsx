@@ -35,6 +35,7 @@ import { DocumentosDoProfissional } from "@/components/cliente/DocumentosDoProfi
 import { TarefasDoCliente } from "@/components/cliente/TarefasDoCliente";
 import { listarPendencias } from "@/lib/api/pendencias";
 import { supabase } from "@/integrations/supabase/client";
+import { ATENDIMENTO_PHONE } from "@/lib/brand";
 import type { Tables } from "@/integrations/supabase/types";
 import { TourProvider, TourAlertDialog, useTour, TourHelpButton } from "@/components/ui/tour";
 import { getTourSteps, TOUR_TOPICS } from "@/components/onboarding/TourTopics";
@@ -788,6 +789,27 @@ function DashboardContent() {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-6xl mx-auto w-full">
+          {/* Processo desativado pela equipe. O painel continua abrindo — o
+              histórico é dele —, mas diz com clareza que nada anda e com quem
+              falar. Sem isto, a pessoa veria a barra parada e esperaria. */}
+          {property?.desativado_em && (
+            <div className="mb-6 rounded-2xl bg-surface p-4 text-sm leading-relaxed ring-1 ring-border">
+              <div className="font-medium">Seu processo está pausado</div>
+              <p className="mt-1 text-ink-soft">
+                A equipe pausou o acompanhamento deste processo. Para retomar ou tirar dúvidas, fale
+                com a gente pelo WhatsApp{" "}
+                <a
+                  href={`https://wa.me/${ATENDIMENTO_PHONE}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground underline"
+                >
+                  (41) 98447-1404
+                </a>
+                .
+              </p>
+            </div>
+          )}
           {/* ── VISÃO GERAL ── */}
           <AnimatePresence mode="wait">
             {activeSection === "overview" && (

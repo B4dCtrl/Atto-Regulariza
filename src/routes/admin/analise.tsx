@@ -29,6 +29,7 @@ function AnalisePage() {
       .from("properties")
       .select("id, name, client_name, updated_at")
       .eq("coleta", "EM_ANALISE")
+      .is("desativado_em", null)
       // Quem espera há mais tempo aparece primeiro.
       .order("updated_at", { ascending: true });
     setFila((data ?? []) as ItemFila[]);

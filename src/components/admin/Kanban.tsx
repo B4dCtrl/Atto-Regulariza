@@ -59,7 +59,8 @@ export function Kanban({ filter = "" }: { filter?: string }) {
 
   /* ── Initial load ── */
   useEffect(() => {
-    supabase.from("properties").select("*").then(({ data }) => {
+    // Cliente desativado sai do quadro.
+    supabase.from("properties").select("*").is("desativado_em", null).then(({ data }) => {
       if (data) setCards(data.map(rowToCard));
       setLoading(false);
     });

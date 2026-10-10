@@ -56,7 +56,8 @@ function AdminHome() {
   async function loadKpis() {
     const { data } = await supabase
       .from("properties")
-      .select("status, updated_at, name, next_action_deadline");
+      .select("status, updated_at, name, next_action_deadline")
+      .is("desativado_em", null);
     if (!data) {
       setLoading(false);
       return;

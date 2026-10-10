@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   UserPlus, Search, Phone, Mail, Building2,
-  Home, Trash2, ChevronRight,
+  Home, Trash2, ChevronRight, RotateCcw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,8 @@ interface Client {
   estado: string;
   cadastrado_em: string;
   tutorial_concluido: boolean;
+  /** Desativado pelo admin: some das listas, fica aqui opaco para reativar. */
+  desativado: boolean;
 }
 
 function ClientesPage() {
@@ -50,10 +52,12 @@ function ClientesPage() {
   const [search,   setSearch]   = useState("");
   const [filter,   setFilter]   = useState("all");
   const [selected, setSelected] = useState<Client | null>(null);
+  const [mudando, setMudando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.from("properties")
-      .select("id, client_name, client_email, client_phone, client_cpf, tipo_imovel, situacao, objetivo, city, state, created_at")
+      .select("id, client_name, client_email, client_phone, client_cpf, tipo_imovel, situacao, objetivo, city, state, created_at, desativado_em")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (!data) return;
@@ -70,12 +74,39 @@ function ClientesPage() {
           estado: p.state ?? "",
           cadastrado_em: p.created_at,
           tutorial_concluido: true,
+          desativado: Boolean(p.desativado_em),
         })));
       });
   }, []);
 
-  const remove = (_id: string) => {
-    alert("Para remover um cliente, exclua o processo dele no Back office. Aqui é somente leitura.");
+  /**
+   * Desativar não apaga: o processo sai das listas, o profissional deixa de ter
+   * o caso e o lead sai da Central de Leads. Reativar devolve o processo e põe
+   * o lead de volta em "Novo". Tudo dentro de uma função no banco, só admin.
+   */
+  const alternarAtivo = async (c: Client) => {
+    const desativar = !c.desativado;
+    if (
+      desativar &&
+      !confirm(
+        `Desativar ${c.nome}? O processo sai das listas, o profissional deixa de ter o caso e o lead sai da Central de Leads. Nada é apagado: dá para reativar depois.`,
+      )
+    )
+      return;
+    setMudando(true);
+    setErro(null);
+    const { error } = await supabase.rpc("desativar_cliente", {
+      _property_id: c.id,
+      _desativar: desativar,
+    });
+    setMudando(false);
+    if (error) {
+      setErro(`Não foi possível ${desativar ? "desativar" : "reativar"}: ${error.message}`);
+      return;
+    }
+    const atualizado = { ...c, desativado: desativar };
+    setClients((cs) => cs.map((x) => (x.id === c.id ? atualizado : x)));
+    setSelected(atualizado);
   };
 
   const filtered = clients.filter((c) => {
@@ -161,7 +192,7 @@ function ClientesPage() {
                 >
                   <button
                     onClick={() => setSelected(selected?.id === c.id ? null : c)}
-                    className={`w-full grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_80px] gap-4 items-center border-b border-border/50 px-5 py-4 last:border-0 text-left transition-colors ${selected?.id === c.id ? "bg-foreground text-background" : "hover:bg-surface/40"}`}
+                    className={`w-full grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_80px] gap-4 items-center border-b border-border/50 px-5 py-4 last:border-0 text-left transition-colors ${selected?.id === c.id ? "bg-foreground text-background" : "hover:bg-surface/40"} ${c.desativado && selected?.id !== c.id ? "opacity-45" : ""}`}
                   >
                     {/* Nome */}
                     <div className="flex items-center gap-3 min-w-0">
@@ -202,9 +233,27 @@ function ClientesPage() {
                     <div className="mt-1 text-xs text-ink-soft">
                       Cadastrado em {new Date(selected.cadastrado_em).toLocaleDateString("pt-BR")}
                     </div>
+                    {selected.desativado && (
+                      <div className="mt-2 inline-flex rounded-full bg-surface px-2 py-0.5 text-[10px] uppercase tracking-widest text-ink-soft ring-1 ring-border">
+                        desativado
+                      </div>
+                    )}
                   </div>
-                  <button onClick={() => remove(selected.id)} className="grid h-8 w-8 place-items-center rounded-full text-ink-soft hover:bg-surface transition-colors">
-                    <Trash2 className="h-4 w-4" />
+                  <button
+                    onClick={() => alternarAtivo(selected)}
+                    disabled={mudando}
+                    title={selected.desativado ? "Reativar cliente" : "Desativar cliente"}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors disabled:opacity-50 ${
+                      selected.desativado
+                        ? "bg-foreground text-background hover:bg-foreground/90"
+                        : "text-ink-soft hover:bg-red-50 hover:text-red-600"
+                    }`}
+                  >
+                    {selected.desativado ? (
+                      <><RotateCcw className="h-3.5 w-3.5" /> Reativar</>
+                    ) : (
+                      <><Trash2 className="h-3.5 w-3.5" /> Desativar</>
+                    )}
                   </button>
                 </div>
 
@@ -225,6 +274,12 @@ function ClientesPage() {
                     Trabalhar no caso
                   </Link>
                 </div>
+
+                {erro && (
+                  <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-xs text-red-700">
+                    {erro}
+                  </p>
+                )}
 
                 <dl className="space-y-3 text-sm">
                   <div className="flex items-center gap-2 text-ink-soft">

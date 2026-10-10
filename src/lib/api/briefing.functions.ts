@@ -122,6 +122,7 @@ async function coletarDados(): Promise<DadosGerenciais> {
       .from("properties")
       .select("id, name, current_stage, updated_at, client_id, client_name")
       .neq("status", "entregue")
+      .is("desativado_em", null)
       .lt("updated_at", limiteParado),
     supabaseAdmin.from("leads").select("city, state, created_at").eq("status", "novo"),
     supabaseAdmin

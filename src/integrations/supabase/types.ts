@@ -346,6 +346,7 @@ export type Database = {
           objetivo: string | null;
           urgencia: string | null;
           notes: string | null;
+          desativado_em: string | null;
         };
         Insert: {
           id?: string;
@@ -372,6 +373,7 @@ export type Database = {
           objetivo?: string | null;
           urgencia?: string | null;
           notes?: string | null;
+          desativado_em?: string | null;
         };
         Update: {
           id?: string;
@@ -398,6 +400,7 @@ export type Database = {
           objetivo?: string | null;
           urgencia?: string | null;
           notes?: string | null;
+          desativado_em?: string | null;
         };
         Relationships: [];
       };
@@ -1030,6 +1033,13 @@ export type Database = {
           criado_em: string;
           ja_pedi: boolean;
         }[];
+      };
+      desativar_cliente: {
+        Args: {
+          _property_id: string;
+          _desativar: boolean;
+        };
+        Returns: boolean;
       };
       emails_confirmados: {
         Args: {
