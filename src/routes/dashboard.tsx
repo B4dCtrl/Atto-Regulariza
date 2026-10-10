@@ -715,9 +715,18 @@ function DashboardContent() {
               <div className="text-xs text-ink-soft">O que falta de você</div>
               <div className="mt-1 text-sm font-medium leading-snug">
                 {tarefasAbertas === 0
-                  ? "Nada pendente"
+                  ? "Nada pendente por enquanto"
                   : `${tarefasAbertas} ${tarefasAbertas === 1 ? "tarefa pendente" : "tarefas pendentes"}`}
               </div>
+              {/* "Nada pendente" sozinho soava como se nada fosse acontecer.
+                  Sem tarefa, o cartão diz o que vem a seguir — e de quem é a vez. */}
+              {tarefasAbertas === 0 && (
+                <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">
+                  {hasProfessional
+                    ? "Seu especialista já está com o caso e avisa aqui quando precisar de algo."
+                    : "Logo entraremos em contato. Nossa equipe está analisando seu cadastro."}
+                </p>
+              )}
               {tarefasAbertas > 0 && (
                 <button
                   onClick={() => setActiveSection("overview")}
