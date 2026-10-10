@@ -92,7 +92,11 @@ function DocumentosPage() {
     };
   }, []);
 
-  const filtered = docs.filter((d) => {
+  // Removido sai da lista. A exclusão é lógica (o arquivo fica guardado) e o
+  // admin enxerga até o removido — sem este filtro, "excluir" não fazia nada
+  // visível.
+  const ativos = docs.filter((d) => !d.deleted_at);
+  const filtered = ativos.filter((d) => {
     const okProp = filterProp === "all" || d.property_id === filterProp;
     const okStat = filterStat === "all" || d.status === filterStat;
     const q = search.toLowerCase();
@@ -100,23 +104,46 @@ function DocumentosPage() {
     return okProp && okStat && okSearch;
   });
 
-  const approve = (id: string) =>
-    supabase
+  /**
+   * Grava o status e já mostra na tela.
+   *
+   * Antes a tela esperava o aviso em tempo real do banco para mudar; quando ele
+   * não chegava, o botão parecia não funcionar. E o erro, se houvesse, sumia.
+   */
+  const mudarStatus = async (id: string, status: "Aprovado" | "Em análise") => {
+    setErroUpload(null);
+    const { error } = await supabase
       .from("documents")
-      .update({ status: "Aprovado", updated_at: new Date().toISOString() })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq("id", id);
+    if (error) {
+      setErroUpload(`Não foi possível marcar como "${status}": ${error.message}`);
+      return;
+    }
+    setDocs((cur) => cur.map((d) => (d.id === id ? { ...d, status } : d)));
+  };
 
-  const analyze = (id: string) =>
-    supabase
-      .from("documents")
-      .update({ status: "Em análise", updated_at: new Date().toISOString() })
-      .eq("id", id);
+  const approve = (id: string) => mudarStatus(id, "Aprovado");
+
+  /** Analisar = abrir o arquivo e marcar que a equipe está olhando. */
+  const analyze = async (id: string) => {
+    await mudarStatus(id, "Em análise");
+    await abrir(id);
+  };
 
   const remove = async (id: string) => {
     if (!confirm("Remover este documento?")) return;
+    setErroUpload(null);
     // Exclusão lógica, não física: o histórico existe para proteger a equipe
-    // numa exigência de cartório, e há gatilho exigindo aprovação do admin.
-    await excluirDocumento(id);
+    // numa exigência de cartório.
+    try {
+      await excluirDocumento(id);
+      setDocs((cur) =>
+        cur.map((d) => (d.id === id ? { ...d, deleted_at: new Date().toISOString() } : d)),
+      );
+    } catch (e) {
+      setErroUpload(e instanceof Error ? e.message : "Não foi possível remover o documento.");
+    }
   };
 
   /**
@@ -196,7 +223,7 @@ function DocumentosPage() {
           <div className="text-[10px] uppercase tracking-widest text-ink-soft">Gestão</div>
           <h1 className="font-serif text-3xl tracking-tight">Central de documentos</h1>
           <p className="mt-1 text-sm text-ink-soft">
-            {docs.length} documentos · todos os processos
+            {ativos.length} documentos · todos os processos
           </p>
         </div>
         <button
@@ -272,7 +299,7 @@ function DocumentosPage() {
       {/* Status tabs */}
       <div className="mb-4 flex flex-wrap gap-2">
         {["all", ...statuses].map((s) => {
-          const count = s === "all" ? docs.length : docs.filter((d) => d.status === s).length;
+          const count = s === "all" ? ativos.length : ativos.filter((d) => d.status === s).length;
           return (
             <button
               key={s}
