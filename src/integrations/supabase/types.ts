@@ -1031,6 +1031,15 @@ export type Database = {
           ja_pedi: boolean;
         }[];
       };
+      emails_confirmados: {
+        Args: {
+          _ids: string[];
+        };
+        Returns: {
+          id: string;
+          confirmado: boolean;
+        }[];
+      };
       solicitar_atribuicao: {
         Args: {
           _property_id: string;

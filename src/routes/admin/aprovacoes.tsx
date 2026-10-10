@@ -40,6 +40,11 @@ function AprovacoesPage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  /**
+   * Quem confirmou o e-mail. Ausente do mapa = não deu para saber (função
+   * ainda não instalada no banco): aí não trava nada.
+   */
+  const [confirmados, setConfirmados] = useState<Map<string, boolean>>(new Map());
 
   async function load() {
     setLoading(true);
@@ -52,6 +57,12 @@ function AprovacoesPage() {
     if (error) setErro(error.message);
     setRows(data ?? []);
     setLoading(false);
+
+    const ids = (data ?? []).map((r) => r.id);
+    if (ids.length > 0) {
+      const { data: conf } = await supabase.rpc("emails_confirmados", { _ids: ids });
+      setConfirmados(new Map((conf ?? []).map((c) => [c.id, c.confirmado])));
+    }
   }
 
   useEffect(() => {
@@ -143,6 +154,11 @@ function AprovacoesPage() {
                           <Clock className="h-2.5 w-2.5" /> em análise
                         </span>
                       )}
+                      {confirmados.get(p.id) === false && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] uppercase tracking-widest text-red-700">
+                          e-mail não confirmado
+                        </span>
+                      )}
                     </div>
                     {p.specialization && (
                       <div className="mt-1 inline-flex items-center gap-1.5 text-sm text-ink-soft">
@@ -167,6 +183,13 @@ function AprovacoesPage() {
                         </span>
                       )}
                     </div>
+                    {confirmados.get(p.id) === false && (
+                      <div className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-700">
+                        Esta pessoa ainda não clicou no link de confirmação. Se o e-mail estiver
+                        errado, o link nunca vai chegar — confirme o endereço com ela antes de
+                        aprovar, ou recuse.
+                      </div>
+                    )}
                     {p.approval_note && (
                       <div className="mt-2 rounded-xl bg-surface/60 px-3 py-2 text-xs leading-relaxed text-ink-soft">
                         <strong className="text-foreground">Observação:</strong> {p.approval_note}
@@ -179,7 +202,14 @@ function AprovacoesPage() {
                   {filtro !== "aprovado" && (
                     <button
                       onClick={() => decidir(p.id, "aprovado")}
-                      disabled={savingId === p.id}
+                      // Aprovar quem não confirmou liberaria uma conta cujo
+                      // e-mail ninguém comprovou ter.
+                      disabled={savingId === p.id || confirmados.get(p.id) === false}
+                      title={
+                        confirmados.get(p.id) === false
+                          ? "Só depois de a pessoa confirmar o e-mail"
+                          : undefined
+                      }
                       className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm text-background transition-opacity hover:opacity-90 disabled:opacity-50"
                     >
                       {savingId === p.id ? (

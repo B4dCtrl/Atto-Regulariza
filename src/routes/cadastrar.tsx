@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Check, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { SeletorLocalidade } from "@/components/forms/SeletorLocalidade";
 import { supabase } from "@/integrations/supabase/client";
+import { dominioRecebeEmail } from "@/lib/api/email-dominio.functions";
+import { avisoDominioInexistente } from "@/lib/email-dominio";
 import { resolveLandingPath } from "@/lib/auth-routing";
 import { createClientIntakeBrowser, type IntakeData } from "@/lib/client-intake";
 import { respostasDoCaso, converterCaso } from "@/lib/api/caso.server";
@@ -310,6 +312,20 @@ function CadastrarPage() {
       await fecharCaso();
       setLoading(false);
       navigate({ to: "/dashboard", search: { welcome: "1" } as never });
+      return;
+    }
+
+    // Domínio que não recebe e-mail (digitado errado, inventado) não cria
+    // conta: o link de confirmação nunca chegaria. Na dúvida, segue.
+    const { recebe, dominio } = await dominioRecebeEmail({ data: { email: data.email } }).catch(
+      () => ({
+        recebe: null,
+        dominio: null,
+      }),
+    );
+    if (recebe === false) {
+      setError(dominio ? avisoDominioInexistente(dominio) : "Confira o e-mail digitado.");
+      setLoading(false);
       return;
     }
 
